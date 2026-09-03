@@ -1,7 +1,7 @@
 # Build Status
 
-Current phase: **Phase 4 — Prospect + Evidence Core**  
-Status: **IN PROGRESS — Phase 3 fully verified; Phase 4 implementation starting**
+Current phase: **Phase 5 — Identity Resolution + Deduplication**  
+Status: **IN PROGRESS — Phase 4 fully verified; Phase 5 implementation starting**
 
 ## Completed
 
@@ -30,43 +30,55 @@ Status: **IN PROGRESS — Phase 3 fully verified; Phase 4 implementation startin
 - Browser tests cover cinematic sections, finder personalization, sparse-data fallbacks, booking safety, mobile overflow, and retained screenshots.
 - Full clean GitHub Actions run `33742603033` is green on commit `8b15eee16cc62e69c709714ba7cb7cad65ae3c0d`.
 
-## Phase 3 acceptance
+### Phase 4 — Prospect + Evidence Core
 
-- Source fingerprint: ✅
-- Runtime fingerprint: ✅
-- Typecheck: ✅
-- Lint: ✅
-- Unit: ✅
-- Phase 1 D1 regression: ✅
-- Phase 2 D1 regression: ✅
-- Build: ✅
-- Worker smoke: ✅
-- Phase 0/1/2/3 audits: ✅
-- Playwright desktop/mobile/sparse-data/finder tests: ✅
-- Python regression: ✅
-- Visual screenshot artifacts retained: ✅
-- User visual approval of the ÉLANE master template: ✅
-
-## Phase 4 scope
-
-- Prospect CRUD.
-- Manual prospect entry.
-- Source records.
-- Evidence model.
-- Verified fields.
-- Source quality.
-- Confidence.
-- Conflicts.
-- Evidence UI.
-- Normalization.
+- Prospect CRUD and manual Salon & Spa prospect entry: ✅
+- Source records and immutable evidence candidates: ✅
+- Canonical prospect facts with verification status/confidence: ✅
+- Database-enforced verified-fact provenance: ✅
+- Cross-prospect evidence rejection: ✅
+- Source quality + field conflict summaries: ✅
+- Evidence/provenance operator UI: ✅
+- Manual-create selection race fixed at query-cache boundary: ✅
+- Full clean GitHub Actions run `33744432744` is green on commit `38a640805b04c23d5603e142a1a77c4e926fbe5e`.
 
 ## Phase 4 acceptance
 
-- Every factual field can map to evidence.
-- Unsupported fields cannot be marked verified without evidence.
-- Conflict display works.
-- Source provenance is visible.
-- Unit and real D1 integration tests pass.
+- Every factual field can map to evidence: ✅
+- Unsupported fields cannot be marked verified without matching evidence: ✅
+- Cross-prospect and wrong-field evidence are rejected by D1: ✅
+- Conflict display works: ✅
+- Source provenance is visible: ✅
+- Typecheck/lint/unit: ✅
+- Phase 1/2/4 real D1 integration: ✅
+- Production build + Worker smoke: ✅
+- Phase 0/1/2/3/4 audits: ✅
+- Playwright prospect/evidence + ÉLANE regressions: ✅
+- Python regression: ✅
+
+## Phase 5 scope
+
+- Deterministic identity keys for normalized domain, phone, name + city, and address + city.
+- One canonical prospect per real business per operator.
+- Exact strong-identifier dedupe before a new canonical prospect is created.
+- Ambiguous/composite matches go to review; they never silently merge.
+- Conflicting strong identifiers stop in identity review.
+- Discovery/entry observations remain auditable even when deduplicated.
+- Identity resolution records store candidates, reason codes, confidence, and outcome.
+- Canonical prospect identity can progress from `NORMALIZED` → `IDENTITY_PENDING` → `IDENTITY_VERIFIED` only after deterministic resolution.
+- Existing evidence/source provenance must never be reassigned across businesses by a merge shortcut.
+- Operator UI must show duplicate/review outcomes clearly.
+
+## Phase 5 acceptance
+
+- Same normalized domain cannot create two canonical prospects for one operator.
+- Same normalized phone cannot create two canonical prospects for one operator.
+- Name + city alone never auto-merges.
+- Conflicting domain/phone candidates require review.
+- Deduplicated observations are recorded against the canonical prospect.
+- Identity decisions are explainable and auditable.
+- Real D1 integration tests prove exact-match, ambiguous, conflict, and no-match behavior.
+- Full regression suite remains green.
 
 ## Blocked
 
@@ -74,4 +86,4 @@ None currently.
 
 ## Next action
 
-Implement Phase 4 strictly to the master contract, then run the complete regression suite before starting Phase 5.
+Implement Phase 5 identity keys, resolver, canonicalization, audit trail, API/UI behavior, then run the complete regression suite before starting Phase 6.
