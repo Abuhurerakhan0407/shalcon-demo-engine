@@ -2,7 +2,6 @@ import {
   JobContextRepository,
   JobRepository,
   LocalRunnerRepository,
-  RunnerJobRepository,
   type D1DatabaseLike,
   type LocalRunnerRecord,
 } from '@shalcon/db';
@@ -13,7 +12,7 @@ import { hashSessionToken } from './auth';
 import type { Bindings } from './context';
 import {
   ResearchLeaseLostError,
-  persistResearchSourcesIfNeeded,
+  completeResearchWithSources,
 } from './research-persistence';
 
 const completeSchema = z.object({ result: z.unknown() });
@@ -104,16 +103,21 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
     );
   }
 
-  let sources;
   try {
-    sources = await persistResearchSourcesIfNeeded(
+    const completed = await completeResearchWithSources(
       db,
       runner.userId,
       runner.id,
       job,
       input.data.result,
       expectedRequestedUrl,
+      new Date().toISOString(),
     );
+    return c.json({
+      job: { id: completed.job.id, status: completed.job.status },
+      sourcePersistence: completed.sourcePersistence,
+      resultAccepted: true,
+    });
   } catch (error) {
     if (error instanceof ResearchLeaseLostError) {
       return c.json(
@@ -129,26 +133,6 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
         },
       },
       422,
-    );
-  }
-
-  try {
-    const completed = await new RunnerJobRepository(db).completeWithResult(
-      job.id,
-      runner.userId,
-      runner.id,
-      JSON.stringify(input.data.result),
-      new Date().toISOString(),
-    );
-    return c.json({
-      job: { id: completed.job.id, status: completed.job.status },
-      sourcePersistence: sources,
-      resultAccepted: true,
-    });
-  } catch {
-    return c.json(
-      { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this active research job.' } },
-      409,
     );
   }
 });
