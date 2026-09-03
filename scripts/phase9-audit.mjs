@@ -38,13 +38,30 @@ for (const contract of ['PLAYWRIGHT_RESEARCH','complete_research','_LeaseKeeper'
 }
 
 const persistence = await readFile('apps/api/src/research-persistence.ts', 'utf8');
-for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl', 'canonicalResearchUrl', 'sourceUrl', 'createOrGetForActiveLease', 'ResearchLeaseLostError', 'runnerId']) {
-  if (!persistence.includes(contract)) throw new Error(`Missing research persistence contract: ${contract}`);
+for (const contract of [
+  'SourceRecordRepository',
+  'JobContextRepository',
+  'JobRepository',
+  'getByIdForUser',
+  'parseResearchResultForJob',
+  'WEBSITE_PAGE',
+  'expectedRequestedUrl',
+  'canonicalResearchUrl',
+  'sourceUrl',
+  'completeResearchWithSources',
+  'db.batch',
+  'activeLeaseSql',
+  'ResearchLeaseLostError',
+  'sourceIdentityMatches',
+  'runnerId',
+  'writes.some',
+]) {
+  if (!persistence.includes(contract)) throw new Error(`Missing atomic research persistence contract: ${contract}`);
 }
 if (persistence.includes('EvidenceRepository') || persistence.includes('ProspectFactRepository')) throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
 
 const runnerRoutes = await readFile('apps/api/src/research-runner-routes.ts', 'utf8');
-for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl','job.leaseExpiresAt === null','job.leaseExpiresAt <= ownershipCheckAt','ResearchLeaseLostError']) {
+for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl','job.leaseExpiresAt === null','job.leaseExpiresAt <= ownershipCheckAt','ResearchLeaseLostError','completeResearchWithSources']) {
   if (!runnerRoutes.includes(contract)) throw new Error(`Missing research completion ownership/input contract: ${contract}`);
 }
 
@@ -59,7 +76,7 @@ for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navig
 }
 
 const integration = await readFile('apps/api/src/phase9.integration.ts', 'utf8');
-for (const contract of ['sourceUrlsStored','diagnosticsPersisted','sourceMaterialOnly','retrySourceReplaySafe','retrySourceIdentityCollisionRejected','mismatchedProspectRejected','requestedUrlMismatchRejected','malformedCompletionRejected','rejectedResultsPersistNothing','noUnsupportedFactsGenerated']) {
+for (const contract of ['sourceUrlsStored','diagnosticsPersisted','sourceMaterialOnly','retrySourceReplaySafe','retrySourceIdentityCollisionRejected','mismatchedProspectRejected','requestedUrlMismatchRejected','malformedCompletionRejected','staleAtomicCompletionRejected','staleAtomicSourcesRolledBack','staleAtomicTerminalStateUntouched','rejectedResultsPersistNothing','noUnsupportedFactsGenerated']) {
   if (!integration.includes(contract)) throw new Error(`Missing Phase 9 D1 acceptance: ${contract}`);
 }
 
