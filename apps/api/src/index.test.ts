@@ -8,7 +8,7 @@ describe('health endpoint', () => {
       WEB_ORIGIN: 'http://localhost:5173',
     });
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body: unknown = await response.json();
     expect(body).toMatchObject({ ok: true, service: 'api', phase: 0 });
   });
 });

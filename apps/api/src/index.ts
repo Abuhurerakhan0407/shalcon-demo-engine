@@ -15,10 +15,7 @@ app.use('*', logger());
 app.use(
   '/api/*',
   cors({
-    origin: (origin, c) => {
-      const allowed = c.env.WEB_ORIGIN;
-      return origin === allowed ? origin : allowed;
-    },
+    origin: 'http://localhost:5173',
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
