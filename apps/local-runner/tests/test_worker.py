@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from shalcon_runner.client import ClaimedJob
+from shalcon_runner.research import ResearchJobError
 from shalcon_runner.worker import LocalRunnerWorker
 
 
@@ -11,6 +12,7 @@ class FakeClient:
         self.job = job
         self.heartbeats: list[tuple[str, list[str]]] = []
         self.completed: list[tuple[str, Any]] = []
+        self.research_completed: list[tuple[str, Any]] = []
         self.failed: list[tuple[str, str, str]] = []
 
     def heartbeat(self, version: str, capabilities: list[str]) -> dict[str, Any]:
@@ -23,6 +25,10 @@ class FakeClient:
 
     def complete(self, job_id: str, result: Any) -> dict[str, Any]:
         self.completed.append((job_id, result))
+        return {}
+
+    def complete_research(self, job_id: str, result: Any) -> dict[str, Any]:
+        self.research_completed.append((job_id, result))
         return {}
 
     def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
@@ -59,6 +65,41 @@ def test_echo_job_completes_with_result() -> None:
     assert client.failed == []
     assert client.completed[0][0] == "job_test"
     assert client.completed[0][1]["payload"] == {"hello": "world"}
+    assert client.research_completed == []
+
+
+def test_research_job_uses_validated_cloud_completion_path() -> None:
+    client = FakeClient(job("PLAYWRIGHT_RESEARCH"))
+
+    def research_fixture(_: ClaimedJob) -> dict[str, Any]:
+        return {"schemaVersion": "playwright-research.v1", "sourceOnly": True}
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"PLAYWRIGHT_RESEARCH": research_fixture},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "COMPLETED"
+    assert client.completed == []
+    assert client.research_completed == [
+        ("job_test", {"schemaVersion": "playwright-research.v1", "sourceOnly": True})
+    ]
+
+
+def test_research_policy_failure_preserves_specific_safe_error_code() -> None:
+    client = FakeClient(job("PLAYWRIGHT_RESEARCH"))
+
+    def blocked(_: ClaimedJob) -> Any:
+        raise ResearchJobError("UNSAFE_RESEARCH_URL", "Research URL failed policy.")
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"PLAYWRIGHT_RESEARCH": blocked},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "FAILED"
+    assert client.research_completed == []
+    assert client.failed == [
+        ("job_test", "UNSAFE_RESEARCH_URL", "Research URL failed policy.")
+    ]
 
 
 def test_unknown_job_type_fails_closed() -> None:
