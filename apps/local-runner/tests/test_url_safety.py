@@ -33,6 +33,8 @@ def test_public_url_is_normalized_and_fragment_removed() -> None:
         "http://10.0.0.7/",
         "http://169.254.169.254/latest/meta-data/",
         "http://[::1]/",
+        "https://93.184.216.34/",
+        "https://[2606:4700:4700::1111]/",
         "http://localhost/",
         "http://service.internal/",
         "file:///etc/passwd",
@@ -41,7 +43,7 @@ def test_public_url_is_normalized_and_fragment_removed() -> None:
         "https://example.com:8080/",
     ],
 )
-def test_private_non_http_or_non_web_targets_are_rejected(url: str) -> None:
+def test_private_literal_non_http_or_non_web_targets_are_rejected(url: str) -> None:
     with pytest.raises(UnsafeResearchUrl):
         validate_public_http_url(url, resolver=resolver_for("93.184.216.34"))
 
