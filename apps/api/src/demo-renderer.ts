@@ -32,7 +32,7 @@ export function isDemoPubliclyAvailable(demo: DemoRecord, nowIso: string): boole
   return Date.parse(demo.expiresAt) > Date.parse(nowIso);
 }
 
-function parseConfig(configJson: string): unknown | null {
+function parseConfig(configJson: string): unknown {
   try {
     return JSON.parse(configJson) as unknown;
   } catch {
