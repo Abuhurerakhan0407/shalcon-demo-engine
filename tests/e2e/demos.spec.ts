@@ -140,7 +140,9 @@ test('manual demo workspace builds, previews, regenerates, hides fields, and dis
   await page.getByRole('button', { name: 'Regenerate configuration' }).click();
   await expect(page.getByText('Revision 2', { exact: true })).toBeVisible();
 
-  await page.getByText('address', { exact: true }).last().click();
+  const addressVisibility = page.getByRole('checkbox', { name: 'address', exact: true });
+  await addressVisibility.check();
+  await expect(addressVisibility).toBeChecked();
   await page.getByRole('button', { name: 'Regenerate configuration' }).click();
   await expect(page.getByText('Revision 3', { exact: true })).toBeVisible();
   await expect(page.locator('.visible-data-list').getByText('Bandra West, Mumbai')).toHaveCount(0);
