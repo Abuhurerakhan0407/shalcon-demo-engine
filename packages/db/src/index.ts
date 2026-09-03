@@ -4,6 +4,7 @@ export { AgentRunRepository } from './repositories/agent-runs';
 export { AuthIdentityRepository } from './repositories/auth-identities';
 export { AuthSessionRepository } from './repositories/auth-sessions';
 export { CampaignRepository } from './repositories/campaigns';
+export { DemoRepository } from './repositories/demos';
 export {
   EvidenceRepository,
   ProspectFactRepository,
@@ -14,11 +15,14 @@ export { JobRepository, isLeaseExpired, nextFailureStatus } from './repositories
 export { ProspectRepository } from './repositories/prospects';
 export { UserRepository } from './repositories/users';
 export {
+  DEMO_STATUSES,
   JOB_STATUSES,
   type AgentRunRecord,
   type AuthIdentityRecord,
   type AuthSessionRecord,
   type CampaignRecord,
+  type DemoRecord,
+  type DemoStatus,
   type EvidenceRecord,
   type IdentityResolutionRecord,
   type JobRecord,
