@@ -8,7 +8,9 @@
     "build": "wrangler deploy --dry-run --outdir=dist",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "vitest run",
-    "cf:types": "wrangler types"
+    "cf:types": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase1-d1-test",
+    "test:d1:worker": "wrangler dev src/phase1.integration.ts --local --port 8790 --persist-to ../../.wrangler/phase1-d1-test"
   },
   "dependencies": {
     "hono": "^4.13.5",

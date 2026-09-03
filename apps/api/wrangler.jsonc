@@ -9,5 +9,13 @@
   "vars": {
     "APP_ENV": "development",
     "WEB_ORIGIN": "http://localhost:5173"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shalcon-demo-engine",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations"
+    }
+  ]
 }

@@ -47,3 +47,95 @@ export const PROSPECT_STATES = [
 ] as const;
 
 export type ProspectState = (typeof PROSPECT_STATES)[number];
+
+export const TERMINAL_PROSPECT_STATES = [
+  'REJECTED',
+  'WON',
+  'LOST',
+  'SUPPRESSED',
+  'UNSUBSCRIBED',
+  'INVALID_CONTACT',
+  'BOUNCED',
+  'QA_FAILED',
+  'ERROR_REVIEW',
+  'DEMO_DISABLED',
+  'EXPIRED',
+] as const satisfies readonly ProspectState[];
+
+const transitionMap: Readonly<Record<ProspectState, readonly ProspectState[]>> = {
+  DISCOVERED: ['NORMALIZED', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  NORMALIZED: ['IDENTITY_PENDING', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  IDENTITY_PENDING: ['IDENTITY_VERIFIED', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  IDENTITY_VERIFIED: ['RESEARCH_PENDING', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  RESEARCH_PENDING: ['RESEARCHED', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  RESEARCHED: ['AUDIT_PENDING', 'RESEARCH_MORE', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  AUDIT_PENDING: ['AUDITED', 'RESEARCH_MORE', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  AUDITED: ['SCORED', 'RESEARCH_MORE', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  SCORED: ['REJECTED', 'RESEARCH_MORE', 'DEMO_QUALIFIED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  REJECTED: [],
+  RESEARCH_MORE: ['RESEARCH_PENDING', 'REJECTED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  DEMO_QUALIFIED: ['TEMPLATE_PENDING', 'REJECTED', 'SUPPRESSED', 'DEMO_DISABLED', 'ERROR_REVIEW'],
+  TEMPLATE_PENDING: ['TEMPLATE_MATCHED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  TEMPLATE_MATCHED: ['CONTENT_PENDING', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  CONTENT_PENDING: ['DEMO_CONFIGURED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  DEMO_CONFIGURED: ['RENDER_PENDING', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  RENDER_PENDING: ['RENDERED', 'QA_FAILED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  RENDERED: ['VISUAL_QA_PENDING', 'QA_FAILED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  VISUAL_QA_PENDING: ['FACT_QA_PENDING', 'QA_FAILED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  FACT_QA_PENDING: ['SALES_QA_PENDING', 'QA_FAILED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  SALES_QA_PENDING: ['DEMO_READY', 'QA_FAILED', 'DEMO_DISABLED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  QA_FAILED: [],
+  DEMO_READY: ['CONTACT_PENDING', 'DEMO_DISABLED', 'EXPIRED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  CONTACT_PENDING: ['CONTACT_VERIFIED', 'INVALID_CONTACT', 'SUPPRESSED', 'ERROR_REVIEW'],
+  CONTACT_VERIFIED: ['COPY_PENDING', 'INVALID_CONTACT', 'SUPPRESSED', 'ERROR_REVIEW'],
+  COPY_PENDING: ['COPY_QA_PENDING', 'SUPPRESSED', 'ERROR_REVIEW'],
+  COPY_QA_PENDING: ['READY_FOR_REVIEW', 'SUPPRESSED', 'ERROR_REVIEW'],
+  READY_FOR_REVIEW: ['APPROVED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  APPROVED: ['QUEUED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  QUEUED: ['SENT', 'SUPPRESSED', 'INVALID_CONTACT', 'ERROR_REVIEW'],
+  SENT: ['FOLLOWUP_PENDING', 'REPLIED', 'BOUNCED', 'UNSUBSCRIBED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  FOLLOWUP_PENDING: ['REPLIED', 'BOUNCED', 'UNSUBSCRIBED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  REPLIED: ['INTERESTED', 'LOST', 'UNSUBSCRIBED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  INTERESTED: ['MEETING', 'LOST', 'UNSUBSCRIBED', 'SUPPRESSED', 'ERROR_REVIEW'],
+  MEETING: ['PROPOSAL', 'LOST', 'SUPPRESSED', 'ERROR_REVIEW'],
+  PROPOSAL: ['WON', 'LOST', 'SUPPRESSED', 'ERROR_REVIEW'],
+  WON: [],
+  LOST: [],
+  SUPPRESSED: [],
+  UNSUBSCRIBED: [],
+  INVALID_CONTACT: [],
+  BOUNCED: [],
+  ERROR_REVIEW: [],
+  DEMO_DISABLED: [],
+  EXPIRED: [],
+};
+
+export class IllegalProspectTransitionError extends Error {
+  readonly from: ProspectState;
+  readonly to: ProspectState;
+
+  constructor(from: ProspectState, to: ProspectState) {
+    super(`Illegal prospect transition: ${from} -> ${to}`);
+    this.name = 'IllegalProspectTransitionError';
+    this.from = from;
+    this.to = to;
+  }
+}
+
+export function allowedProspectTransitions(from: ProspectState): readonly ProspectState[] {
+  return transitionMap[from];
+}
+
+export function canTransitionProspect(from: ProspectState, to: ProspectState): boolean {
+  return transitionMap[from].includes(to);
+}
+
+export function assertProspectTransition(from: ProspectState, to: ProspectState): void {
+  if (!canTransitionProspect(from, to)) {
+    throw new IllegalProspectTransitionError(from, to);
+  }
+}
+
+export function isTerminalProspectState(state: ProspectState): boolean {
+  return (TERMINAL_PROSPECT_STATES as readonly ProspectState[]).includes(state);
+}

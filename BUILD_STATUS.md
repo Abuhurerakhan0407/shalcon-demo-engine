@@ -1,76 +1,63 @@
 # Build Status
 
-Current phase: **Phase 0 — Repository + Engineering Foundation**  
-Status: **COMPLETE — GREEN**
+Current phase: **Phase 1 — Data Layer + State Machine**  
+Status: **IN PROGRESS — implementation complete locally; awaiting full GitHub CI verification**
 
 ## Completed
 
-- npm-workspaces monorepo established.
-- React + Vite + TypeScript web application foundation established.
-- Cloudflare Worker + Hono API foundation established.
-- Python local-runner package established.
-- Shared package boundaries created for DB, agents, providers, templates, template runtime, scoring, evidence, shared contracts, and state machine.
-- Strict TypeScript baseline enabled.
-- ESLint flat config enabled with typed rules scoped to project source.
-- Prettier configured.
-- Vitest configured with API health test.
-- Playwright configured with Chromium E2E foundation test.
-- Pytest configured with local-runner health tests.
-- `.env.example` contains placeholders only.
-- README and architecture/operations documentation created.
-- GitHub Actions CI created.
-- Structural/security audit created.
-- npm dependency resolution locked in committed `package-lock.json`.
-- CI switched to deterministic `npm ci` installs.
-- React/Vite development server verified through Playwright.
-- Wrangler Worker development server verified by live HTTP health request.
-- Production web/Worker builds verified.
-- Python runner install and execution verified.
+- Phase 0 repository and engineering foundation remains green.
+- D1 initial migration created from the master database design.
+- D1 binding and migration directory configured for local Worker development.
+- Typed D1 repository contract created without tying domain packages to runtime globals.
+- User, campaign, prospect, job, and agent-run repositories implemented.
+- Prospect state machine implemented with explicit allowed transitions.
+- Illegal prospect state transitions throw a dedicated error.
+- Prospect state changes are audit-recorded by a D1 trigger.
+- Canonical job states, leasing, retries, dead-letter behavior, and ownership checks implemented.
+- Unique job idempotency key constraint implemented.
+- Deterministic idempotency-key utility implemented.
+- Phase 1 fixtures and unit tests implemented.
+- Real local-D1 integration harness implemented through Wrangler.
+- Migration reproducibility check applies the migration twice against the same local D1 state.
+- Phase 1 structural/state/idempotency audit added.
 
 ## In progress
 
-None.
+- GitHub Actions verification on a clean checkout.
+- Root-cause fixes for any failures exposed by real D1/Wrangler CI.
 
 ## Blocked
 
-None.
+None currently.
 
 ## Tests
 
-Verified in GitHub Actions run **33726048514** against commit `53c3123cb6ec06d57fa6e9db3e9f16267f0159ae`:
-
-- `npm ci`: **PASS**
-- Full workspace TypeScript typecheck: **PASS**
-- ESLint: **PASS**
-- Vitest unit scaffold: **PASS**
-- Vite production build: **PASS**
-- Wrangler dry-run Worker build: **PASS**
-- Live Wrangler Worker `/api/v1/health` smoke: **PASS**
-- Phase 0 structural/security audit: **PASS**
-- Playwright Chromium install: **PASS**
-- Playwright foundation E2E / Vite startup: **PASS**
-- Python editable install: **PASS**
-- Pytest local-runner suite: **PASS — 2/2**
-
-Earlier offline-safe verification also passed foundation TypeScript, TypeScript syntax smoke, Python compileall, runner health, and secret/structure scanning.
+- Typecheck: pending CI
+- Lint: pending CI
+- Unit: pending CI
+- D1 migration fresh apply: pending CI
+- D1 migration reproducibility: pending CI
+- D1 repository integration: pending CI
+- State transitions: implemented; pending CI
+- Illegal transition rejection: implemented; pending CI
+- Idempotency: implemented; pending CI
+- Playwright: Phase 0 foundation test retained; pending CI
+- Pytest: Phase 0 runner tests retained; pending CI
 
 ## Known issues
 
-- No production credentials are configured; this is intentional in Phase 0.
-- No database/auth/scraping/AI/provider behavior is implemented yet; those belong to later phases and are not represented as complete.
-- The long-form master handoff is distributed with the project handoff archive and should be supplied to a fresh coding chat alongside this repository.
+- The D1 database id in `wrangler.jsonc` is a local-development placeholder. Production D1 provisioning belongs to the deployment phase; no fake production resource is claimed.
+- Phase 1 intentionally does not add auth, discovery, scraping, AI, outreach, or production data.
 
 ## Risks
 
-- External-provider limits and credentials remain future-phase concerns.
-- TypeScript is intentionally constrained below 6.1 while the current typescript-eslint support window requires it.
+- Wrangler/D1 local persistence semantics must be validated by CI rather than inferred.
+- Future phases may require additive migrations; the initial migration must not be edited after production deployment.
 
-## Last verified code commit
+## Last verified commit
 
-`53c3123cb6ec06d57fa6e9db3e9f16267f0159ae`
-
-CI run: `33726048514` — JavaScript, Playwright, and Python jobs all completed successfully.
+Phase 0 code: `53c3123cb6ec06d57fa6e9db3e9f16267f0159ae` (all Phase 0 gates green).
 
 ## Next action
 
-Begin **Phase 1 — Data Layer + State Machine** only after this Phase 0 closeout is accepted.
+Push Phase 1 implementation, run CI, fix every failure, and mark Phase 1 complete only when all acceptance criteria are green.
