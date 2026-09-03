@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 
+import { SalonTemplatePreview } from './salon/SalonTemplatePreview';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
 
 interface AuthUser {
@@ -110,8 +112,8 @@ function DashboardPage() {
         </article>
         <article className="metric-card">
           <span>Current phase</span>
-          <strong>02</strong>
-          <small>Auth + dashboard</small>
+          <strong>03</strong>
+          <small>Salon template v1</small>
         </article>
       </section>
       <section className="flow-panel">
@@ -306,9 +308,12 @@ function AuthenticatedApp() {
 }
 
 export function App() {
+  const location = useLocation();
+  const isSalonTemplatePreview = location.pathname === '/template-preview/salon-v1';
+
   return (
     <AppErrorBoundary>
-      <AuthenticatedApp />
+      {isSalonTemplatePreview ? <SalonTemplatePreview /> : <AuthenticatedApp />}
     </AppErrorBoundary>
   );
 }

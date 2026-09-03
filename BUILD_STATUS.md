@@ -1,7 +1,7 @@
 # Build Status
 
-Current phase: **Phase 2 — Authentication + Dashboard Shell**  
-Status: **IN PROGRESS — Phase 1 fully verified; Phase 2 implementation starting**
+Current phase: **Phase 3 — Salon Template v1**  
+Status: **IN PROGRESS — Phase 2 fully verified; Phase 3 implementation staged for clean CI**
 
 ## Completed
 
@@ -11,75 +11,79 @@ Status: **IN PROGRESS — Phase 1 fully verified; Phase 2 implementation startin
 
 ### Phase 1 — Data Layer + State Machine
 
-- D1 initial migration created from the master database design.
-- D1 binding and migration directory configured for local Worker development.
-- Typed D1 repository contract created without tying domain packages to runtime globals.
-- User, campaign, prospect, job, and agent-run repositories implemented.
-- Prospect state machine implemented with explicit allowed transitions.
-- Illegal prospect state transitions throw a dedicated error.
-- Prospect state changes are audit-recorded by a D1 trigger.
-- Canonical job states, leasing, retries, dead-letter behavior, and ownership checks implemented.
-- Unique job idempotency key constraint implemented.
-- Deterministic idempotency-key utility implemented.
-- Phase 1 fixtures and unit tests implemented.
-- Real local-D1 integration harness implemented through Wrangler.
-- Migration reproducibility check applies the migration twice against the same local D1 state.
-- D1 write/concurrency paths use atomic returned-row semantics rather than relying on trigger-influenced change counts.
-- D1 integration harness terminates the full local Wrangler/workerd process tree after verification.
-- Phase 1 structural/state/idempotency audit added.
-- Full GitHub Actions run is green on commit `2fbc441bcf355cfbe5ac3483441275cfcdb7bc8f`.
+- D1 initial migration and typed repositories implemented.
+- Prospect state machine, audit trail, retries, leases, dead-letter behavior, and deterministic idempotency implemented.
+- Fresh/repeated migrations, real D1 integration, typecheck, lint, unit, build, Worker smoke, Playwright, Python, and audits are green.
 
-## Phase 1 acceptance
+### Phase 2 — Authentication + Dashboard Shell
 
-- Fresh migration: ✅
-- Migration reproducibility: ✅
-- State transition tests: ✅
-- Illegal transition rejection: ✅
-- Idempotency tests: ✅
-- Live D1 repository integration: ✅
-- Typecheck: ✅
-- Lint: ✅
-- Unit: ✅
-- Build: ✅
-- Worker smoke: ✅
-- Phase 0 audit: ✅
-- Phase 1 audit: ✅
-- Playwright: ✅
-- Pytest: ✅
-
-## Phase 2 scope
-
-- Google OAuth.
-- Session/auth middleware.
-- Protected routes.
-- Sidebar/topbar.
-- Route shell.
-- Loading, empty, and error states.
-- Responsive navigation.
-- Dashboard skeleton.
+- Google OAuth code flow implemented with signed, short-lived return state.
+- Google access token is used only to establish verified identity; Google passwords/tokens are not stored by Shalcon.
+- Google identities are bound by stable provider subject (`sub`), not by mutable email.
+- Email/identity collision handling rejects ambiguous account linking.
+- App session tokens are random, stored only by SHA-256 hash, expiring, touchable, and revocable.
+- Auth/session middleware protects dashboard API routes.
+- Credentialed CORS is restricted to the configured web origin.
+- Login surface, loading/error states, dashboard shell, sidebar/topbar, all master routes, responsive mobile drawer, operator identity, and logout are implemented.
+- Real D1 auth integration verifies anonymous rejection, valid-session access, identity uniqueness, CORS behavior, logout revocation, migration reproducibility, and foreign-key integrity.
+- Playwright verifies dashboard navigation, logout, mobile navigation, and zero console errors.
+- Full clean GitHub Actions run is green on commit `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
 
 ## Phase 2 acceptance
 
-- Login/logout works.
-- Unauthorized API requests are blocked.
-- All dashboard routes render.
-- Mobile navigation works.
-- No console errors.
-- Playwright navigation test passes.
+- Google OAuth implementation: ✅
+- Session/auth middleware: ✅
+- Unauthorized API blocked: ✅
+- All dashboard routes render: ✅
+- Mobile navigation works: ✅
+- Logout revokes session: ✅
+- No console errors: ✅
+- Playwright navigation test: ✅
+- Stable Google subject identity binding: ✅
+- Production-origin CORS contract: ✅
+- Live D1 auth integration: ✅
+- Typecheck/lint/unit/build/smoke/audits/Python: ✅
+
+## Phase 3 scope
+
+- First high-quality Salon & Spa template.
+- Template registry and versioning.
+- Theme DNA schema.
+- CSS token system.
+- Responsive design.
+- Section component contract.
+- Safe fallback sections.
+- Shalcon concept disclosure.
+- Noindex support.
+- Long, short, and missing-data QA fixtures.
+- Static valid-config preview route.
+- Desktop/mobile browser screenshots retained as CI artifacts.
+
+## Phase 3 acceptance
+
+- Visually approved.
+- Desktop/mobile complete.
+- No broken components.
+- Long/short fixture data works.
+- Missing fields gracefully hide/fallback.
+- Visual snapshots captured.
+- Route renders from static valid config.
+- Full clean CI passes.
 
 ## Blocked
 
-None currently. Real Google OAuth credentials will be required only for production/manual OAuth verification; implementation and automated verification must not require secrets in the repository.
+None for Phase 3 implementation. Real Google OAuth client credentials remain required only for provider-level manual OAuth verification and production deployment; secrets must never be committed.
 
 ## Known issues
 
-- The D1 database id in `wrangler.jsonc` is a local-development placeholder. Production D1 provisioning belongs to the deployment phase; no fake production resource is claimed.
-- Production Google OAuth client credentials and session secret must be provisioned as Worker secrets, never committed.
+- The D1 database id in `wrangler.jsonc` is a local-development placeholder. Production D1 provisioning belongs to the deployment phase.
+- Production Google OAuth client credentials and session secret must be provisioned as Worker secrets.
+- Phase 3 abstract visual treatments intentionally avoid stock/remote imagery. Real prospect photography must be evidence-backed or explicitly supplied later.
 
 ## Last verified commit
 
-Phase 1: `2fbc441bcf355cfbe5ac3483441275cfcdb7bc8f` — all Phase 0 + Phase 1 gates green.
+Phase 2: `41facc71fceb3ab004c55a10ff747ca98bf28fdc` — all Phase 0 + Phase 1 + Phase 2 gates green.
 
 ## Next action
 
-Implement Phase 2 strictly to the master acceptance criteria, then run the complete CI suite and fix every failure before starting Phase 3.
+Push the Phase 3 template/runtime/browser slice, run the complete CI suite, inspect retained desktop/mobile screenshots, and fix every acceptance failure before starting Phase 4.

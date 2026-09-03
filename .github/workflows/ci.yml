@@ -49,6 +49,7 @@ jobs:
       - run: npm run test:phase0:audit
       - run: npm run test:phase1:audit
       - run: npm run test:phase2:audit
+      - run: npm run test:phase3:audit
 
   playwright:
     runs-on: ubuntu-latest
@@ -60,6 +61,16 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Upload Playwright visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-phase3-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
 
   python:
     runs-on: ubuntu-latest
