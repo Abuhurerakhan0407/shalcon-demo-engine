@@ -48,9 +48,12 @@ describe('Phase 9 research result contract', () => {
     ).toThrow('does not match');
   });
 
-  it('rejects inconsistent page counts and unsupported protocols', () => {
+  it('rejects inconsistent page counts, empty results, and unsupported protocols', () => {
     expect(
       playwrightResearchResultSchema.safeParse({ ...validResult(), pageCount: 2 }).success,
+    ).toBe(false);
+    expect(
+      playwrightResearchResultSchema.safeParse({ ...validResult(), pages: [], pageCount: 0 }).success,
     ).toBe(false);
     expect(
       playwrightResearchResultSchema.safeParse({
@@ -58,6 +61,18 @@ describe('Phase 9 research result contract', () => {
         requestedUrl: 'file:///etc/passwd',
       }).success,
     ).toBe(false);
+  });
+
+  it('rejects duplicate final URLs so source persistence stays deterministic', () => {
+    const result = validResult();
+    result.pages.push({
+      ...result.pages[0]!,
+      requestedUrl: 'https://example.com/redirect',
+      finalUrl: 'https://example.com/',
+      title: 'Redirected duplicate',
+    });
+    result.pageCount = result.pages.length;
+    expect(playwrightResearchResultSchema.safeParse(result).success).toBe(false);
   });
 
   it('rejects oversized extracted source data', () => {
