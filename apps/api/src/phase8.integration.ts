@@ -153,7 +153,12 @@ integration.get('/phase8', async (c) => {
   const dueAfterMissingSignal = await jobs.dueForSignal(USER_ID, LATER);
   const recreatedSignals: JobSignalMessage[] = [];
   const recreatedSignal = await signalJob(
-    { send: async (message) => { recreatedSignals.push(message as JobSignalMessage); } },
+    {
+      send(message) {
+        recreatedSignals.push(message as JobSignalMessage);
+        return Promise.resolve();
+      },
+    },
     { jobId: offline.id, userId: USER_ID, jobType: offline.jobType },
   );
 
