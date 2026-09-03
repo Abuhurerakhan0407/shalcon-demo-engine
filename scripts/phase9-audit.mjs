@@ -18,8 +18,13 @@ const required = [
 for (const path of required) await access(path);
 
 const safety = await readFile('apps/local-runner/src/shalcon_runner/url_safety.py', 'utf8');
-for (const contract of ['validate_public_http_url','address.is_global','localhost','embedded credentials','getaddrinfo','_ALLOWED_WEB_PORTS']) {
+for (const contract of ['validate_public_http_url','address.is_global','localhost','embedded credentials','getaddrinfo','_ALLOWED_WEB_PORTS','literal IP address']) {
   if (!safety.includes(contract)) throw new Error(`Missing Phase 9 URL-safety contract: ${contract}`);
+}
+
+const safetyTests = await readFile('apps/local-runner/tests/test_url_safety.py', 'utf8');
+for (const contract of ['https://93.184.216.34/','https://[2606:4700:4700::1111]/']) {
+  if (!safetyTests.includes(contract)) throw new Error(`Missing literal-IP URL safety test: ${contract}`);
 }
 
 const egress = await readFile('apps/local-runner/src/shalcon_runner/egress_proxy.py', 'utf8');
@@ -77,8 +82,13 @@ for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable ident
 }
 
 const resultSchema = await readFile('apps/api/src/research-result.ts', 'utf8');
-for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navigationError','requestFailures','httpErrors','.min(1).max(6)','unique finalUrl values','canonicalResearchUrl','requested URL does not match the claimed job payload','First research page must represent the requested URL']) {
+for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navigationError','requestFailures','httpErrors','.min(1).max(6)','unique finalUrl values','canonicalResearchUrl','isIpLiteralHostname','requested URL does not match the claimed job payload','First research page must represent the requested URL']) {
   if (!resultSchema.includes(contract)) throw new Error(`Missing research-result validation contract: ${contract}`);
+}
+
+const resultTests = await readFile('apps/api/src/research-result.test.ts', 'utf8');
+for (const contract of ['https://93.184.216.34/','https://[2606:4700:4700::1111]/']) {
+  if (!resultTests.includes(contract)) throw new Error(`Missing cloud literal-IP provenance test: ${contract}`);
 }
 
 const integration = await readFile('apps/api/src/phase9.integration.ts', 'utf8');
