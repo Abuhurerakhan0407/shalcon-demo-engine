@@ -87,7 +87,7 @@ export async function completeResearchWithSources(
   job: JobRecord,
   rawResult: unknown,
   expectedRequestedUrl: string,
-  completionAt: string,
+  completionAtOverride?: string,
 ): Promise<ResearchCompletionResult> {
   if (job.jobType !== 'PLAYWRIGHT_RESEARCH') {
     throw new Error('Research completion requires a PLAYWRIGHT_RESEARCH job.');
@@ -117,6 +117,9 @@ export async function completeResearchWithSources(
     }
   }
 
+  // Evaluate lease freshness after all result validation and source preflight work so the final
+  // transaction cannot rely on a timestamp captured before potentially slow processing.
+  const completionAt = completionAtOverride ?? new Date().toISOString();
   const activeLeaseSql = `
     SELECT 1
     FROM jobs j
