@@ -84,14 +84,16 @@ async function recordResolution(
   prospectId: string,
   resolution: IdentityResolution,
   now: string,
-  status = resolution.status,
+  status: string = resolution.status,
 ) {
   return identity.createResolution({
     id: `ires_${randomToken(12)}`,
     prospectId,
     status,
     confidence: resolution.confidence,
-    conflictsJson: JSON.stringify(resolution.status === 'CONFLICT' ? resolution.candidateProspectIds : []),
+    conflictsJson: JSON.stringify(
+      resolution.status === 'CONFLICT' ? resolution.candidateProspectIds : [],
+    ),
     evidenceIdsJson: '[]',
     candidateProspectIdsJson: JSON.stringify(resolution.candidateProspectIds),
     matchedKeysJson: JSON.stringify(resolution.matchedKeys),
@@ -144,12 +146,29 @@ async function exactMatchResult(
   aliasProspectId: string | null,
 ): Promise<ProspectIdentityResult> {
   const canonicalProspectId = resolution.candidateProspectIds[0];
-  if (!canonicalProspectId) throw new ProspectIdentityError('IDENTITY_MATCH_MISSING', 'Exact identity match has no canonical prospect.');
-  const prospect = await new ProspectRepository(db).getByIdForUser(canonicalProspectId, input.userId);
-  if (!prospect || !isCanonicalState(prospect.currentState)) {
-    throw new ProspectIdentityError('IDENTITY_MATCH_INVALID', 'Identity key points to a non-canonical prospect.');
+  if (!canonicalProspectId) {
+    throw new ProspectIdentityError(
+      'IDENTITY_MATCH_MISSING',
+      'Exact identity match has no canonical prospect.',
+    );
   }
-  await recordResolution(identity, aliasProspectId ?? prospect.id, resolution, now, aliasProspectId ? 'RACE_DUPLICATE' : 'EXACT_MATCH');
+  const prospect = await new ProspectRepository(db).getByIdForUser(
+    canonicalProspectId,
+    input.userId,
+  );
+  if (!prospect || !isCanonicalState(prospect.currentState)) {
+    throw new ProspectIdentityError(
+      'IDENTITY_MATCH_INVALID',
+      'Identity key points to a non-canonical prospect.',
+    );
+  }
+  await recordResolution(
+    identity,
+    aliasProspectId ?? prospect.id,
+    resolution,
+    now,
+    aliasProspectId ? 'RACE_DUPLICATE' : 'EXACT_MATCH',
+  );
   const observation = await recordObservation(identity, input, resolution, now, prospect.id, null);
   return {
     prospect,
@@ -172,7 +191,10 @@ export async function createOrResolveProspectIdentity(
   const identity = new IdentityRepository(db);
   const prospects = new ProspectRepository(db);
   const keys = buildIdentityKeys(identityProfile(input));
-  const initialResolution = resolveIdentity(keys, await identity.findCandidateMatches(input.userId, keys));
+  const initialResolution = resolveIdentity(
+    keys,
+    await identity.findCandidateMatches(input.userId, keys),
+  );
 
   if (initialResolution.status === 'EXACT_MATCH') {
     return exactMatchResult(db, identity, input, initialResolution, now, null);
@@ -200,7 +222,14 @@ export async function createOrResolveProspectIdentity(
 
   if (initialResolution.status !== 'NEW_CANONICAL') {
     await recordResolution(identity, pending.id, initialResolution, now);
-    const observation = await recordObservation(identity, input, initialResolution, now, null, pending.id);
+    const observation = await recordObservation(
+      identity,
+      input,
+      initialResolution,
+      now,
+      null,
+      pending.id,
+    );
     return {
       prospect: pending,
       identity: {
@@ -215,9 +244,14 @@ export async function createOrResolveProspectIdentity(
   }
 
   try {
-    await identity.registerCanonicalKeys(keyRecords(input.userId, pending.id, keys, input.sourceType, now));
+    await identity.registerCanonicalKeys(
+      keyRecords(input.userId, pending.id, keys, input.sourceType, now),
+    );
   } catch (error) {
-    const raceResolution = resolveIdentity(keys, await identity.findCandidateMatches(input.userId, keys));
+    const raceResolution = resolveIdentity(
+      keys,
+      await identity.findCandidateMatches(input.userId, keys),
+    );
     if (raceResolution.status === 'EXACT_MATCH') {
       const canonicalProspectId = raceResolution.candidateProspectIds[0];
       if (!canonicalProspectId) throw error;
@@ -235,7 +269,14 @@ export async function createOrResolveProspectIdentity(
     }
     if (raceResolution.status === 'REVIEW_REQUIRED' || raceResolution.status === 'CONFLICT') {
       await recordResolution(identity, pending.id, raceResolution, now, 'RACE_REVIEW_REQUIRED');
-      const observation = await recordObservation(identity, input, raceResolution, now, null, pending.id);
+      const observation = await recordObservation(
+        identity,
+        input,
+        raceResolution,
+        now,
+        null,
+        pending.id,
+      );
       return {
         prospect: pending,
         identity: {
@@ -253,7 +294,14 @@ export async function createOrResolveProspectIdentity(
 
   const verified = await prospects.transition(pending.id, 'IDENTITY_VERIFIED', now);
   await recordResolution(identity, verified.id, initialResolution, now);
-  const observation = await recordObservation(identity, input, initialResolution, now, verified.id, null);
+  const observation = await recordObservation(
+    identity,
+    input,
+    initialResolution,
+    now,
+    verified.id,
+    null,
+  );
   return {
     prospect: verified,
     identity: {
@@ -271,7 +319,9 @@ export async function resolvePendingProspectIdentity(
   db: D1DatabaseLike,
   userId: string,
   prospectId: string,
-  decision: { type: 'LINK_TO_EXISTING'; canonicalProspectId: string } | { type: 'KEEP_DISTINCT' },
+  decision:
+    | { type: 'LINK_TO_EXISTING'; canonicalProspectId: string }
+    | { type: 'KEEP_DISTINCT' },
   now: string,
 ) {
   const prospects = new ProspectRepository(db);
@@ -279,16 +329,25 @@ export async function resolvePendingProspectIdentity(
   const pending = await prospects.getByIdForUser(prospectId, userId);
   if (!pending) throw new ProspectIdentityError('NOT_FOUND', 'Prospect not found.');
   if (pending.currentState !== 'IDENTITY_PENDING') {
-    throw new ProspectIdentityError('IDENTITY_NOT_PENDING', 'Only identity-pending prospects can be resolved.');
+    throw new ProspectIdentityError(
+      'IDENTITY_NOT_PENDING',
+      'Only identity-pending prospects can be resolved.',
+    );
   }
 
   if (decision.type === 'LINK_TO_EXISTING') {
     if (decision.canonicalProspectId === pending.id) {
-      throw new ProspectIdentityError('IDENTITY_SELF_LINK', 'A prospect cannot be linked to itself.');
+      throw new ProspectIdentityError(
+        'IDENTITY_SELF_LINK',
+        'A prospect cannot be linked to itself.',
+      );
     }
     const canonical = await prospects.getByIdForUser(decision.canonicalProspectId, userId);
     if (!canonical || !isCanonicalState(canonical.currentState)) {
-      throw new ProspectIdentityError('CANONICAL_NOT_FOUND', 'Selected canonical prospect is not available.');
+      throw new ProspectIdentityError(
+        'CANONICAL_NOT_FOUND',
+        'Selected canonical prospect is not available.',
+      );
     }
     const duplicate = await prospects.transition(pending.id, 'DUPLICATE', now);
     const alias = await identity.createAlias({
@@ -319,8 +378,22 @@ export async function resolvePendingProspectIdentity(
       niche: pending.niche,
       sourceType: 'MANUAL_REVIEW',
     };
-    const observation = await recordObservation(identity, input, resolution, now, canonical.id, null, 'MANUAL_REVIEW');
-    return { prospect: duplicate, canonical, alias, observation, decision: 'LINK_TO_EXISTING' as const };
+    const observation = await recordObservation(
+      identity,
+      input,
+      resolution,
+      now,
+      canonical.id,
+      null,
+      'MANUAL_REVIEW',
+    );
+    return {
+      prospect: duplicate,
+      canonical,
+      alias,
+      observation,
+      decision: 'LINK_TO_EXISTING' as const,
+    };
   }
 
   const keys = buildIdentityKeys({
@@ -360,6 +433,20 @@ export async function resolvePendingProspectIdentity(
     niche: verified.niche,
     sourceType: 'MANUAL_REVIEW',
   };
-  const observation = await recordObservation(identity, input, distinctResolution, now, verified.id, null, 'MANUAL_REVIEW');
-  return { prospect: verified, canonical: verified, alias: null, observation, decision: 'KEEP_DISTINCT' as const };
+  const observation = await recordObservation(
+    identity,
+    input,
+    distinctResolution,
+    now,
+    verified.id,
+    null,
+    'MANUAL_REVIEW',
+  );
+  return {
+    prospect: verified,
+    canonical: verified,
+    alias: null,
+    observation,
+    decision: 'KEEP_DISTINCT' as const,
+  };
 }
