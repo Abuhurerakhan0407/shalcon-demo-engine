@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+from typing import Any
+
+from shalcon_runner.client import ClaimedJob
+from shalcon_runner.worker import LocalRunnerWorker
+
+
+class FakeClient:
+    def __init__(self, job: ClaimedJob | None) -> None:
+        self.job = job
+        self.heartbeats: list[tuple[str, list[str]]] = []
+        self.completed: list[tuple[str, Any]] = []
+        self.failed: list[tuple[str, str, str]] = []
+
+    def heartbeat(self, version: str, capabilities: list[str]) -> dict[str, Any]:
+        self.heartbeats.append((version, capabilities))
+        return {}
+
+    def claim(self) -> ClaimedJob | None:
+        job, self.job = self.job, None
+        return job
+
+    def complete(self, job_id: str, result: Any) -> dict[str, Any]:
+        self.completed.append((job_id, result))
+        return {}
+
+    def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
+        self.failed.append((job_id, error_code, safe_message))
+        return {}
+
+
+def job(job_type: str = "PHASE8_ECHO") -> ClaimedJob:
+    return ClaimedJob(
+        id="job_test",
+        job_type=job_type,
+        entity_id="entity_1",
+        attempts=0,
+        max_attempts=3,
+        lease_seconds=120,
+        payload={"hello": "world"},
+    )
+
+
+def test_idle_poll_still_heartbeats() -> None:
+    client = FakeClient(None)
+    outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "IDLE"
+    assert len(client.heartbeats) == 1
+    assert client.completed == []
+    assert client.failed == []
+
+
+def test_echo_job_completes_with_result() -> None:
+    client = FakeClient(job())
+    outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "COMPLETED"
+    assert outcome.job_id == "job_test"
+    assert client.failed == []
+    assert client.completed[0][0] == "job_test"
+    assert client.completed[0][1]["payload"] == {"hello": "world"}
+
+
+def test_unknown_job_type_fails_closed() -> None:
+    client = FakeClient(job("ARBITRARY_CODE"))
+    outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "FAILED"
+    assert client.completed == []
+    assert client.failed[0][1] == "UNSUPPORTED_JOB_TYPE"
+
+
+def test_handler_exception_is_sanitized() -> None:
+    client = FakeClient(job("FAIL_TEST"))
+
+    def boom(_: ClaimedJob) -> Any:
+        raise RuntimeError("secret internal detail")
+
+    outcome = LocalRunnerWorker(client, handlers={"FAIL_TEST": boom}).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "FAILED"
+    assert client.failed[0][1] == "LOCAL_EXECUTION_FAILED"
+    assert "secret internal detail" not in client.failed[0][2]
