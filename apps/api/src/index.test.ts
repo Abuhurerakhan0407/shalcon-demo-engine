@@ -7,11 +7,11 @@ const testEnv = {
 };
 
 describe('public API', () => {
-  it('returns a phase 5 health response', async () => {
+  it('returns a phase 6 health response', async () => {
     const response = await app.request('/api/v1/health', {}, testEnv);
     expect(response.status).toBe(200);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ ok: true, service: 'api', phase: 5 });
+    expect(body).toMatchObject({ ok: true, service: 'api', phase: 6 });
   });
 
   it('allows credentialed CORS only for the configured web origin', async () => {
