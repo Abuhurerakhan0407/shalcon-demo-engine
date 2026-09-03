@@ -78,7 +78,10 @@ class LocalRunnerWorker:
             self.client.fail(job.id, "LOCAL_EXECUTION_FAILED", safe_exception_message(error))
             return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
 
-        self.client.complete(job.id, result)
+        if job.job_type == "PLAYWRIGHT_RESEARCH":
+            self.client.complete_research(job.id, result)
+        else:
+            self.client.complete(job.id, result)
         return RunOutcome(status="COMPLETED", job_id=job.id, job_type=job.job_type)
 
     def run_forever(self, poll_seconds: float = 3.0) -> None:
