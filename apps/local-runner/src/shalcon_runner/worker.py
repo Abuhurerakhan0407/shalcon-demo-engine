@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from . import __version__
 from .client import ClaimedJob, RunnerApiClient, RunnerApiError
+from .research import ResearchJobError, research_job
 
 JobHandler = Callable[[ClaimedJob], Any]
 
@@ -29,6 +30,7 @@ def _echo(job: ClaimedJob) -> dict[str, Any]:
 
 DEFAULT_HANDLERS: dict[str, JobHandler] = {
     "PHASE8_ECHO": _echo,
+    "PLAYWRIGHT_RESEARCH": research_job,
 }
 
 
@@ -69,6 +71,9 @@ class LocalRunnerWorker:
 
         try:
             result = handler(job)
+        except ResearchJobError as error:
+            self.client.fail(job.id, error.code, error.safe_message)
+            return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
         except BaseException as error:  # noqa: BLE001 - boundary converts arbitrary handler faults to a safe failure.
             self.client.fail(job.id, "LOCAL_EXECUTION_FAILED", safe_exception_message(error))
             return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
