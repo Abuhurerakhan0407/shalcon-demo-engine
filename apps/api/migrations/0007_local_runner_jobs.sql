@@ -33,5 +33,5 @@ CREATE TABLE job_contexts (
 CREATE INDEX idx_job_contexts_user
   ON job_contexts(user_id, created_at DESC);
 
-CREATE INDEX idx_jobs_claimable
+CREATE INDEX IF NOT EXISTS idx_jobs_claimable
   ON jobs(status, scheduled_for, priority DESC, created_at);
