@@ -106,7 +106,24 @@ export class RunnerJobRepository {
     return reconciled;
   }
 
-  async dueForSignal(userId: string, now: string, limit = 100): Promise<JobRecord[]> {
+  async dueForSignal(
+    userId: string,
+    now: string,
+    limit = 100,
+    allowedJobTypes?: readonly string[],
+  ): Promise<JobRecord[]> {
+    const allowed =
+      allowedJobTypes === undefined
+        ? null
+        : [...new Set(allowedJobTypes.map((item) => item.trim()).filter(Boolean))];
+    if (allowed !== null && allowed.length === 0) return [];
+
+    const typeFilter =
+      allowed === null ? '' : `AND j.job_type IN (${allowed.map(() => '?').join(', ')})`;
+    const bindings: unknown[] = [userId, now];
+    if (allowed !== null) bindings.push(...allowed);
+    bindings.push(limit);
+
     const result = await this.db
       .prepare(`
         SELECT j.*
@@ -115,10 +132,11 @@ export class RunnerJobRepository {
         WHERE jc.user_id = ?
           AND j.scheduled_for <= ?
           AND j.status IN ('PENDING', 'FAILED')
+          ${typeFilter}
         ORDER BY j.priority DESC, j.scheduled_for ASC, j.created_at ASC
         LIMIT ?
       `)
-      .bind(userId, now, limit)
+      .bind(...bindings)
       .all<JobRow>();
     return result.results.map(mapJob);
   }
@@ -128,9 +146,10 @@ export class RunnerJobRepository {
     owner: string,
     leaseExpiresAt: string,
     now: string,
+    allowedJobTypes?: readonly string[],
   ): Promise<RunnerJobClaim | null> {
     await this.reconcileExpiredLeases(userId, now);
-    const candidates = await this.dueForSignal(userId, now, 5);
+    const candidates = await this.dueForSignal(userId, now, 50, allowedJobTypes);
 
     for (const candidate of candidates) {
       const context = await this.contexts.getByJobId(candidate.id);
