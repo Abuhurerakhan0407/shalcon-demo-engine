@@ -23,6 +23,7 @@ import {
   randomToken,
   verifyOAuthState,
 } from './auth';
+import { demoRoutes } from './demo-routes';
 import { prospectRoutes } from './prospect-routes';
 
 interface Env {
@@ -120,13 +121,13 @@ app.use('/api/v1/dashboard/*', requireAuth);
 app.use('/api/v1/prospects', requireAuth);
 app.use('/api/v1/prospects/*', requireAuth);
 
-app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 5, status: 'ok' }));
+app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 6, status: 'ok' }));
 
 app.get('/api/v1/health', (c) =>
   c.json({
     ok: true,
     service: 'api',
-    phase: 5,
+    phase: 6,
     environment: c.env.APP_ENV,
     timestamp: new Date().toISOString(),
   }),
@@ -251,12 +252,13 @@ app.get('/api/v1/dashboard/summary', (c) => {
   const user = c.get('authUser');
   return c.json({
     user: { id: user.id, email: user.email, name: user.name },
-    phase: 5,
+    phase: 6,
     system: 'ready',
   });
 });
 
 app.route('/api/v1/prospects', prospectRoutes);
+app.route('/d', demoRoutes);
 
 app.get('/api/v1/runner/health', (c) =>
   c.json({
