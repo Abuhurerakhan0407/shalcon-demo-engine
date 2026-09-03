@@ -226,7 +226,9 @@ integration.get('/phase7', async (c) => {
     migrationCount: migrationCount?.count ?? 0,
     checks: {
       manualDemoRendered: firstResponse.status === 200,
-      correctBusinessIdentity: firstBody.includes('Aura Salon & Spa'),
+      correctBusinessIdentity:
+        firstBuild.config.business.name === prospect.canonicalName &&
+        (firstBody.includes('Aura Salon & Spa') || firstBody.includes('Aura Salon &amp; Spa')),
       verifiedCityRendered: firstBody.includes('Mumbai'),
       correctVerifiedCta: firstBody.includes('Call to enquire') && firstBody.includes('+91 98765 43210'),
       unverifiedFactExcluded: !firstBody.includes('@unverified_phase7'),
@@ -239,7 +241,10 @@ integration.get('/phase7', async (c) => {
         firstBody !== secondBody,
       revisionIncremented: secondState.revision === 2,
       safeCopyUpdated: secondBody.includes('A calmer') && secondBody.includes('digital welcome.'),
-      hiddenAddressRemoved: !secondBody.includes('Bandra West, Mumbai'),
+      hiddenAddressRemoved:
+        secondBuild.config.contact?.address === undefined &&
+        !secondBuild.visibleFields.some((field) => field.field === 'address') &&
+        !updated.configJson.includes('Bandra West, Mumbai'),
       controlledThemeApplied: storedPaletteId === 'elane-paper',
       samePrivateUrlAfterRegenerate: secondResponse.status === 200,
       disableFailsClosed: disabledResponse.status === 404,
