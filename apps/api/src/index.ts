@@ -25,7 +25,9 @@ import {
 } from './auth';
 import { demoAdminRoutes } from './demo-admin-routes';
 import { demoRoutes } from './demo-routes';
+import { CURRENT_PHASE } from './phase';
 import { prospectRoutes } from './prospect-routes';
+import { researchRunnerRoutes } from './research-runner-routes';
 import { runnerRoutes } from './runner-routes';
 
 interface JobSignalQueueLike {
@@ -130,13 +132,15 @@ app.use('/api/v1/prospects/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
 app.use('/api/v1/runner/operator/*', requireAuth);
 
-app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 8, status: 'ok' }));
+app.get('/', (c) =>
+  c.json({ service: 'shalcon-demo-engine-api', phase: CURRENT_PHASE, status: 'ok' }),
+);
 
 app.get('/api/v1/health', (c) =>
   c.json({
     ok: true,
     service: 'api',
-    phase: 8,
+    phase: CURRENT_PHASE,
     environment: c.env.APP_ENV,
     timestamp: new Date().toISOString(),
   }),
@@ -261,20 +265,21 @@ app.get('/api/v1/dashboard/summary', (c) => {
   const user = c.get('authUser');
   return c.json({
     user: { id: user.id, email: user.email, name: user.name },
-    phase: 8,
+    phase: CURRENT_PHASE,
     system: 'ready',
   });
 });
 
 app.route('/api/v1/prospects', prospectRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
+app.route('/api/v1/runner/research', researchRunnerRoutes);
 app.route('/api/v1/runner', runnerRoutes);
 app.route('/d', demoRoutes);
 
 app.get('/api/v1/runner/health', (c) =>
   c.json({
     ok: true,
-    phase: 8,
+    phase: CURRENT_PHASE,
     runnerControlPlane: 'ready',
     d1Canonical: true,
     queueRole: c.env.JOB_QUEUE ? 'signal-accelerator' : 'd1-polling',
