@@ -1,6 +1,11 @@
-import { AuthSessionRepository, UserRepository, type D1DatabaseLike, type UserRecord } from '@shalcon/db';
+import {
+  AuthIdentityRepository,
+  AuthSessionRepository,
+  UserRepository,
+  type D1DatabaseLike,
+  type UserRecord,
+} from '@shalcon/db';
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { deleteCookie, setCookie } from 'hono/cookie';
 import { logger } from 'hono/logger';
 
@@ -65,6 +70,15 @@ function readCookie(cookieHeader: string | undefined, name: string): string | un
   return undefined;
 }
 
+function identityConflictResponse() {
+  return {
+    error: {
+      code: 'OAUTH_IDENTITY_CONFLICT',
+      message: 'This email is already linked to a different Google identity.',
+    },
+  } as const;
+}
+
 async function authenticatedUser(env: Env, rawToken: string | undefined): Promise<UserRecord | null> {
   if (!rawToken || !env.DB) return null;
   const tokenHash = await hashSessionToken(rawToken);
@@ -79,15 +93,19 @@ async function authenticatedUser(env: Env, rawToken: string | undefined): Promis
 }
 
 app.use('*', logger());
-app.use(
-  '/api/*',
-  cors({
-    origin: 'http://localhost:5173',
-    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  }),
-);
+app.use('/api/*', async (c, next) => {
+  const requestOrigin = c.req.header('Origin');
+  if (requestOrigin === c.env.WEB_ORIGIN) {
+    c.header('Access-Control-Allow-Origin', requestOrigin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    c.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    c.header('Vary', 'Origin');
+  }
+
+  if (c.req.method === 'OPTIONS') return c.body(null, 204);
+  await next();
+});
 
 app.use('/api/v1/dashboard/*', async (c, next) => {
   const user = await authenticatedUser(
@@ -161,13 +179,45 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const db = requireDb(c.env);
   const now = new Date();
+  const nowIso = now.toISOString();
   const users = new UserRepository(db);
-  const user = await users.upsertByEmail({
-    id: `usr_${randomToken(12)}`,
-    email: profile.email,
-    name: profile.name,
-    createdAt: now.toISOString(),
-  });
+  const identities = new AuthIdentityRepository(db);
+  const existingIdentity = await identities.getByProviderSubject('google', profile.sub);
+
+  let user: UserRecord;
+  if (existingIdentity) {
+    const emailOwner = await users.getByEmail(profile.email);
+    if (emailOwner && emailOwner.id !== existingIdentity.userId) {
+      return c.json(identityConflictResponse(), 409);
+    }
+    user = await users.updateProfile(existingIdentity.userId, profile.email, profile.name);
+    await identities.updateEmail(existingIdentity.id, profile.email, nowIso);
+  } else {
+    const emailOwner = await users.getByEmail(profile.email);
+    if (emailOwner) {
+      return c.json(identityConflictResponse(), 409);
+    }
+
+    user = {
+      id: `usr_${randomToken(12)}`,
+      email: profile.email,
+      name: profile.name,
+      createdAt: nowIso,
+    };
+    await users.create(user);
+    const identity = await identities.createOrGet({
+      id: `aid_${randomToken(12)}`,
+      userId: user.id,
+      provider: 'google',
+      providerSubject: profile.sub,
+      emailAtLink: profile.email,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    });
+    if (identity.identity.userId !== user.id) {
+      throw new Error('Google identity resolved to an unexpected user.');
+    }
+  }
 
   const rawSessionToken = randomToken(32);
   const tokenHash = await hashSessionToken(rawSessionToken);
@@ -177,8 +227,8 @@ app.get('/api/v1/auth/google/callback', async (c) => {
     userId: user.id,
     tokenHash,
     expiresAt: expiresAt.toISOString(),
-    createdAt: now.toISOString(),
-    lastSeenAt: now.toISOString(),
+    createdAt: nowIso,
+    lastSeenAt: nowIso,
     revokedAt: null,
   });
 

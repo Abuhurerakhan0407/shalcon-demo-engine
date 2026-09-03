@@ -36,6 +36,20 @@ export class UserRepository {
     return mapUser(row);
   }
 
+  async updateProfile(id: string, email: string, name: string): Promise<UserRecord> {
+    const row = await this.db
+      .prepare(`
+        UPDATE users
+        SET email = ?, name = ?
+        WHERE id = ?
+        RETURNING id, email, name, created_at
+      `)
+      .bind(email, name, id)
+      .first<UserRow>();
+    if (!row) throw new Error(`User ${id} was not found.`);
+    return mapUser(row);
+  }
+
   async getById(id: string): Promise<UserRecord | null> {
     const row = await this.db
       .prepare('SELECT id, email, name, created_at FROM users WHERE id = ?')

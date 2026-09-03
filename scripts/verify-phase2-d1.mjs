@@ -96,9 +96,13 @@ try {
   const required = [
     result.ok === true,
     result.migrationCount >= 2,
+    checks.identityCreated === true,
+    checks.duplicateSubjectResolvedToOriginal === true,
     checks.unauthorizedBlocked === true,
     checks.authorizedAllowed === true,
     checks.authenticatedIdentity === true,
+    checks.corsAllowsConfiguredOrigin === true,
+    checks.corsRejectsOtherOrigin === true,
     checks.logoutSucceeded === true,
     checks.sessionRevoked === true,
     checks.tokenStoredHashed === true,

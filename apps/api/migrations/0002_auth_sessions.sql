@@ -1,5 +1,18 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS auth_identities (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_subject TEXT NOT NULL,
+  email_at_link TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(provider, provider_subject)
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_identities_user ON auth_identities(user_id, provider);
+
 CREATE TABLE IF NOT EXISTS auth_sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

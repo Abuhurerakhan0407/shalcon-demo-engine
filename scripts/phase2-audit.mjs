@@ -5,6 +5,7 @@ const required = [
   'apps/api/src/auth.ts',
   'apps/api/src/auth.test.ts',
   'apps/api/src/phase2.integration.ts',
+  'packages/db/src/repositories/auth-identities.ts',
   'packages/db/src/repositories/auth-sessions.ts',
   'tests/e2e/navigation.spec.ts',
   'scripts/verify-phase2-d1.mjs',
@@ -12,6 +13,12 @@ const required = [
 for (const path of required) await access(path);
 
 const migration = await readFile('apps/api/migrations/0002_auth_sessions.sql', 'utf8');
+if (!migration.includes('CREATE TABLE IF NOT EXISTS auth_identities')) {
+  throw new Error('Phase 2 auth_identities table is missing.');
+}
+if (!migration.includes('UNIQUE(provider, provider_subject)')) {
+  throw new Error('Google/provider identities must be unique by provider subject.');
+}
 if (!migration.includes('CREATE TABLE IF NOT EXISTS auth_sessions')) {
   throw new Error('Phase 2 auth_sessions table is missing.');
 }
@@ -36,10 +43,14 @@ for (const contract of [
 const api = await readFile('apps/api/src/index.ts', 'utf8');
 for (const contract of [
   "app.use('/api/v1/dashboard/*'",
+  'AuthIdentityRepository',
+  "getByProviderSubject('google', profile.sub)",
   'httpOnly: true',
   "sameSite: 'Lax'",
   "code: 'UNAUTHORIZED'",
+  "code: 'OAUTH_IDENTITY_CONFLICT'",
   "app.post('/api/v1/auth/logout'",
+  "requestOrigin === c.env.WEB_ORIGIN",
 ]) {
   if (!api.includes(contract)) throw new Error(`Missing API auth contract: ${contract}`);
 }

@@ -1,4 +1,9 @@
-import { AuthSessionRepository, UserRepository, type D1DatabaseLike } from '@shalcon/db';
+import {
+  AuthIdentityRepository,
+  AuthSessionRepository,
+  UserRepository,
+  type D1DatabaseLike,
+} from '@shalcon/db';
 import { Hono } from 'hono';
 
 import { hashSessionToken } from './auth';
@@ -18,8 +23,9 @@ const RAW_TOKEN = 'phase2-fixture-session-token';
 
 async function cleanup(db: D1DatabaseLike): Promise<void> {
   await db.batch([
-    db.prepare("DELETE FROM auth_sessions WHERE user_id = 'phase2-fixture-user'"),
-    db.prepare("DELETE FROM users WHERE id = 'phase2-fixture-user'"),
+    db.prepare("DELETE FROM auth_sessions WHERE user_id IN ('phase2-fixture-user', 'phase2-other-user')"),
+    db.prepare("DELETE FROM auth_identities WHERE user_id IN ('phase2-fixture-user', 'phase2-other-user')"),
+    db.prepare("DELETE FROM users WHERE id IN ('phase2-fixture-user', 'phase2-other-user')"),
   ]);
 }
 
@@ -28,6 +34,7 @@ integration.get('/phase2', async (c) => {
   await cleanup(db);
 
   const users = new UserRepository(db);
+  const identities = new AuthIdentityRepository(db);
   const sessions = new AuthSessionRepository(db);
   const user = {
     id: 'phase2-fixture-user',
@@ -35,7 +42,33 @@ integration.get('/phase2', async (c) => {
     name: 'Phase 2 Fixture',
     createdAt: NOW,
   };
+  const otherUser = {
+    id: 'phase2-other-user',
+    email: 'phase2-other@example.invalid',
+    name: 'Phase 2 Other',
+    createdAt: NOW,
+  };
   await users.create(user);
+  await users.create(otherUser);
+
+  const firstIdentity = await identities.createOrGet({
+    id: 'phase2-fixture-identity',
+    userId: user.id,
+    provider: 'google',
+    providerSubject: 'google-subject-fixture',
+    emailAtLink: user.email,
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
+  const duplicateIdentity = await identities.createOrGet({
+    id: 'phase2-duplicate-identity',
+    userId: otherUser.id,
+    provider: 'google',
+    providerSubject: 'google-subject-fixture',
+    emailAtLink: otherUser.email,
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
 
   const tokenHash = await hashSessionToken(RAW_TOKEN);
   await sessions.create({
@@ -69,6 +102,17 @@ integration.get('/phase2', async (c) => {
     user?: { email?: string };
   };
 
+  const allowedCors = await productionApp.request(
+    'http://local.test/api/v1/health',
+    { headers: { Origin: runtimeEnv.WEB_ORIGIN } },
+    runtimeEnv,
+  );
+  const rejectedCors = await productionApp.request(
+    'http://local.test/api/v1/health',
+    { headers: { Origin: 'https://evil.invalid' } },
+    runtimeEnv,
+  );
+
   const logout = await productionApp.request(
     'http://local.test/api/v1/auth/logout',
     { method: 'POST', headers: { Cookie: `shalcon_session=${RAW_TOKEN}` } },
@@ -88,9 +132,18 @@ integration.get('/phase2', async (c) => {
     ok: true,
     migrationCount: migrationCount?.count ?? 0,
     checks: {
+      identityCreated: firstIdentity.created === true,
+      duplicateSubjectResolvedToOriginal:
+        duplicateIdentity.created === false && duplicateIdentity.identity.userId === user.id,
       unauthorizedBlocked: unauthorized.status === 401,
       authorizedAllowed: authorized.status === 200,
       authenticatedIdentity: authorizedBody.user?.email === user.email,
+      corsAllowsConfiguredOrigin:
+        allowedCors.headers.get('Access-Control-Allow-Origin') === runtimeEnv.WEB_ORIGIN &&
+        allowedCors.headers.get('Access-Control-Allow-Credentials') === 'true',
+      corsRejectsOtherOrigin:
+        rejectedCors.headers.get('Access-Control-Allow-Origin') === null &&
+        rejectedCors.headers.get('Access-Control-Allow-Credentials') === null,
       logoutSucceeded: logout.status === 204,
       sessionRevoked: activeAfterLogout === null,
       tokenStoredHashed: tokenHash !== RAW_TOKEN,

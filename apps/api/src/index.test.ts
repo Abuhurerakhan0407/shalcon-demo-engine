@@ -13,6 +13,24 @@ describe('public API', () => {
     const body: unknown = await response.json();
     expect(body).toMatchObject({ ok: true, service: 'api', phase: 2 });
   });
+
+  it('allows credentialed CORS only for the configured web origin', async () => {
+    const allowed = await app.request(
+      '/api/v1/health',
+      { headers: { Origin: testEnv.WEB_ORIGIN } },
+      testEnv,
+    );
+    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe(testEnv.WEB_ORIGIN);
+    expect(allowed.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+
+    const rejected = await app.request(
+      '/api/v1/health',
+      { headers: { Origin: 'https://evil.invalid' } },
+      testEnv,
+    );
+    expect(rejected.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(rejected.headers.get('Access-Control-Allow-Credentials')).toBeNull();
+  });
 });
 
 describe('protected API', () => {

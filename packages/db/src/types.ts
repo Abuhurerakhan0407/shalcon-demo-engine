@@ -9,6 +9,16 @@ export interface UserRecord {
   createdAt: UtcTimestamp;
 }
 
+export interface AuthIdentityRecord {
+  id: string;
+  userId: string;
+  provider: string;
+  providerSubject: string;
+  emailAtLink: string;
+  createdAt: UtcTimestamp;
+  updatedAt: UtcTimestamp;
+}
+
 export interface AuthSessionRecord {
   id: string;
   userId: string;
