@@ -4,7 +4,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 
-from shalcon_runner.research import BrowserResearchEngine, ResearchLimits
+from shalcon_runner.research import (
+    BrowserResearchEngine,
+    ResearchLimits,
+    _WEBRTC_POLICY_ARG,
+)
 
 
 class FixtureHandler(BaseHTTPRequestHandler):
@@ -117,3 +121,7 @@ def test_websocket_guard_closes_without_connecting() -> None:
     assert context.socket.closed is True
     assert context.socket.code == 1008
     assert context.socket.reason == "Research network policy"
+
+
+def test_webrtc_cannot_use_non_proxied_udp() -> None:
+    assert _WEBRTC_POLICY_ARG == "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
