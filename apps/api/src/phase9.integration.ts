@@ -16,6 +16,10 @@ import { Hono } from 'hono';
 
 import { hashSessionToken } from './auth';
 import { app as productionApp } from './index';
+import {
+  ResearchLeaseLostError,
+  completeResearchWithSources,
+} from './research-persistence';
 
 interface Env { DB: D1DatabaseLike }
 type Bindings = { Bindings: Env };
@@ -28,6 +32,7 @@ const RUNNER_ID = 'phase9-runner';
 const JOB_ID = 'phase9-research-job';
 const BAD_JOB_ID = 'phase9-mismatch-job';
 const URL_MISMATCH_JOB_ID = 'phase9-url-mismatch-job';
+const STALE_ATOMIC_JOB_ID = 'phase9-stale-atomic-job';
 const RAW_TOKEN = 'rnr_phase9_fixture_token_1234567890';
 const NOW = '2026-09-03T14:30:00.000Z';
 const ACTIVE_LEASE = '2099-01-01T00:00:00.000Z';
@@ -284,6 +289,36 @@ integration.get('/phase9', async (c) => {
     env,
   );
 
+  await createOwnedJob(db, researchJob(STALE_ATOMIC_JOB_ID, PROSPECT_ID), {
+    url: 'https://aura-phase9.example/',
+    maxPages: 2,
+  });
+  const staleAtomicClaim = await runnerJobs.claimNextForUser(
+    USER_ID,
+    runner.id,
+    '2026-09-03T14:33:00.000Z',
+    '2026-09-03T14:32:30.000Z',
+  );
+  let staleAtomicCompletionRejected = false;
+  if (staleAtomicClaim?.job.id === STALE_ATOMIC_JOB_ID) {
+    try {
+      await completeResearchWithSources(
+        db,
+        USER_ID,
+        runner.id,
+        staleAtomicClaim.job,
+        resultFor(STALE_ATOMIC_JOB_ID, PROSPECT_ID),
+        'https://aura-phase9.example/',
+        '2026-09-03T14:34:00.000Z',
+      );
+    } catch (error) {
+      staleAtomicCompletionRejected = error instanceof ResearchLeaseLostError;
+    }
+  }
+  const sourcesAfterStaleAtomic = await sourceRepo.listForProspect(PROSPECT_ID);
+  const staleAtomicJob = await new JobRepository(db).getById(STALE_ATOMIC_JOB_ID);
+  const staleAtomicContext = await new JobContextRepository(db).getByJobId(STALE_ATOMIC_JOB_ID);
+
   const otherSourcesAfterBad = await sourceRepo.listForProspect(OTHER_PROSPECT_ID);
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
   const migrationCount = await db
@@ -317,6 +352,12 @@ integration.get('/phase9', async (c) => {
       requestedUrlMismatchRejected:
         urlMismatchClaim?.job.id === URL_MISMATCH_JOB_ID && urlMismatchCompletion.status === 422,
       malformedCompletionRejected: malformedCompletion.status === 422,
+      staleAtomicCompletionRejected,
+      staleAtomicSourcesRolledBack:
+        sourcesAfterStaleAtomic.length === sourcesAfterValid.length &&
+        !sourcesAfterStaleAtomic.some((source) => source.rawJson.includes(STALE_ATOMIC_JOB_ID)),
+      staleAtomicTerminalStateUntouched:
+        staleAtomicJob?.status === 'RUNNING' && staleAtomicContext?.resultJson === null,
       rejectedResultsPersistNothing: otherSourcesAfterBad.length === 0,
       noUnsupportedFactsGenerated:
         (await new EvidenceRepository(db).listForProspect(OTHER_PROSPECT_ID)).length === 0 &&
