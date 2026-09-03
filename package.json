@@ -11,7 +11,9 @@
     "dev": "npm run dev:web",
     "dev:web": "npm run prepare:templates && npm --workspace @shalcon/web run dev",
     "dev:api": "npm --workspace @shalcon/api run dev",
-    "dev:runner": "cd apps/local-runner && PYTHONPATH=src python3 -m shalcon_runner health",
+    "dev:runner": "cd apps/local-runner && PYTHONPATH=src python3 -m shalcon_runner run",
+    "runner:once": "cd apps/local-runner && PYTHONPATH=src python3 -m shalcon_runner once",
+    "runner:health": "cd apps/local-runner && PYTHONPATH=src python3 -m shalcon_runner health",
     "build": "npm run prepare:templates && npm run build --workspaces --if-present",
     "typecheck": "npm run prepare:templates && npm run typecheck --workspaces --if-present",
     "typecheck:foundation": "tsc -p tsconfig.foundation.json --noEmit",
@@ -45,7 +47,10 @@
     "test:phase6": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:phase2:d1 && npm run test:phase4:d1 && npm run test:phase5:d1 && npm run test:phase6:d1 && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit && npm run test:phase1:audit && npm run test:phase2:audit && npm run test:phase3:audit && npm run test:phase4:audit && npm run test:phase5:audit && npm run test:phase6:audit",
     "test:phase7:d1": "node scripts/verify-phase7-d1.mjs",
     "test:phase7:audit": "node scripts/phase7-audit.mjs",
-    "test:phase7": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:phase2:d1 && npm run test:phase4:d1 && npm run test:phase5:d1 && npm run test:phase6:d1 && npm run test:phase7:d1 && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit && npm run test:phase1:audit && npm run test:phase2:audit && npm run test:phase3:audit && npm run test:phase4:audit && npm run test:phase5:audit && npm run test:phase6:audit && npm run test:phase7:audit"
+    "test:phase7": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:phase2:d1 && npm run test:phase4:d1 && npm run test:phase5:d1 && npm run test:phase6:d1 && npm run test:phase7:d1 && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit && npm run test:phase1:audit && npm run test:phase2:audit && npm run test:phase3:audit && npm run test:phase4:audit && npm run test:phase5:audit && npm run test:phase6:audit && npm run test:phase7:audit",
+    "test:phase8:d1": "node scripts/verify-phase8-d1.mjs",
+    "test:phase8:audit": "node scripts/phase8-audit.mjs",
+    "test:phase8": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:phase2:d1 && npm run test:phase4:d1 && npm run test:phase5:d1 && npm run test:phase6:d1 && npm run test:phase7:d1 && npm run test:phase8:d1 && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit && npm run test:phase1:audit && npm run test:phase2:audit && npm run test:phase3:audit && npm run test:phase4:audit && npm run test:phase5:audit && npm run test:phase6:audit && npm run test:phase7:audit && npm run test:phase8:audit"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
