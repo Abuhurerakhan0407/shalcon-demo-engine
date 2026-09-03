@@ -27,6 +27,7 @@ def _validated_base_url(raw_base_url: str) -> str:
     candidate = raw_base_url.strip()
     try:
         parsed = urlsplit(candidate)
+        parsed.port
     except ValueError as exc:
         raise ValueError("Runner API base URL is malformed.") from exc
 
