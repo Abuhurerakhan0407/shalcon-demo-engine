@@ -1,4 +1,9 @@
-import type { VerificationStatus } from '@shalcon/evidence';
+import type {
+  IdentityKey,
+  IdentityKeyType,
+  IdentityResolutionStatus,
+  VerificationStatus,
+} from '@shalcon/evidence';
 import type { ProspectState } from '@shalcon/state-machine';
 
 export type UtcTimestamp = string;
@@ -92,6 +97,51 @@ export interface ProspectFactRecord {
   evidenceId: string | null;
   createdAt: UtcTimestamp;
   updatedAt: UtcTimestamp;
+}
+
+export interface ProspectIdentityKeyRecord {
+  id: string;
+  userId: string;
+  prospectId: string;
+  keyType: IdentityKeyType;
+  keyValue: string;
+  keyStrength: 'STRONG' | 'WEAK';
+  sourceType: string;
+  createdAt: UtcTimestamp;
+}
+
+export interface ProspectObservationRecord {
+  id: string;
+  userId: string;
+  campaignId: string;
+  canonicalProspectId: string | null;
+  pendingProspectId: string | null;
+  observedName: string;
+  normalizedName: string;
+  domain: string | null;
+  phoneNormalized: string | null;
+  city: string | null;
+  addressNormalized: string | null;
+  sourceType: string;
+  resolutionStatus: IdentityResolutionStatus;
+  confidence: number;
+  candidateProspectIds: string[];
+  matchedKeys: IdentityKey[];
+  reasonCodes: string[];
+  createdAt: UtcTimestamp;
+}
+
+export interface IdentityResolutionRecord {
+  id: string;
+  prospectId: string;
+  status: string;
+  confidence: number;
+  conflictsJson: string;
+  evidenceIdsJson: string;
+  candidateProspectIdsJson: string;
+  matchedKeysJson: string;
+  reasonCodesJson: string;
+  createdAt: UtcTimestamp;
 }
 
 export const JOB_STATUSES = [
