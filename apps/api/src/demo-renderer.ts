@@ -51,10 +51,10 @@ export function renderDemoRecord(demo: DemoRecord, nowIso: string): DemoRenderRe
   const config = parseConfig(demo.configJson);
   if (!config) return { ok: false, reason: 'INVALID_CONFIG' };
   const typedConfig = config as SalonTemplateConfig;
-  const validation = validateSalonTemplateConfig(typedConfig);
-  if (!validation.ok) return { ok: false, reason: 'INVALID_CONFIG' };
 
   try {
+    const validation = validateSalonTemplateConfig(typedConfig);
+    if (!validation.ok) return { ok: false, reason: 'INVALID_CONFIG' };
     return {
       ok: true,
       html: renderElaneDocument(ELANE_V8_DOCUMENT_SOURCE, typedConfig),
