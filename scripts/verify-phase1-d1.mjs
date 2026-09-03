@@ -46,6 +46,50 @@ async function waitForIntegration(url, timeoutMs = 60_000) {
   throw lastError instanceof Error ? lastError : new Error('Timed out waiting for D1 integration worker.');
 }
 
+async function terminateProcessTree(child) {
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+
+  const exited = new Promise((resolve) => child.once('exit', () => resolve(true)));
+
+  if (process.platform === 'win32') {
+    const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      shell: false,
+    });
+    await new Promise((resolve) => killer.once('exit', resolve));
+  } else {
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      child.kill('SIGTERM');
+    }
+  }
+
+  const graceful = await Promise.race([exited, sleep(3_000).then(() => false)]);
+  if (!graceful && child.exitCode === null && child.signalCode === null) {
+    if (process.platform === 'win32') {
+      const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+        shell: false,
+      });
+      await new Promise((resolve) => killer.once('exit', resolve));
+    } else {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+    }
+    await Promise.race([
+      new Promise((resolve) => child.once('exit', () => resolve(true))),
+      sleep(1_000),
+    ]);
+  }
+
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+}
+
 await rm(persistDir, { recursive: true, force: true });
 
 const migrationArgs = ['--workspace', '@shalcon/api', 'run', 'db:migrate:local'];
@@ -57,6 +101,7 @@ const worker = spawn('npm', ['--workspace', '@shalcon/api', 'run', 'test:d1:work
   env: process.env,
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: false,
+  detached: process.platform !== 'win32',
 });
 
 let logs = '';
@@ -88,7 +133,5 @@ try {
   console.error(logs);
   throw error;
 } finally {
-  worker.kill('SIGTERM');
-  await sleep(500);
-  if (!worker.killed) worker.kill('SIGKILL');
+  await terminateProcessTree(worker);
 }
