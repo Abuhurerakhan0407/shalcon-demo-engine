@@ -60,6 +60,14 @@ function stateJson(build: ReturnType<typeof buildManualSalonDemoConfig>) {
   });
 }
 
+function readStoredPaletteId(configJson: string): string | null {
+  const parsed: unknown = JSON.parse(configJson);
+  if (typeof parsed !== 'object' || parsed === null || !('theme' in parsed)) return null;
+  const theme = parsed.theme;
+  if (typeof theme !== 'object' || theme === null || !('paletteId' in theme)) return null;
+  return typeof theme.paletteId === 'string' ? theme.paletteId : null;
+}
+
 integration.get('/phase7', async (c) => {
   const db = c.env.DB;
   await db.prepare("DELETE FROM users WHERE id IN ('phase7-user', 'phase7-other-user')").run();
@@ -206,6 +214,7 @@ integration.get('/phase7', async (c) => {
     .prepare('SELECT token_hash, template_id, template_version, config_json FROM demos WHERE id = ?')
     .bind(DEMO_ID)
     .first<{ token_hash: string; template_id: string; template_version: string; config_json: string }>();
+  const storedPaletteId = readStoredPaletteId(stored?.config_json ?? '{}');
   const migrationCount = await db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').first<{ count: number }>();
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
 
@@ -231,7 +240,7 @@ integration.get('/phase7', async (c) => {
       revisionIncremented: secondState.revision === 2,
       safeCopyUpdated: secondBody.includes('A calmer') && secondBody.includes('digital welcome.'),
       hiddenAddressRemoved: !secondBody.includes('Bandra West, Mumbai'),
-      controlledThemeApplied: JSON.parse(stored?.config_json ?? '{}').theme?.paletteId === 'elane-paper',
+      controlledThemeApplied: storedPaletteId === 'elane-paper',
       samePrivateUrlAfterRegenerate: secondResponse.status === 200,
       disableFailsClosed: disabledResponse.status === 404,
       exactTemplateVersion: stored?.template_id === 'elane-v8' && stored.template_version === '8.0.0',
