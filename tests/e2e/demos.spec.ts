@@ -127,7 +127,7 @@ test('manual demo workspace builds, previews, regenerates, hides fields, and dis
   await expect(page.getByText('ev_city')).toBeVisible();
 
   await page.getByRole('button', { name: 'Generate private demo' }).click();
-  await expect(page.getByText('Revision 1')).toBeVisible();
+  await expect(page.getByText('Revision 1', { exact: true })).toBeVisible();
   await expect(page.locator('.live-demo-frame iframe')).toBeVisible();
   await expect(page.getByText('CALL', { exact: true })).toBeVisible();
 
@@ -138,11 +138,11 @@ test('manual demo workspace builds, previews, regenerates, hides fields, and dis
 
   await page.getByLabel('Hero line').fill('A calmer');
   await page.getByRole('button', { name: 'Regenerate configuration' }).click();
-  await expect(page.getByText('Revision 2')).toBeVisible();
+  await expect(page.getByText('Revision 2', { exact: true })).toBeVisible();
 
   await page.getByText('address', { exact: true }).last().click();
   await page.getByRole('button', { name: 'Regenerate configuration' }).click();
-  await expect(page.getByText('Revision 3')).toBeVisible();
+  await expect(page.getByText('Revision 3', { exact: true })).toBeVisible();
   await expect(page.locator('.visible-data-list').getByText('Bandra West, Mumbai')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Disable preview' }).click();
