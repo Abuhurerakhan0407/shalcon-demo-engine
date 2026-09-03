@@ -36,7 +36,7 @@ for (const contract of ['PLAYWRIGHT_RESEARCH','complete_research','_LeaseKeeper'
 }
 
 const persistence = await readFile('apps/api/src/research-persistence.ts', 'utf8');
-for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl']) {
+for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl', 'canonicalResearchUrl', 'sourceUrl']) {
   if (!persistence.includes(contract)) throw new Error(`Missing research persistence contract: ${contract}`);
 }
 if (persistence.includes('EvidenceRepository') || persistence.includes('ProspectFactRepository')) throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
