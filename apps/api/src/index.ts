@@ -120,13 +120,13 @@ app.use('/api/v1/dashboard/*', requireAuth);
 app.use('/api/v1/prospects', requireAuth);
 app.use('/api/v1/prospects/*', requireAuth);
 
-app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 4, status: 'ok' }));
+app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 5, status: 'ok' }));
 
 app.get('/api/v1/health', (c) =>
   c.json({
     ok: true,
     service: 'api',
-    phase: 4,
+    phase: 5,
     environment: c.env.APP_ENV,
     timestamp: new Date().toISOString(),
   }),
@@ -178,13 +178,20 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   let user: UserRecord;
   if (existingIdentity) {
     const emailOwner = await users.getByEmail(profile.email);
-    if (emailOwner && emailOwner.id !== existingIdentity.userId) return c.json(identityConflictResponse(), 409);
+    if (emailOwner && emailOwner.id !== existingIdentity.userId) {
+      return c.json(identityConflictResponse(), 409);
+    }
     user = await users.updateProfile(existingIdentity.userId, profile.email, profile.name);
     await identities.updateEmail(existingIdentity.id, profile.email, nowIso);
   } else {
     const emailOwner = await users.getByEmail(profile.email);
     if (emailOwner) return c.json(identityConflictResponse(), 409);
-    user = { id: `usr_${randomToken(12)}`, email: profile.email, name: profile.name, createdAt: nowIso };
+    user = {
+      id: `usr_${randomToken(12)}`,
+      email: profile.email,
+      name: profile.name,
+      createdAt: nowIso,
+    };
     await users.create(user);
     const identity = await identities.createOrGet({
       id: `aid_${randomToken(12)}`,
@@ -195,7 +202,9 @@ app.get('/api/v1/auth/google/callback', async (c) => {
       createdAt: nowIso,
       updatedAt: nowIso,
     });
-    if (identity.identity.userId !== user.id) throw new Error('Google identity resolved to an unexpected user.');
+    if (identity.identity.userId !== user.id) {
+      throw new Error('Google identity resolved to an unexpected user.');
+    }
   }
 
   const rawSessionToken = randomToken(32);
@@ -222,7 +231,9 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
 app.get('/api/v1/auth/session', async (c) => {
   const user = await authenticatedUser(c.env, readCookie(c.req.header('Cookie'), SESSION_COOKIE));
-  if (!user) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
+  if (!user) {
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
+  }
   return c.json({ user: { id: user.id, email: user.email, name: user.name } });
 });
 
@@ -238,13 +249,21 @@ app.post('/api/v1/auth/logout', async (c) => {
 
 app.get('/api/v1/dashboard/summary', (c) => {
   const user = c.get('authUser');
-  return c.json({ user: { id: user.id, email: user.email, name: user.name }, phase: 4, system: 'ready' });
+  return c.json({
+    user: { id: user.id, email: user.email, name: user.name },
+    phase: 5,
+    system: 'ready',
+  });
 });
 
 app.route('/api/v1/prospects', prospectRoutes);
 
 app.get('/api/v1/runner/health', (c) =>
-  c.json({ ok: true, runner: 'not-connected', message: 'Local runner connection begins in Phase 8.' }),
+  c.json({
+    ok: true,
+    runner: 'not-connected',
+    message: 'Local runner connection begins in Phase 8.',
+  }),
 );
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } }, 404));
