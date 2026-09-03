@@ -99,10 +99,12 @@ for (const contract of [
 }
 
 const api = await readFile('apps/api/src/index.ts', 'utf8');
-if (!api.includes("phase: 5")) throw new Error('API does not report Phase 5.');
-const app = await readFile('apps/web/src/App.tsx', 'utf8');
-if (!app.includes('<strong>05</strong><small>Identity resolution</small>')) {
-  throw new Error('Dashboard does not report Phase 5 identity resolution.');
+for (const contract of [
+  "app.use('/api/v1/prospects', requireAuth)",
+  "app.use('/api/v1/prospects/*', requireAuth)",
+  "app.route('/api/v1/prospects', prospectRoutes)",
+]) {
+  if (!api.includes(contract)) throw new Error(`Phase 5 identity surface is no longer protected/mounted: ${contract}`);
 }
 
 console.log('Phase 5 audit passed.');
