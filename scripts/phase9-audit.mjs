@@ -35,6 +35,9 @@ for (const contract of [
   'requestfailed',
   'discoveredLinks',
   'sourceOnly',
+  '_SAFE_NON_NETWORK_SCHEMES',
+  'route.abort("blockedbyclient")',
+  'final_url = self.validator(candidate)',
 ]) {
   if (!research.includes(contract)) throw new Error(`Missing Phase 9 browser contract: ${contract}`);
 }
@@ -51,8 +54,22 @@ if (persistence.includes('EvidenceRepository') || persistence.includes('Prospect
   throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
 }
 
+const sourceRepository = await readFile('packages/db/src/repositories/evidence.ts', 'utf8');
+for (const contract of ['createOrGet', 'sourceRecordsEqual', 'immutable-content mismatch']) {
+  if (!sourceRepository.includes(contract)) throw new Error(`Missing immutable source-record contract: ${contract}`);
+}
+
 const resultSchema = await readFile('apps/api/src/research-result.ts', 'utf8');
-for (const contract of ['playwright-research.v1', 'sourceOnly', 'pageCount', 'navigationError', 'requestFailures', 'httpErrors']) {
+for (const contract of [
+  'playwright-research.v1',
+  'sourceOnly',
+  'pageCount',
+  'navigationError',
+  'requestFailures',
+  'httpErrors',
+  '.min(1).max(6)',
+  'unique finalUrl values',
+]) {
   if (!resultSchema.includes(contract)) throw new Error(`Missing research-result validation contract: ${contract}`);
 }
 
