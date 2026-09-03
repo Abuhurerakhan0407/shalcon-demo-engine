@@ -30,6 +30,7 @@ const BAD_JOB_ID = 'phase9-mismatch-job';
 const URL_MISMATCH_JOB_ID = 'phase9-url-mismatch-job';
 const RAW_TOKEN = 'rnr_phase9_fixture_token_1234567890';
 const NOW = '2026-09-03T14:30:00.000Z';
+const ACTIVE_LEASE = '2099-01-01T00:00:00.000Z';
 
 function researchJob(id: string, prospectId: string): JobRecord {
   return {
@@ -173,7 +174,7 @@ integration.get('/phase9', async (c) => {
   const claim = await runnerJobs.claimNextForUser(
     USER_ID,
     runner.id,
-    '2026-09-03T14:35:00.000Z',
+    ACTIVE_LEASE,
     NOW,
   );
 
@@ -232,7 +233,7 @@ integration.get('/phase9', async (c) => {
   const badClaim = await runnerJobs.claimNextForUser(
     USER_ID,
     runner.id,
-    '2026-09-03T14:36:00.000Z',
+    ACTIVE_LEASE,
     '2026-09-03T14:31:00.000Z',
   );
   const badCompletion = await productionApp.request(
@@ -255,7 +256,7 @@ integration.get('/phase9', async (c) => {
   const urlMismatchClaim = await runnerJobs.claimNextForUser(
     USER_ID,
     runner.id,
-    '2026-09-03T14:37:00.000Z',
+    ACTIVE_LEASE,
     '2026-09-03T14:32:00.000Z',
   );
   const urlMismatchCompletion = await productionApp.request(
