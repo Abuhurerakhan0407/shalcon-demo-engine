@@ -215,6 +215,31 @@ export interface JobRecord {
   updatedAt: UtcTimestamp;
 }
 
+export type LocalRunnerStatus = 'ACTIVE' | 'REVOKED';
+
+export interface LocalRunnerRecord {
+  id: string;
+  userId: string;
+  name: string;
+  tokenHash: string;
+  version: string | null;
+  capabilitiesJson: string;
+  status: LocalRunnerStatus;
+  lastHeartbeatAt: UtcTimestamp | null;
+  createdAt: UtcTimestamp;
+  updatedAt: UtcTimestamp;
+  revokedAt: UtcTimestamp | null;
+}
+
+export interface JobContextRecord {
+  jobId: string;
+  userId: string;
+  payloadJson: string;
+  resultJson: string | null;
+  createdAt: UtcTimestamp;
+  updatedAt: UtcTimestamp;
+}
+
 export interface ProspectStateEventRecord {
   id: number;
   prospectId: string;
