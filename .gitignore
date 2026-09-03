@@ -14,3 +14,5 @@ __pycache__/
 .dev.vars
 .DS_Store
 artifacts/
+packages/templates/generated/
+packages/template-runtime/src/index.ts
