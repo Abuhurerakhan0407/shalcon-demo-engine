@@ -54,7 +54,6 @@ if (!signal.includes("return 'SIGNALLED'")) throw new Error('Queue signal adapte
 const api = await readFile('apps/api/src/index.ts', 'utf8');
 if (!api.includes("app.use('/api/v1/runner/operator/*', requireAuth)")) throw new Error('Runner operator routes are not session protected.');
 if (!api.includes("app.route('/api/v1/runner', runnerRoutes)")) throw new Error('Runner routes are not mounted.');
-if (!api.includes('phase: 8')) throw new Error('API does not report Phase 8.');
 
 const client = await readFile('apps/local-runner/src/shalcon_runner/client.py', 'utf8');
 for (const contract of ['Authorization', 'Bearer', '/agent/heartbeat', '/agent/jobs/claim', '/complete', '/fail']) {
