@@ -37,7 +37,7 @@ adapted = replaceExactlyOnce(
 adapted = replaceExactlyOnce(
   adapted,
   '<meta name="description" content="Fictional premium salon and spa concept with a mobile-first cinematic scroll experience.">',
-  '<meta name="description" content="Fictional premium salon and spa concept with a mobile-first cinematic scroll experience.">\n<meta name="robots" content="noindex,nofollow,noarchive">\n<meta name="shalcon-template" content="elane-v8@8.0.0">',
+  '<meta name="description" content="Fictional premium salon and spa concept with a mobile-first cinematic scroll experience.">\n<meta name="robots" content="noindex,nofollow,noarchive">\n<meta name="shalcon-template" content="elane-v8@8.0.0">\n<style id="shalcon-runtime-safety">[hidden]{display:none!important}</style>',
   'head metadata hook',
 );
 adapted = replaceExactlyOnce(
