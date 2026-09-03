@@ -131,6 +131,15 @@ export interface ProspectObservationRecord {
   createdAt: UtcTimestamp;
 }
 
+export interface ProspectAliasRecord {
+  duplicateProspectId: string;
+  canonicalProspectId: string;
+  userId: string;
+  reasonCode: string;
+  confidence: number;
+  createdAt: UtcTimestamp;
+}
+
 export interface IdentityResolutionRecord {
   id: string;
   prospectId: string;
