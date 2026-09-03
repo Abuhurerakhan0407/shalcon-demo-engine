@@ -283,11 +283,13 @@ runnerRoutes.post('/agent/jobs/claim', async (c) => {
     runner.capabilitiesJson,
     now.toISOString(),
   );
+  const capabilities = parseCapabilities(runner.capabilitiesJson);
   const claim = await new RunnerJobRepository(db).claimNextForUser(
     runner.userId,
     runner.id,
     leaseExpiry(now),
     now.toISOString(),
+    capabilities,
   );
   if (!claim) return c.json({ job: null, leaseSeconds: DEFAULT_LEASE_SECONDS });
   return c.json({
