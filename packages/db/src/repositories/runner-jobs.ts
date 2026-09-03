@@ -156,9 +156,10 @@ export class RunnerJobRepository {
         UPDATE jobs
         SET lease_expires_at = ?, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+          AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
         RETURNING *
       `)
-      .bind(leaseExpiresAt, now, jobId, owner)
+      .bind(leaseExpiresAt, now, jobId, owner, now)
       .first<JobRow>();
     if (!row) throw new Error(`Job ${jobId} cannot renew lease for ${owner}.`);
     return mapJob(row);
@@ -180,21 +181,23 @@ export class RunnerJobRepository {
             AND EXISTS (
               SELECT 1 FROM jobs
               WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+                AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
             )
         `)
-        .bind(resultJson, now, jobId, userId, jobId, owner),
+        .bind(resultJson, now, jobId, userId, jobId, owner, now),
       this.db
         .prepare(`
           UPDATE jobs
           SET status = 'COMPLETED', completed_at = ?, lease_owner = NULL,
             lease_expires_at = NULL, updated_at = ?
           WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+            AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
             AND EXISTS (
               SELECT 1 FROM job_contexts
               WHERE job_id = ? AND user_id = ?
             )
         `)
-        .bind(now, now, jobId, owner, jobId, userId),
+        .bind(now, now, jobId, owner, now, jobId, userId),
     ]);
 
     if (writes.length !== 2 || writes.some((write) => write.meta?.changes !== 1)) {
