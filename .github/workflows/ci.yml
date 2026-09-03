@@ -19,6 +19,7 @@ jobs:
       - run: npm run test:phase1:d1
       - run: npm run test:phase2:d1
       - run: npm run test:phase4:d1
+      - run: npm run test:phase5:d1
       - run: npm run build
       - name: Smoke Worker dev server
         shell: bash
@@ -52,6 +53,7 @@ jobs:
       - run: npm run test:phase2:audit
       - run: npm run test:phase3:audit
       - run: npm run test:phase4:audit
+      - run: npm run test:phase5:audit
 
   playwright:
     runs-on: ubuntu-latest
