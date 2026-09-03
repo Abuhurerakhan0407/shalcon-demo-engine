@@ -3,6 +3,7 @@ import type { IdentityCandidateMatch, IdentityKey } from '@shalcon/evidence';
 import type { D1DatabaseLike } from '../d1';
 import type {
   IdentityResolutionRecord,
+  ProspectAliasRecord,
   ProspectIdentityKeyRecord,
   ProspectObservationRecord,
 } from '../types';
@@ -44,6 +45,15 @@ interface ResolutionRow {
   candidate_prospect_ids_json: string;
   matched_keys_json: string;
   reason_codes_json: string;
+  created_at: string;
+}
+
+interface AliasRow {
+  duplicate_prospect_id: string;
+  canonical_prospect_id: string;
+  user_id: string;
+  reason_code: string;
+  confidence: number;
   created_at: string;
 }
 
@@ -105,6 +115,17 @@ function mapResolution(row: ResolutionRow): IdentityResolutionRecord {
     candidateProspectIdsJson: row.candidate_prospect_ids_json,
     matchedKeysJson: row.matched_keys_json,
     reasonCodesJson: row.reason_codes_json,
+    createdAt: row.created_at,
+  };
+}
+
+function mapAlias(row: AliasRow): ProspectAliasRecord {
+  return {
+    duplicateProspectId: row.duplicate_prospect_id,
+    canonicalProspectId: row.canonical_prospect_id,
+    userId: row.user_id,
+    reasonCode: row.reason_code,
+    confidence: row.confidence,
     createdAt: row.created_at,
   };
 }
@@ -275,5 +296,52 @@ export class IdentityRepository {
       .bind(prospectId)
       .first<ResolutionRow>();
     return row ? mapResolution(row) : null;
+  }
+
+  async createAlias(record: ProspectAliasRecord): Promise<ProspectAliasRecord> {
+    const row = await this.db
+      .prepare(`
+        INSERT INTO prospect_aliases(
+          duplicate_prospect_id, canonical_prospect_id, user_id, reason_code, confidence, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        RETURNING *
+      `)
+      .bind(
+        record.duplicateProspectId,
+        record.canonicalProspectId,
+        record.userId,
+        record.reasonCode,
+        record.confidence,
+        record.createdAt,
+      )
+      .first<AliasRow>();
+    if (!row) throw new Error('Prospect alias insert did not return a row.');
+    return mapAlias(row);
+  }
+
+  async getAlias(duplicateProspectId: string): Promise<ProspectAliasRecord | null> {
+    const row = await this.db
+      .prepare(`
+        SELECT duplicate_prospect_id, canonical_prospect_id, user_id, reason_code, confidence, created_at
+        FROM prospect_aliases
+        WHERE duplicate_prospect_id = ?
+        LIMIT 1
+      `)
+      .bind(duplicateProspectId)
+      .first<AliasRow>();
+    return row ? mapAlias(row) : null;
+  }
+
+  async listAliasesForCanonical(canonicalProspectId: string): Promise<ProspectAliasRecord[]> {
+    const result = await this.db
+      .prepare(`
+        SELECT duplicate_prospect_id, canonical_prospect_id, user_id, reason_code, confidence, created_at
+        FROM prospect_aliases
+        WHERE canonical_prospect_id = ?
+        ORDER BY created_at DESC, duplicate_prospect_id ASC
+      `)
+      .bind(canonicalProspectId)
+      .all<AliasRow>();
+    return result.results.map(mapAlias);
   }
 }
