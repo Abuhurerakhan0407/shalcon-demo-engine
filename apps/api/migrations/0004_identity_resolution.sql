@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS prospect_observations (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-  canonical_prospect_id TEXT REFERENCES prospects(id) ON DELETE CASCADE,
-  pending_prospect_id TEXT REFERENCES prospects(id) ON DELETE CASCADE,
+  canonical_prospect_id TEXT REFERENCES prospects(id) ON DELETE RESTRICT,
+  pending_prospect_id TEXT REFERENCES prospects(id) ON DELETE RESTRICT,
   observed_name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
   domain TEXT,
@@ -105,4 +105,37 @@ WHEN NEW.pending_prospect_id IS NOT NULL AND NOT EXISTS (
 )
 BEGIN
   SELECT RAISE(ABORT, 'OBSERVATION_PENDING_USER_MISMATCH');
+END;
+
+CREATE TABLE IF NOT EXISTS prospect_aliases (
+  duplicate_prospect_id TEXT PRIMARY KEY REFERENCES prospects(id) ON DELETE RESTRICT,
+  canonical_prospect_id TEXT NOT NULL REFERENCES prospects(id) ON DELETE RESTRICT,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason_code TEXT NOT NULL,
+  confidence REAL NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+  created_at TEXT NOT NULL,
+  CHECK (duplicate_prospect_id <> canonical_prospect_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_aliases_canonical
+  ON prospect_aliases(canonical_prospect_id, created_at DESC);
+
+CREATE TRIGGER IF NOT EXISTS trg_alias_user_ownership_insert
+BEFORE INSERT ON prospect_aliases
+FOR EACH ROW
+WHEN
+  NOT EXISTS (
+    SELECT 1
+    FROM prospects prospect
+    JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+    WHERE prospect.id = NEW.duplicate_prospect_id AND campaign.user_id = NEW.user_id
+  )
+  OR NOT EXISTS (
+    SELECT 1
+    FROM prospects prospect
+    JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+    WHERE prospect.id = NEW.canonical_prospect_id AND campaign.user_id = NEW.user_id
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'ALIAS_USER_MISMATCH');
 END;
