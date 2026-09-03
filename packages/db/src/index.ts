@@ -17,6 +17,12 @@ export {
 export { IdentityRepository } from './repositories/identity';
 export { JobRepository, isLeaseExpired, nextFailureStatus } from './repositories/jobs';
 export { ProspectRepository } from './repositories/prospects';
+export {
+  RunnerJobRepository,
+  type RunnerJobClaim,
+  type RunnerJobCounts,
+} from './repositories/runner-jobs';
+export { JobContextRepository, LocalRunnerRepository } from './repositories/runners';
 export { UserRepository } from './repositories/users';
 export {
   DEMO_STATUSES,
@@ -29,8 +35,11 @@ export {
   type DemoStatus,
   type EvidenceRecord,
   type IdentityResolutionRecord,
+  type JobContextRecord,
   type JobRecord,
   type JobStatus,
+  type LocalRunnerRecord,
+  type LocalRunnerStatus,
   type ProspectAliasRecord,
   type ProspectFactRecord,
   type ProspectIdentityKeyRecord,
