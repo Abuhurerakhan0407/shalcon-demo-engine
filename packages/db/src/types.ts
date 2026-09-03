@@ -153,6 +153,37 @@ export interface IdentityResolutionRecord {
   createdAt: UtcTimestamp;
 }
 
+export const DEMO_STATUSES = [
+  'DRAFT',
+  'RENDERED',
+  'QA_FAILED',
+  'READY',
+  'SENT',
+  'EXPIRED',
+  'DISABLED',
+  'CONVERTED',
+] as const;
+
+export type DemoStatus = (typeof DEMO_STATUSES)[number];
+
+export interface DemoRecord {
+  id: string;
+  prospectId: string;
+  tokenHash: string;
+  templateId: string;
+  templateVersion: string;
+  schemaVersion: string;
+  configJson: string;
+  status: DemoStatus;
+  expiresAt: UtcTimestamp | null;
+  createdAt: UtcTimestamp;
+  updatedAt: UtcTimestamp;
+  lastQaAt: UtcTimestamp | null;
+  factQaStatus: string;
+  visualQaStatus: string;
+  salesQaStatus: string;
+}
+
 export const JOB_STATUSES = [
   'PENDING',
   'RUNNING',
