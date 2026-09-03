@@ -165,7 +165,7 @@ export function researchPageRawJson(
   result: PlaywrightResearchResult,
   page: ResearchPageResult,
 ): string {
-  return JSON.stringify({
+  const json = JSON.stringify({
     schemaVersion: result.schemaVersion,
     jobId: result.jobId,
     prospectId: result.prospectId,
@@ -174,4 +174,6 @@ export function researchPageRawJson(
     sourceOnly: true,
     page,
   });
+  if (json === undefined) throw new Error('Research page source could not be serialized.');
+  return json;
 }
