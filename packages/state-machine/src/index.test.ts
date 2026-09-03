@@ -15,8 +15,11 @@ describe('prospect state machine', () => {
     }
   });
 
-  it('allows the master happy path and scored branches', () => {
+  it('allows the master happy path, scored branches, and identity duplicate terminalization', () => {
     expect(canTransitionProspect('DISCOVERED', 'NORMALIZED')).toBe(true);
+    expect(canTransitionProspect('NORMALIZED', 'IDENTITY_PENDING')).toBe(true);
+    expect(canTransitionProspect('IDENTITY_PENDING', 'IDENTITY_VERIFIED')).toBe(true);
+    expect(canTransitionProspect('IDENTITY_PENDING', 'DUPLICATE')).toBe(true);
     expect(canTransitionProspect('SCORED', 'DEMO_QUALIFIED')).toBe(true);
     expect(canTransitionProspect('SCORED', 'RESEARCH_MORE')).toBe(true);
     expect(canTransitionProspect('SCORED', 'REJECTED')).toBe(true);
@@ -28,13 +31,23 @@ describe('prospect state machine', () => {
     expect(() => assertProspectTransition('DISCOVERED', 'SENT')).toThrow(
       IllegalProspectTransitionError,
     );
+    expect(() => assertProspectTransition('DUPLICATE', 'RESEARCH_PENDING')).toThrow(
+      'Illegal prospect transition: DUPLICATE -> RESEARCH_PENDING',
+    );
     expect(() => assertProspectTransition('WON', 'RESEARCH_PENDING')).toThrow(
       'Illegal prospect transition: WON -> RESEARCH_PENDING',
     );
   });
 
-  it('keeps safety and outcome states terminal', () => {
-    for (const state of ['REJECTED', 'SUPPRESSED', 'UNSUBSCRIBED', 'WON', 'LOST'] as const) {
+  it('keeps safety, duplicate, and outcome states terminal', () => {
+    for (const state of [
+      'REJECTED',
+      'DUPLICATE',
+      'SUPPRESSED',
+      'UNSUBSCRIBED',
+      'WON',
+      'LOST',
+    ] as const) {
       expect(isTerminalProspectState(state)).toBe(true);
       expect(allowedProspectTransitions(state)).toEqual([]);
     }
