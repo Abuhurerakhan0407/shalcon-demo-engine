@@ -139,6 +139,51 @@ integration.get('/phase8', async (c) => {
       )
     : null;
 
+  const staleCompletionJob = await createOwnedJob(
+    db,
+    job('phase8-stale-completion-job', 'salon-stale-completion'),
+    USER_ID,
+    { scenario: 'stale-runner-completion' },
+  );
+  const staleFirstClaim = await jobs.claimNextForUser(
+    USER_ID,
+    runnerOne.id,
+    '2026-09-03T12:01:00.000Z',
+    NOW,
+  );
+  const staleRecovered = await jobs.reconcileExpiredLeases(USER_ID, AFTER_CRASH);
+  const staleReclaim = await jobs.claimNextForUser(
+    USER_ID,
+    runnerTwo.id,
+    '2026-09-03T12:04:00.000Z',
+    AFTER_CRASH,
+  );
+
+  let staleOwnerCompletionRejected = false;
+  try {
+    await jobs.completeWithResult(
+      staleCompletionJob.id,
+      USER_ID,
+      runnerOne.id,
+      JSON.stringify({ staleRunnerMustNotWrite: true }),
+      AFTER_CRASH,
+    );
+  } catch {
+    staleOwnerCompletionRejected = true;
+  }
+  const staleContextAfterRejected = await new JobContextRepository(db).getByJobId(staleCompletionJob.id);
+  const staleJobAfterRejected = await new JobRepository(db).getById(staleCompletionJob.id);
+  const canonicalReclaimedCompletion = staleReclaim
+    ? await jobs.completeWithResult(
+        staleCompletionJob.id,
+        USER_ID,
+        runnerTwo.id,
+        JSON.stringify({ canonicalRunnerWrite: true }),
+        AFTER_CRASH,
+      )
+    : null;
+  const canonicalReclaimedContext = await new JobContextRepository(db).getByJobId(staleCompletionJob.id);
+
   const offline = await createOwnedJob(
     db,
     job('phase8-offline-job', 'salon-offline'),
@@ -215,6 +260,19 @@ integration.get('/phase8', async (c) => {
       retryStayedRetryable: failedTwice?.status === 'FAILED' && failedTwice.attempts === 2,
       permanentFailureDeadLettered: deadLetter?.status === 'DEAD_LETTER' && deadLetter.attempts === 3,
       deadLetterVisible: deadLetters.some((item) => item.id === 'phase8-crash-job'),
+      staleCompletionLeaseRecovered:
+        staleFirstClaim?.job.id === staleCompletionJob.id &&
+        staleRecovered.some((item) => item.id === staleCompletionJob.id),
+      staleCompletionReclaimed:
+        staleReclaim?.job.id === staleCompletionJob.id && staleReclaim.job.leaseOwner === runnerTwo.id,
+      staleOwnerCompletionRejected,
+      staleOwnerResultNotPersisted:
+        staleContextAfterRejected?.resultJson === null &&
+        staleJobAfterRejected?.status === 'RUNNING' &&
+        staleJobAfterRejected.leaseOwner === runnerTwo.id,
+      canonicalReclaimedCompletionAtomic:
+        canonicalReclaimedCompletion?.job.status === 'COMPLETED' &&
+        canonicalReclaimedContext?.resultJson?.includes('canonicalRunnerWrite') === true,
       offlineJobStayedCanonical: noQueueSignal === 'D1_ONLY' && storedOffline?.status === 'COMPLETED',
       missingSignalDiscoverable: dueAfterMissingSignal.some((item) => item.id === offline.id),
       queueSignalRecreated: recreatedSignal === 'SIGNALLED' && recreatedSignals.some((item) => item.jobId === offline.id),
