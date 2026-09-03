@@ -47,7 +47,10 @@ for (const contract of [
 const api = await readFile('apps/api/src/index.ts', 'utf8');
 if (!api.includes("app.use('/api/v1/demo-admin/*', requireAuth)")) throw new Error('Demo admin routes are not protected.');
 if (!api.includes("app.route('/api/v1/demo-admin', demoAdminRoutes)")) throw new Error('Demo admin routes are not mounted.');
-if (!api.includes('phase: 7')) throw new Error('API does not report Phase 7.');
+const reportedPhases = [...api.matchAll(/phase:\s*(\d+)/gu)].map((match) => Number(match[1]));
+if (reportedPhases.length === 0 || Math.max(...reportedPhases) < 7) {
+  throw new Error('API phase has regressed below Phase 7.');
+}
 
 const ui = await readFile('apps/web/src/demos/DemoBuilderPage.tsx', 'utf8');
 for (const contract of [
