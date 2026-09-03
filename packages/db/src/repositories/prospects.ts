@@ -10,6 +10,7 @@ interface ProspectRow {
   domain: string | null;
   phone_normalized: string | null;
   city: string | null;
+  address_normalized: string | null;
   niche: string;
   source_first_seen: string;
   current_state: ProspectState;
@@ -34,6 +35,7 @@ function mapProspect(row: ProspectRow): ProspectRecord {
     domain: row.domain,
     phoneNormalized: row.phone_normalized,
     city: row.city,
+    addressNormalized: row.address_normalized,
     niche: row.niche,
     sourceFirstSeen: row.source_first_seen,
     currentState: row.current_state,
@@ -41,6 +43,12 @@ function mapProspect(row: ProspectRow): ProspectRecord {
     updatedAt: row.updated_at,
   };
 }
+
+const SELECT_PROSPECT = `
+  SELECT id, campaign_id, canonical_name, normalized_name, domain, phone_normalized,
+    city, address_normalized, niche, source_first_seen, current_state, created_at, updated_at
+  FROM prospects
+`;
 
 export class ProspectRepository {
   constructor(private readonly db: D1DatabaseLike) {}
@@ -52,7 +60,7 @@ export class ProspectRepository {
           id, campaign_id, canonical_name, normalized_name, domain, phone_normalized, city,
           address_normalized, niche, archetype, source_first_seen, current_state,
           identity_confidence, demo_score, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, NULL, NULL, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?)
       `)
       .bind(
         record.id,
@@ -62,6 +70,7 @@ export class ProspectRepository {
         record.domain,
         record.phoneNormalized,
         record.city,
+        record.addressNormalized ?? null,
         record.niche,
         record.sourceFirstSeen,
         record.currentState,
@@ -73,21 +82,51 @@ export class ProspectRepository {
 
   async getById(id: string): Promise<ProspectRecord | null> {
     const row = await this.db
-      .prepare(`
-        SELECT id, campaign_id, canonical_name, normalized_name, domain, phone_normalized,
-          city, niche, source_first_seen, current_state, created_at, updated_at
-        FROM prospects WHERE id = ?
-      `)
+      .prepare(`${SELECT_PROSPECT} WHERE id = ?`)
       .bind(id)
       .first<ProspectRow>();
     return row ? mapProspect(row) : null;
   }
 
+  async getByIdForUser(id: string, userId: string): Promise<ProspectRecord | null> {
+    const row = await this.db
+      .prepare(`
+        SELECT prospect.id, prospect.campaign_id, prospect.canonical_name, prospect.normalized_name,
+          prospect.domain, prospect.phone_normalized, prospect.city, prospect.address_normalized,
+          prospect.niche, prospect.source_first_seen, prospect.current_state,
+          prospect.created_at, prospect.updated_at
+        FROM prospects prospect
+        JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+        WHERE prospect.id = ? AND campaign.user_id = ?
+        LIMIT 1
+      `)
+      .bind(id, userId)
+      .first<ProspectRow>();
+    return row ? mapProspect(row) : null;
+  }
+
+  async listForUser(userId: string, limit = 100): Promise<ProspectRecord[]> {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 200);
+    const result = await this.db
+      .prepare(`
+        SELECT prospect.id, prospect.campaign_id, prospect.canonical_name, prospect.normalized_name,
+          prospect.domain, prospect.phone_normalized, prospect.city, prospect.address_normalized,
+          prospect.niche, prospect.source_first_seen, prospect.current_state,
+          prospect.created_at, prospect.updated_at
+        FROM prospects prospect
+        JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+        WHERE campaign.user_id = ?
+        ORDER BY prospect.updated_at DESC, prospect.id DESC
+        LIMIT ?
+      `)
+      .bind(userId, safeLimit)
+      .all<ProspectRow>();
+    return result.results.map(mapProspect);
+  }
+
   async transition(id: string, to: ProspectState, at: string): Promise<ProspectRecord> {
     const current = await this.getById(id);
-    if (!current) {
-      throw new Error(`Prospect ${id} was not found.`);
-    }
+    if (!current) throw new Error(`Prospect ${id} was not found.`);
 
     assertProspectTransition(current.currentState, to);
 
@@ -97,7 +136,7 @@ export class ProspectRepository {
         SET current_state = ?, updated_at = ?
         WHERE id = ? AND current_state = ?
         RETURNING id, campaign_id, canonical_name, normalized_name, domain, phone_normalized,
-          city, niche, source_first_seen, current_state, created_at, updated_at
+          city, address_normalized, niche, source_first_seen, current_state, created_at, updated_at
       `)
       .bind(to, at, id, current.currentState)
       .first<ProspectRow>();
