@@ -65,12 +65,13 @@ def test_idle_poll_still_heartbeats() -> None:
     assert client.failed == []
 
 
-def test_echo_job_completes_with_result() -> None:
+def test_echo_job_renews_before_terminal_completion() -> None:
     client = FakeClient(job())
     outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
     assert outcome.status == "COMPLETED"
     assert outcome.job_id == "job_test"
     assert client.failed == []
+    assert client.renewed == ["job_test"]
     assert client.completed[0][0] == "job_test"
     assert client.completed[0][1]["payload"] == {"hello": "world"}
     assert client.research_completed == []
@@ -89,7 +90,7 @@ def test_long_job_renews_lease_while_handler_is_running() -> None:
     ).run_once()  # type: ignore[arg-type]
 
     assert outcome.status == "COMPLETED"
-    assert client.renewed
+    assert len(client.renewed) >= 2
     assert client.completed == [("job_test", {"ok": True})]
 
 

@@ -71,9 +71,11 @@ class _LeaseKeeper:
             raise RunnerApiError("Lease renewal did not stop safely.")
 
     def ensure_current(self) -> None:
-        if self.last_error is not None:
-            self.client.renew(self.job.id)
-            self.last_error = None
+        # Always renew once synchronously immediately before the terminal API call. This gives
+        # result persistence/failure handling a fresh lease window and proves the runner still
+        # owns the job after any long browser execution or transient background-renewal error.
+        self.client.renew(self.job.id)
+        self.last_error = None
 
 
 class LocalRunnerWorker:
