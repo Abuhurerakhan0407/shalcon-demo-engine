@@ -57,6 +57,8 @@ test('authenticated operator can navigate every dashboard route and logout', asy
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     if (label === 'Prospects') {
       await expect(page.getByRole('heading', { name: 'One business. One identity.' })).toBeVisible();
+    } else if (label === 'Demos') {
+      await expect(page.getByRole('heading', { name: 'Verified facts in. Private demo out.' })).toBeVisible();
     } else {
       await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
     }
