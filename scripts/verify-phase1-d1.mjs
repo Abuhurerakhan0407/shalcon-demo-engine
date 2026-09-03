@@ -33,8 +33,12 @@ async function waitForIntegration(url, timeoutMs = 60_000) {
     try {
       const response = await globalThis.fetch(url);
       if (response.ok) return response;
-      lastError = new Error(`HTTP ${response.status}`);
+      const body = await response.text();
+      throw new Error(`Integration worker returned HTTP ${response.status}: ${body}`);
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Integration worker returned HTTP')) {
+        throw error;
+      }
       lastError = error;
     }
     await sleep(500);

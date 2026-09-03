@@ -91,24 +91,22 @@ export class ProspectRepository {
 
     assertProspectTransition(current.currentState, to);
 
-    const result = await this.db
+    const updated = await this.db
       .prepare(`
         UPDATE prospects
         SET current_state = ?, updated_at = ?
         WHERE id = ? AND current_state = ?
+        RETURNING id, campaign_id, canonical_name, normalized_name, domain, phone_normalized,
+          city, niche, source_first_seen, current_state, created_at, updated_at
       `)
       .bind(to, at, id, current.currentState)
-      .run();
+      .first<ProspectRow>();
 
-    if ((result.meta?.changes ?? 0) !== 1) {
+    if (!updated) {
       throw new Error(`Prospect ${id} changed concurrently; transition was not applied.`);
     }
 
-    const updated = await this.getById(id);
-    if (!updated) {
-      throw new Error(`Prospect ${id} disappeared after transition.`);
-    }
-    return updated;
+    return mapProspect(updated);
   }
 
   async listStateEvents(id: string): Promise<ProspectStateEventRecord[]> {

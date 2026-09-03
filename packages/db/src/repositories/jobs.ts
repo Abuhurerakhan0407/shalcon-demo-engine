@@ -55,13 +55,14 @@ export class JobRepository {
   constructor(private readonly db: D1DatabaseLike) {}
 
   async createOrGet(record: JobRecord): Promise<{ job: JobRecord; created: boolean }> {
-    const result = await this.db
+    const inserted = await this.db
       .prepare(`
         INSERT OR IGNORE INTO jobs(
           id, job_type, entity_id, status, priority, idempotency_key, attempts, max_attempts,
           lease_owner, lease_expires_at, scheduled_for, started_at, completed_at,
           last_error_code, last_error_safe_message, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING *
       `)
       .bind(
         record.id,
@@ -82,13 +83,17 @@ export class JobRepository {
         record.createdAt,
         record.updatedAt,
       )
-      .run();
+      .first<JobRow>();
 
-    const job = await this.getByIdempotencyKey(record.idempotencyKey);
-    if (!job) {
+    if (inserted) {
+      return { job: mapJob(inserted), created: true };
+    }
+
+    const existing = await this.getByIdempotencyKey(record.idempotencyKey);
+    if (!existing) {
       throw new Error('Job insert did not produce a readable row.');
     }
-    return { job, created: (result.meta?.changes ?? 0) === 1 };
+    return { job: existing, created: false };
   }
 
   async getById(id: string): Promise<JobRecord | null> {
@@ -108,7 +113,7 @@ export class JobRepository {
   }
 
   async claim(id: string, owner: string, leaseExpiresAt: string, now: string): Promise<JobRecord> {
-    const result = await this.db
+    const claimed = await this.db
       .prepare(`
         UPDATE jobs
         SET status = 'RUNNING', lease_owner = ?, lease_expires_at = ?,
@@ -120,35 +125,33 @@ export class JobRepository {
             OR status = 'FAILED'
             OR (status = 'RUNNING' AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?)
           )
+        RETURNING *
       `)
       .bind(owner, leaseExpiresAt, now, now, id, now, now)
-      .run();
+      .first<JobRow>();
 
-    if ((result.meta?.changes ?? 0) !== 1) {
+    if (!claimed) {
       throw new Error(`Job ${id} is not claimable.`);
     }
-
-    const job = await this.getById(id);
-    if (!job) throw new Error(`Job ${id} was not found after claim.`);
-    return job;
+    return mapJob(claimed);
   }
 
   async complete(id: string, owner: string, now: string): Promise<JobRecord> {
-    const result = await this.db
+    const completed = await this.db
       .prepare(`
         UPDATE jobs
         SET status = 'COMPLETED', completed_at = ?, lease_owner = NULL,
           lease_expires_at = NULL, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+        RETURNING *
       `)
       .bind(now, now, id, owner)
-      .run();
-    if ((result.meta?.changes ?? 0) !== 1) {
+      .first<JobRow>();
+
+    if (!completed) {
       throw new Error(`Job ${id} cannot be completed by ${owner}.`);
     }
-    const job = await this.getById(id);
-    if (!job) throw new Error(`Job ${id} was not found after completion.`);
-    return job;
+    return mapJob(completed);
   }
 
   async fail(
@@ -165,18 +168,20 @@ export class JobRepository {
     const attempts = current.attempts + 1;
     const status = nextFailureStatus(attempts, current.maxAttempts);
 
-    await this.db
+    const failed = await this.db
       .prepare(`
         UPDATE jobs
         SET status = ?, attempts = ?, lease_owner = NULL, lease_expires_at = NULL,
           last_error_code = ?, last_error_safe_message = ?, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+        RETURNING *
       `)
       .bind(status, attempts, errorCode, safeMessage, now, id, owner)
-      .run();
+      .first<JobRow>();
 
-    const job = await this.getById(id);
-    if (!job) throw new Error(`Job ${id} was not found after failure.`);
-    return job;
+    if (!failed) {
+      throw new Error(`Job ${id} is not owned by ${owner}.`);
+    }
+    return mapJob(failed);
   }
 }
