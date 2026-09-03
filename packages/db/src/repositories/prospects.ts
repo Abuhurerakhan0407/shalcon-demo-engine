@@ -81,10 +81,7 @@ export class ProspectRepository {
   }
 
   async getById(id: string): Promise<ProspectRecord | null> {
-    const row = await this.db
-      .prepare(`${SELECT_PROSPECT} WHERE id = ?`)
-      .bind(id)
-      .first<ProspectRow>();
+    const row = await this.db.prepare(`${SELECT_PROSPECT} WHERE id = ?`).bind(id).first<ProspectRow>();
     return row ? mapProspect(row) : null;
   }
 
@@ -124,10 +121,49 @@ export class ProspectRepository {
     return result.results.map(mapProspect);
   }
 
+  async updateProfile(
+    id: string,
+    values: Pick<
+      ProspectRecord,
+      'canonicalName' | 'normalizedName' | 'domain' | 'phoneNormalized' | 'city' | 'addressNormalized'
+    >,
+    at: string,
+  ): Promise<ProspectRecord> {
+    const row = await this.db
+      .prepare(`
+        UPDATE prospects SET
+          canonical_name = ?, normalized_name = ?, domain = ?, phone_normalized = ?,
+          city = ?, address_normalized = ?, updated_at = ?
+        WHERE id = ?
+        RETURNING id, campaign_id, canonical_name, normalized_name, domain, phone_normalized,
+          city, address_normalized, niche, source_first_seen, current_state, created_at, updated_at
+      `)
+      .bind(
+        values.canonicalName,
+        values.normalizedName,
+        values.domain,
+        values.phoneNormalized,
+        values.city,
+        values.addressNormalized ?? null,
+        at,
+        id,
+      )
+      .first<ProspectRow>();
+    if (!row) throw new Error(`Prospect ${id} was not found.`);
+    return mapProspect(row);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const row = await this.db
+      .prepare('DELETE FROM prospects WHERE id = ? RETURNING id')
+      .bind(id)
+      .first<{ id: string }>();
+    return row !== null;
+  }
+
   async transition(id: string, to: ProspectState, at: string): Promise<ProspectRecord> {
     const current = await this.getById(id);
     if (!current) throw new Error(`Prospect ${id} was not found.`);
-
     assertProspectTransition(current.currentState, to);
 
     const updated = await this.db
@@ -141,10 +177,7 @@ export class ProspectRepository {
       .bind(to, at, id, current.currentState)
       .first<ProspectRow>();
 
-    if (!updated) {
-      throw new Error(`Prospect ${id} changed concurrently; transition was not applied.`);
-    }
-
+    if (!updated) throw new Error(`Prospect ${id} changed concurrently; transition was not applied.`);
     return mapProspect(updated);
   }
 
