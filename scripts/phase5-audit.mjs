@@ -4,11 +4,14 @@ const required = [
   'apps/api/migrations/0004_identity_resolution.sql',
   'apps/api/src/prospect-identity.ts',
   'apps/api/src/phase5.integration.ts',
+  'apps/web/src/prospects/ProspectsPage.tsx',
+  'apps/web/src/prospects/prospects.css',
   'packages/db/src/repositories/identity.ts',
   'packages/evidence/src/index.ts',
   'packages/evidence/src/index.test.ts',
   'packages/state-machine/src/index.ts',
   'scripts/verify-phase5-d1.mjs',
+  'tests/e2e/prospects.spec.ts',
 ];
 for (const path of required) await access(path);
 
@@ -68,6 +71,38 @@ for (const contract of [
   'DUPLICATE_PROSPECT',
 ]) {
   if (!routes.includes(contract)) throw new Error(`Missing Phase 5 API contract: ${contract}`);
+}
+
+const prospectUi = await readFile('apps/web/src/prospects/ProspectsPage.tsx', 'utf8');
+for (const contract of [
+  'One business. One identity.',
+  "queryKey: ['prospect-identity', selectedId]",
+  'Existing canonical selected',
+  'Identity review required before this business can enter research or outreach.',
+  'Link as duplicate',
+  'Keep as distinct business',
+  'Retired duplicate',
+  'Identity audit trail',
+]) {
+  if (!prospectUi.includes(contract)) throw new Error(`Missing Phase 5 operator UI contract: ${contract}`);
+}
+
+const e2e = await readFile('tests/e2e/prospects.spec.ts', 'utf8');
+for (const contract of [
+  'identity engine deduplicates exact keys and parks weak matches for operator review',
+  'Existing canonical selected',
+  'Possible duplicate. Human decision required.',
+  'Link as duplicate',
+  'Duplicate retired. Glow Salon remains the canonical business.',
+]) {
+  if (!e2e.includes(contract)) throw new Error(`Missing Phase 5 browser contract: ${contract}`);
+}
+
+const api = await readFile('apps/api/src/index.ts', 'utf8');
+if (!api.includes("phase: 5")) throw new Error('API does not report Phase 5.');
+const app = await readFile('apps/web/src/App.tsx', 'utf8');
+if (!app.includes('<strong>05</strong><small>Identity resolution</small>')) {
+  throw new Error('Dashboard does not report Phase 5 identity resolution.');
 }
 
 console.log('Phase 5 audit passed.');
