@@ -53,6 +53,7 @@ _RELEVANT_TERMS = (
 )
 
 _SAFE_NON_NETWORK_SCHEMES = {"about", "blob", "data"}
+_WEBRTC_POLICY_ARG = "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
 
 
 def _safe_job_segment(value: str) -> str:
@@ -269,7 +270,7 @@ class BrowserResearchEngine:
             else nullcontext(None)
         )
         with proxy_context as egress_proxy, sync_playwright() as playwright:
-            launch_options: dict[str, Any] = {}
+            launch_options: dict[str, Any] = {"args": [_WEBRTC_POLICY_ARG]}
             if isinstance(egress_proxy, str):
                 launch_options["proxy"] = {
                     "server": egress_proxy,
