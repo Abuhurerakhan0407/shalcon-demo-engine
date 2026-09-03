@@ -119,35 +119,43 @@ function safeContact(
   const whatsapp = verifiedFact(facts, FIELD_ALIASES.whatsapp);
   const phone = verifiedFact(facts, FIELD_ALIASES.phone);
   const email = verifiedFact(facts, FIELD_ALIASES.email);
-  const channel = whatsapp ?? phone ?? email;
-  const hasContactBlock = Boolean(address || hours || channel);
+  const hasContactBlock = Boolean(address || hours || whatsapp || phone || email);
   if (!hasContactBlock) return { contactMode: 'BOOKING_PLACEHOLDER' };
 
   let contactMode: ManualDemoBuildResult['contactMode'] = 'BOOKING_PLACEHOLDER';
+  let contactFact: ProspectFactRecord | undefined;
   let ctaLabel = 'Request appointment ↗';
   let bookingNote = 'Concept demo — booking remains inactive until a verified production channel is connected.';
+  let verifiedChannel: Partial<NonNullable<SalonTemplateConfig['contact']>> = {};
 
-  if (channel === whatsapp) {
+  if (whatsapp) {
     contactMode = 'WHATSAPP';
+    contactFact = whatsapp;
     ctaLabel = 'WhatsApp to enquire ↗';
-    bookingNote = `Concept demo — verified WhatsApp: ${channel.value}. Production can connect this CTA after approval.`;
-  } else if (channel === phone) {
+    bookingNote = `Concept demo — verified WhatsApp: ${whatsapp.value}. Production can connect this CTA after approval.`;
+    verifiedChannel = { whatsapp: whatsapp.value };
+  } else if (phone) {
     contactMode = 'CALL';
+    contactFact = phone;
     ctaLabel = 'Call to enquire ↗';
-    bookingNote = `Concept demo — verified phone: ${channel.value}. Production can connect this CTA after approval.`;
-  } else if (channel === email) {
+    bookingNote = `Concept demo — verified phone: ${phone.value}. Production can connect this CTA after approval.`;
+    verifiedChannel = { phone: phone.value };
+  } else if (email) {
     contactMode = 'EMAIL';
+    contactFact = email;
     ctaLabel = 'Email to enquire ↗';
-    bookingNote = `Concept demo — verified email: ${channel.value}. Production can connect this CTA after approval.`;
+    bookingNote = `Concept demo — verified email: ${email.value}. Production can connect this CTA after approval.`;
+    verifiedChannel = { email: email.value };
   }
 
   return {
     contactMode,
-    contactFact: channel,
+    ...(contactFact ? { contactFact } : {}),
     primaryCtaLabel: ctaLabel,
     contact: {
       ...(address && !isHidden(input, 'address') ? { address: address.value } : {}),
       ...(hours && !isHidden(input, 'hours') ? { hoursSummary: hours.value } : {}),
+      ...verifiedChannel,
       ctaLabel,
       bookingNote,
     },
