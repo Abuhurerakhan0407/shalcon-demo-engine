@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import Event, Thread
 import time
 from typing import Any, Callable
 
@@ -40,6 +41,41 @@ def safe_exception_message(error: BaseException) -> str:
     return f"{type(error).__name__}: local job execution failed safely."[:500]
 
 
+class _LeaseKeeper:
+    def __init__(self, client: RunnerApiClient, job: ClaimedJob) -> None:
+        self.client = client
+        self.job = job
+        self.interval_seconds = max(0.25, min(float(job.lease_seconds) / 3.0, 30.0))
+        self._stop = Event()
+        self._thread = Thread(target=self._run, daemon=True, name=f"lease-{job.id[:32]}")
+        self.last_error: RunnerApiError | None = None
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval_seconds):
+            try:
+                self.client.renew(self.job.id)
+            except RunnerApiError as error:
+                self.last_error = error
+            except BaseException:  # noqa: BLE001 - renewal thread must fail closed.
+                self.last_error = RunnerApiError("Lease renewal failed safely.")
+            else:
+                self.last_error = None
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=5.0)
+        if self._thread.is_alive():
+            raise RunnerApiError("Lease renewal did not stop safely.")
+
+    def ensure_current(self) -> None:
+        if self.last_error is not None:
+            self.client.renew(self.job.id)
+            self.last_error = None
+
+
 class LocalRunnerWorker:
     def __init__(
         self,
@@ -69,20 +105,31 @@ class LocalRunnerWorker:
             )
             return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
 
+        lease_keeper = _LeaseKeeper(self.client, job)
+        lease_keeper.start()
         try:
-            result = handler(job)
-        except ResearchJobError as error:
-            self.client.fail(job.id, error.code, error.safe_message)
-            return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
-        except BaseException as error:  # noqa: BLE001 - boundary converts arbitrary handler faults to a safe failure.
-            self.client.fail(job.id, "LOCAL_EXECUTION_FAILED", safe_exception_message(error))
-            return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
+            try:
+                result = handler(job)
+            except ResearchJobError as error:
+                lease_keeper.stop()
+                lease_keeper.ensure_current()
+                self.client.fail(job.id, error.code, error.safe_message)
+                return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
+            except BaseException as error:  # noqa: BLE001 - boundary sanitizes arbitrary faults.
+                lease_keeper.stop()
+                lease_keeper.ensure_current()
+                self.client.fail(job.id, "LOCAL_EXECUTION_FAILED", safe_exception_message(error))
+                return RunOutcome(status="FAILED", job_id=job.id, job_type=job.job_type)
 
-        if job.job_type == "PLAYWRIGHT_RESEARCH":
-            self.client.complete_research(job.id, result)
-        else:
-            self.client.complete(job.id, result)
-        return RunOutcome(status="COMPLETED", job_id=job.id, job_type=job.job_type)
+            lease_keeper.stop()
+            lease_keeper.ensure_current()
+            if job.job_type == "PLAYWRIGHT_RESEARCH":
+                self.client.complete_research(job.id, result)
+            else:
+                self.client.complete(job.id, result)
+            return RunOutcome(status="COMPLETED", job_id=job.id, job_type=job.job_type)
+        finally:
+            lease_keeper.stop()
 
     def run_forever(self, poll_seconds: float = 3.0) -> None:
         delay = max(1.0, poll_seconds)

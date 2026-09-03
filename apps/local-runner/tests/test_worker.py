@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from threading import Event
 from typing import Any
 
 from shalcon_runner.client import ClaimedJob
@@ -11,6 +12,8 @@ class FakeClient:
     def __init__(self, job: ClaimedJob | None) -> None:
         self.job = job
         self.heartbeats: list[tuple[str, list[str]]] = []
+        self.renewed: list[str] = []
+        self.renew_event = Event()
         self.completed: list[tuple[str, Any]] = []
         self.research_completed: list[tuple[str, Any]] = []
         self.failed: list[tuple[str, str, str]] = []
@@ -22,6 +25,11 @@ class FakeClient:
     def claim(self) -> ClaimedJob | None:
         job, self.job = self.job, None
         return job
+
+    def renew(self, job_id: str) -> dict[str, Any]:
+        self.renewed.append(job_id)
+        self.renew_event.set()
+        return {}
 
     def complete(self, job_id: str, result: Any) -> dict[str, Any]:
         self.completed.append((job_id, result))
@@ -36,14 +44,14 @@ class FakeClient:
         return {}
 
 
-def job(job_type: str = "PHASE8_ECHO") -> ClaimedJob:
+def job(job_type: str = "PHASE8_ECHO", lease_seconds: int = 120) -> ClaimedJob:
     return ClaimedJob(
         id="job_test",
         job_type=job_type,
         entity_id="entity_1",
         attempts=0,
         max_attempts=3,
-        lease_seconds=120,
+        lease_seconds=lease_seconds,
         payload={"hello": "world"},
     )
 
@@ -66,6 +74,23 @@ def test_echo_job_completes_with_result() -> None:
     assert client.completed[0][0] == "job_test"
     assert client.completed[0][1]["payload"] == {"hello": "world"}
     assert client.research_completed == []
+
+
+def test_long_job_renews_lease_while_handler_is_running() -> None:
+    client = FakeClient(job(lease_seconds=1))
+
+    def slow_handler(_: ClaimedJob) -> dict[str, bool]:
+        assert client.renew_event.wait(timeout=2.0)
+        return {"ok": True}
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"PHASE8_ECHO": slow_handler},
+    ).run_once()  # type: ignore[arg-type]
+
+    assert outcome.status == "COMPLETED"
+    assert client.renewed
+    assert client.completed == [("job_test", {"ok": True})]
 
 
 def test_research_job_uses_validated_cloud_completion_path() -> None:

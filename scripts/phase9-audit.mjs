@@ -31,8 +31,9 @@ for (const contract of ['sync_playwright','context.route','page.goto','inner_tex
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');
-if (!worker.includes('PLAYWRIGHT_RESEARCH')) throw new Error('Research job handler is not registered.');
-if (!worker.includes('complete_research')) throw new Error('Research result does not use the validated cloud completion path.');
+for (const contract of ['PLAYWRIGHT_RESEARCH','complete_research','_LeaseKeeper','client.renew','lease_seconds','ensure_current']) {
+  if (!worker.includes(contract)) throw new Error(`Missing long-running runner lease contract: ${contract}`);
+}
 
 const persistence = await readFile('apps/api/src/research-persistence.ts', 'utf8');
 for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE']) {
