@@ -1,14 +1,47 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ipaddress
 import json
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 
 class RunnerApiError(RuntimeError):
     """Safe runner API error that never embeds bearer credentials."""
+
+
+def _loopback_host(hostname: str) -> bool:
+    normalized = hostname.strip().rstrip(".").lower()
+    if normalized == "localhost" or normalized.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def _validated_base_url(raw_base_url: str) -> str:
+    candidate = raw_base_url.strip()
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError as exc:
+        raise ValueError("Runner API base URL is malformed.") from exc
+
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Runner API base URL must use http:// or https://.")
+    if parsed.username or parsed.password:
+        raise ValueError("Runner API base URL must not contain credentials.")
+    if parsed.query or parsed.fragment:
+        raise ValueError("Runner API base URL must not contain query or fragment data.")
+    if parsed.path not in {"", "/"}:
+        raise ValueError("Runner API base URL must not contain an application path.")
+    if parsed.scheme == "http" and not _loopback_host(parsed.hostname):
+        raise ValueError("Runner API requires HTTPS except for loopback development endpoints.")
+
+    return candidate.rstrip("/")
 
 
 @dataclass(frozen=True)
@@ -24,9 +57,7 @@ class ClaimedJob:
 
 class RunnerApiClient:
     def __init__(self, base_url: str, token: str, timeout_seconds: float = 20.0) -> None:
-        base = base_url.strip().rstrip("/")
-        if not base.startswith(("http://", "https://")):
-            raise ValueError("Runner API base URL must use http:// or https://.")
+        base = _validated_base_url(base_url)
         if len(token.strip()) < 24:
             raise ValueError("Runner token is missing or too short.")
         self._base_url = base
@@ -47,7 +78,7 @@ class RunnerApiClient:
             },
         )
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:  # noqa: S310 - URL is operator-configured.
+            with urlopen(request, timeout=self._timeout_seconds) as response:  # noqa: S310 - URL passed strict transport validation.
                 raw = response.read().decode("utf-8")
         except HTTPError as exc:
             safe_message = f"Runner API returned HTTP {exc.code}."
