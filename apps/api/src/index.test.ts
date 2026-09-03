@@ -7,11 +7,11 @@ const testEnv = {
 };
 
 describe('public API', () => {
-  it('returns a phase 6 health response', async () => {
+  it('returns a phase 7 health response', async () => {
     const response = await app.request('/api/v1/health', {}, testEnv);
     expect(response.status).toBe(200);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ ok: true, service: 'api', phase: 6 });
+    expect(body).toMatchObject({ ok: true, service: 'api', phase: 7 });
   });
 
   it('allows credentialed CORS only for the configured web origin', async () => {
@@ -34,8 +34,12 @@ describe('public API', () => {
 });
 
 describe('protected API', () => {
-  it('blocks unauthenticated dashboard and prospect requests', async () => {
-    for (const path of ['/api/v1/dashboard/summary', '/api/v1/prospects']) {
+  it('blocks unauthenticated dashboard, prospect, and demo-builder requests', async () => {
+    for (const path of [
+      '/api/v1/dashboard/summary',
+      '/api/v1/prospects',
+      '/api/v1/demo-admin/prospects/prospect_123',
+    ]) {
       const response = await app.request(path, {}, testEnv);
       expect(response.status).toBe(401);
       await expect(response.json()).resolves.toMatchObject({ error: { code: 'UNAUTHORIZED' } });
