@@ -179,7 +179,11 @@ function DashboardShell({ user }: { user: AuthUser }) {
 
   return (
     <div className="dashboard-shell">
-      <aside className={`sidebar ${mobileOpen ? 'is-open' : ''}`} aria-label="Primary navigation">
+      <aside
+        id="mobile-navigation"
+        className={`sidebar ${mobileOpen ? 'is-open' : ''}`}
+        aria-label="Primary navigation"
+      >
         <div className="brand-lockup">
           <span className="brand-mark">S</span>
           <div>
@@ -190,6 +194,7 @@ function DashboardShell({ user }: { user: AuthUser }) {
         <nav className="nav-stack">
           {navItems.map((item) => (
             <NavLink
+              aria-label={item.label}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               key={item.to}
               onClick={() => setMobileOpen(false)}
@@ -251,7 +256,12 @@ function DashboardShell({ user }: { user: AuthUser }) {
               <Route
                 key={item.to}
                 path={item.to}
-                element={<EmptyModulePage title={item.label} description={moduleCopy[item.label]} />}
+                element={
+                  <EmptyModulePage
+                    title={item.label}
+                    description={moduleCopy[item.label] ?? 'Module activation is pending.'}
+                  />
+                }
               />
             ))}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -263,7 +273,7 @@ function DashboardShell({ user }: { user: AuthUser }) {
 }
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Dashboard render failure', { name: error.name, componentStack: info.componentStack });
