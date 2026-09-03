@@ -66,7 +66,13 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
       404,
     );
   }
-  if (job.status !== 'RUNNING' || job.leaseOwner !== runner.id) {
+  const ownershipCheckAt = new Date().toISOString();
+  if (
+    job.status !== 'RUNNING' ||
+    job.leaseOwner !== runner.id ||
+    job.leaseExpiresAt === null ||
+    job.leaseExpiresAt <= ownershipCheckAt
+  ) {
     return c.json(
       { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this active research job.' } },
       409,
