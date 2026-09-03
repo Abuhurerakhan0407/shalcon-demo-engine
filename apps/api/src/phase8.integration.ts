@@ -151,6 +151,49 @@ integration.get('/phase8', async (c) => {
     '2026-09-03T12:01:00.000Z',
     NOW,
   );
+
+  let expiredLeaseRenewalRejected = false;
+  try {
+    await jobs.renewLease(
+      staleCompletionJob.id,
+      runnerOne.id,
+      '2026-09-03T12:04:00.000Z',
+      AFTER_CRASH,
+    );
+  } catch {
+    expiredLeaseRenewalRejected = true;
+  }
+
+  let expiredLeaseCompletionRejected = false;
+  try {
+    await jobs.completeWithResult(
+      staleCompletionJob.id,
+      USER_ID,
+      runnerOne.id,
+      JSON.stringify({ expiredLeaseMustNotComplete: true }),
+      AFTER_CRASH,
+    );
+  } catch {
+    expiredLeaseCompletionRejected = true;
+  }
+
+  let expiredLeaseFailureRejected = false;
+  try {
+    await jobs.failWithRetry(
+      staleCompletionJob.id,
+      USER_ID,
+      runnerOne.id,
+      'EXPIRED_LEASE',
+      'Expired runner must not write failure state.',
+      AFTER_CRASH,
+      AFTER_CRASH,
+    );
+  } catch {
+    expiredLeaseFailureRejected = true;
+  }
+
+  const expiredContextBeforeRecovery = await new JobContextRepository(db).getByJobId(staleCompletionJob.id);
+  const expiredJobBeforeRecovery = await new JobRepository(db).getById(staleCompletionJob.id);
   const staleRecovered = await jobs.reconcileExpiredLeases(USER_ID, AFTER_CRASH);
   const staleReclaim = await jobs.claimNextForUser(
     USER_ID,
@@ -260,6 +303,13 @@ integration.get('/phase8', async (c) => {
       retryStayedRetryable: failedTwice?.status === 'FAILED' && failedTwice.attempts === 2,
       permanentFailureDeadLettered: deadLetter?.status === 'DEAD_LETTER' && deadLetter.attempts === 3,
       deadLetterVisible: deadLetters.some((item) => item.id === 'phase8-crash-job'),
+      expiredLeaseRenewalRejected,
+      expiredLeaseCompletionRejected,
+      expiredLeaseFailureRejected,
+      expiredLeaseResultNotPersisted:
+        expiredContextBeforeRecovery?.resultJson === null &&
+        expiredJobBeforeRecovery?.status === 'RUNNING' &&
+        expiredJobBeforeRecovery.leaseOwner === runnerOne.id,
       staleCompletionLeaseRecovered:
         staleFirstClaim?.job.id === staleCompletionJob.id &&
         staleRecovered.some((item) => item.id === staleCompletionJob.id),
