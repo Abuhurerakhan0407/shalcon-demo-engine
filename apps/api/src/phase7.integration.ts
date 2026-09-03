@@ -68,6 +68,14 @@ function readStoredPaletteId(configJson: string): string | null {
   return typeof theme.paletteId === 'string' ? theme.paletteId : null;
 }
 
+function readStoredBusinessName(configJson: string): string | null {
+  const parsed: unknown = JSON.parse(configJson);
+  if (typeof parsed !== 'object' || parsed === null || !('business' in parsed)) return null;
+  const business = parsed.business;
+  if (typeof business !== 'object' || business === null || !('name' in business)) return null;
+  return typeof business.name === 'string' ? business.name : null;
+}
+
 integration.get('/phase7', async (c) => {
   const db = c.env.DB;
   await db.prepare("DELETE FROM users WHERE id IN ('phase7-user', 'phase7-other-user')").run();
@@ -214,7 +222,9 @@ integration.get('/phase7', async (c) => {
     .prepare('SELECT token_hash, template_id, template_version, config_json FROM demos WHERE id = ?')
     .bind(DEMO_ID)
     .first<{ token_hash: string; template_id: string; template_version: string; config_json: string }>();
-  const storedPaletteId = readStoredPaletteId(stored?.config_json ?? '{}');
+  const storedConfigJson = stored?.config_json ?? '{}';
+  const storedPaletteId = readStoredPaletteId(storedConfigJson);
+  const storedBusinessName = readStoredBusinessName(storedConfigJson);
   const migrationCount = await db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').first<{ count: number }>();
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
 
@@ -228,7 +238,8 @@ integration.get('/phase7', async (c) => {
       manualDemoRendered: firstResponse.status === 200,
       correctBusinessIdentity:
         firstBuild.config.business.name === prospect.canonicalName &&
-        (firstBody.includes('Aura Salon & Spa') || firstBody.includes('Aura Salon &amp; Spa')),
+        secondBuild.config.business.name === prospect.canonicalName &&
+        storedBusinessName === prospect.canonicalName,
       verifiedCityRendered: firstBody.includes('Mumbai'),
       correctVerifiedCta: firstBody.includes('Call to enquire') && firstBody.includes('+91 98765 43210'),
       unverifiedFactExcluded: !firstBody.includes('@unverified_phase7'),
