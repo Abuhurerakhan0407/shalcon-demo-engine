@@ -63,4 +63,23 @@ export class CampaignRepository {
       .first<CampaignRow>();
     return row ? mapCampaign(row) : null;
   }
+
+  async ensureManualSalonCampaign(userId: string, at: string): Promise<CampaignRecord> {
+    const id = `cmp_manual_${userId}`;
+    const row = await this.db
+      .prepare(`
+        INSERT INTO campaigns(
+          id, user_id, name, niche, archetype_filter_json, country, region, city, status,
+          daily_discovery_limit, daily_demo_limit, daily_send_limit, min_demo_score,
+          approval_mode, email_account_id, created_at, updated_at
+        ) VALUES (?, ?, 'Manual Salon & Spa', 'SALON_SPA', '[]', NULL, NULL, NULL, 'DRAFT',
+          0, 0, 0, 0, 'MANUAL', NULL, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET updated_at = campaigns.updated_at
+        RETURNING id, user_id, name, niche, status, city, approval_mode, created_at, updated_at
+      `)
+      .bind(id, userId, at, at)
+      .first<CampaignRow>();
+    if (!row) throw new Error('Manual campaign upsert did not return a row.');
+    return mapCampaign(row);
+  }
 }
