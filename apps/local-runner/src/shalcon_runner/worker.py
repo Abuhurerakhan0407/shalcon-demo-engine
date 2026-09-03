@@ -87,7 +87,12 @@ class LocalRunnerWorker:
     ) -> None:
         self.client = client
         self.handlers = dict(DEFAULT_HANDLERS if handlers is None else handlers)
-        self.capabilities = sorted(self.handlers) if capabilities is None else list(capabilities)
+        if capabilities is None:
+            self.capabilities = sorted(self.handlers)
+        else:
+            # Never advertise a job type this process cannot actually execute. Explicit capability
+            # lists can narrow the runner, but cannot make the control plane hand it unknown work.
+            self.capabilities = sorted(set(capabilities).intersection(self.handlers))
 
     def heartbeat(self) -> None:
         self.client.heartbeat(__version__, self.capabilities)
