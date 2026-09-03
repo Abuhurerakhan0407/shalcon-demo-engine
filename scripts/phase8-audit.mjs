@@ -85,8 +85,15 @@ for (const contract of [
   '_validated_base_url',
   '_loopback_host',
   'requires HTTPS except for loopback',
+  '_NoRedirect',
+  'build_opener(_NoRedirect())',
 ]) {
   if (!client.includes(contract)) throw new Error(`Missing local runner client contract: ${contract}`);
+}
+
+const clientTest = await readFile('apps/local-runner/tests/test_client.py', 'utf8');
+if (!clientTest.includes('test_runner_api_redirects_are_not_followed_or_given_bearer_credentials')) {
+  throw new Error('Runner client does not test bearer-safe redirect rejection.');
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');
