@@ -111,7 +111,6 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
       job,
       input.data.result,
       expectedRequestedUrl,
-      new Date().toISOString(),
     );
     return c.json({
       job: { id: completed.job.id, status: completed.job.status },
