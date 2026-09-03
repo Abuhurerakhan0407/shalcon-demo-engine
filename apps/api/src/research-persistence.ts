@@ -70,7 +70,9 @@ async function researchSourceRecords(
     });
   }
 
-  return { records, resultJson: JSON.stringify(rawResult) };
+  const resultJson = JSON.stringify(result);
+  if (resultJson === undefined) throw new Error('Validated research result could not be serialized.');
+  return { records, resultJson };
 }
 
 /**
