@@ -5,7 +5,7 @@ import {
   type D1DatabaseLike,
   type UserRecord,
 } from '@shalcon/db';
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
 import { logger } from 'hono/logger';
 
@@ -23,6 +23,7 @@ import {
   randomToken,
   verifyOAuthState,
 } from './auth';
+import { prospectRoutes } from './prospect-routes';
 
 interface Env {
   DB?: D1DatabaseLike;
@@ -92,6 +93,15 @@ async function authenticatedUser(env: Env, rawToken: string | undefined): Promis
   return user;
 }
 
+const requireAuth: MiddlewareHandler<Bindings> = async (c, next) => {
+  const user = await authenticatedUser(c.env, readCookie(c.req.header('Cookie'), SESSION_COOKIE));
+  if (!user) {
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
+  }
+  c.set('authUser', user);
+  await next();
+};
+
 app.use('*', logger());
 app.use('/api/*', async (c, next) => {
   const requestOrigin = c.req.header('Origin');
@@ -99,39 +109,24 @@ app.use('/api/*', async (c, next) => {
     c.header('Access-Control-Allow-Origin', requestOrigin);
     c.header('Access-Control-Allow-Credentials', 'true');
     c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    c.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    c.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, PUT, OPTIONS');
     c.header('Vary', 'Origin');
   }
-
   if (c.req.method === 'OPTIONS') return c.body(null, 204);
   await next();
 });
 
-app.use('/api/v1/dashboard/*', async (c, next) => {
-  const user = await authenticatedUser(
-    c.env,
-    readCookie(c.req.header('Cookie'), SESSION_COOKIE),
-  );
-  if (!user) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
-  }
-  c.set('authUser', user);
-  await next();
-});
+app.use('/api/v1/dashboard/*', requireAuth);
+app.use('/api/v1/prospects', requireAuth);
+app.use('/api/v1/prospects/*', requireAuth);
 
-app.get('/', (c) =>
-  c.json({
-    service: 'shalcon-demo-engine-api',
-    phase: 2,
-    status: 'ok',
-  }),
-);
+app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 4, status: 'ok' }));
 
 app.get('/api/v1/health', (c) =>
   c.json({
     ok: true,
     service: 'api',
-    phase: 2,
+    phase: 4,
     environment: c.env.APP_ENV,
     timestamp: new Date().toISOString(),
   }),
@@ -143,7 +138,6 @@ app.get('/api/v1/auth/google/start', async (c) => {
   const returnTo = normalizeReturnTo(c.req.query('return_to'));
   const state = await createOAuthState(sessionSecret, returnTo);
   const redirectUri = redirectUriFor(c.req.url, c.env.GOOGLE_REDIRECT_URI);
-
   setCookie(c, OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     secure: cookieSecurity(c.env),
@@ -151,7 +145,6 @@ app.get('/api/v1/auth/google/start', async (c) => {
     path: '/api/v1/auth/google',
     maxAge: OAUTH_STATE_MAX_AGE_SECONDS,
   });
-
   return c.redirect(buildGoogleAuthorizationUrl({ clientId, redirectUri, state }));
 });
 
@@ -160,7 +153,6 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const code = c.req.query('code');
   const stateCookie = readCookie(c.req.header('Cookie'), OAUTH_STATE_COOKIE);
   deleteCookie(c, OAUTH_STATE_COOKIE, { path: '/api/v1/auth/google' });
-
   if (!state || !code || !stateCookie || state !== stateCookie) {
     return c.json({ error: { code: 'OAUTH_STATE_INVALID', message: 'OAuth state is invalid.' } }, 400);
   }
@@ -176,7 +168,6 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const redirectUri = redirectUriFor(c.req.url, c.env.GOOGLE_REDIRECT_URI);
   const accessToken = await exchangeGoogleCode({ code, clientId, clientSecret, redirectUri });
   const profile = await fetchGoogleProfile(accessToken);
-
   const db = requireDb(c.env);
   const now = new Date();
   const nowIso = now.toISOString();
@@ -187,23 +178,13 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   let user: UserRecord;
   if (existingIdentity) {
     const emailOwner = await users.getByEmail(profile.email);
-    if (emailOwner && emailOwner.id !== existingIdentity.userId) {
-      return c.json(identityConflictResponse(), 409);
-    }
+    if (emailOwner && emailOwner.id !== existingIdentity.userId) return c.json(identityConflictResponse(), 409);
     user = await users.updateProfile(existingIdentity.userId, profile.email, profile.name);
     await identities.updateEmail(existingIdentity.id, profile.email, nowIso);
   } else {
     const emailOwner = await users.getByEmail(profile.email);
-    if (emailOwner) {
-      return c.json(identityConflictResponse(), 409);
-    }
-
-    user = {
-      id: `usr_${randomToken(12)}`,
-      email: profile.email,
-      name: profile.name,
-      createdAt: nowIso,
-    };
+    if (emailOwner) return c.json(identityConflictResponse(), 409);
+    user = { id: `usr_${randomToken(12)}`, email: profile.email, name: profile.name, createdAt: nowIso };
     await users.create(user);
     const identity = await identities.createOrGet({
       id: `aid_${randomToken(12)}`,
@@ -214,9 +195,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
       createdAt: nowIso,
       updatedAt: nowIso,
     });
-    if (identity.identity.userId !== user.id) {
-      throw new Error('Google identity resolved to an unexpected user.');
-    }
+    if (identity.identity.userId !== user.id) throw new Error('Google identity resolved to an unexpected user.');
   }
 
   const rawSessionToken = randomToken(32);
@@ -231,7 +210,6 @@ app.get('/api/v1/auth/google/callback', async (c) => {
     lastSeenAt: nowIso,
     revokedAt: null,
   });
-
   setCookie(c, SESSION_COOKIE, rawSessionToken, {
     httpOnly: true,
     secure: cookieSecurity(c.env),
@@ -239,18 +217,12 @@ app.get('/api/v1/auth/google/callback', async (c) => {
     path: '/',
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
-
   return c.redirect(`${c.env.WEB_ORIGIN}${statePayload.returnTo}`);
 });
 
 app.get('/api/v1/auth/session', async (c) => {
-  const user = await authenticatedUser(
-    c.env,
-    readCookie(c.req.header('Cookie'), SESSION_COOKIE),
-  );
-  if (!user) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
-  }
+  const user = await authenticatedUser(c.env, readCookie(c.req.header('Cookie'), SESSION_COOKIE));
+  if (!user) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
   return c.json({ user: { id: user.id, email: user.email, name: user.name } });
 });
 
@@ -266,29 +238,19 @@ app.post('/api/v1/auth/logout', async (c) => {
 
 app.get('/api/v1/dashboard/summary', (c) => {
   const user = c.get('authUser');
-  return c.json({
-    user: { id: user.id, email: user.email, name: user.name },
-    phase: 2,
-    system: 'ready',
-  });
+  return c.json({ user: { id: user.id, email: user.email, name: user.name }, phase: 4, system: 'ready' });
 });
 
+app.route('/api/v1/prospects', prospectRoutes);
+
 app.get('/api/v1/runner/health', (c) =>
-  c.json({
-    ok: true,
-    runner: 'not-connected',
-    message: 'Local runner connection begins in Phase 8.',
-  }),
+  c.json({ ok: true, runner: 'not-connected', message: 'Local runner connection begins in Phase 8.' }),
 );
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } }, 404));
-
 app.onError((error, c) => {
   console.error('Unhandled request error', { name: error.name });
-  return c.json(
-    { error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } },
-    500,
-  );
+  return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } }, 500);
 });
 
 export default app;
