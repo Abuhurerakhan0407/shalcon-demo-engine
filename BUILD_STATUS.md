@@ -2,7 +2,7 @@
 
 Current phase: **Phase 9 — Playwright Research Engine**  
 Launch progress: **~31%**  
-Status: **IMPLEMENTED — final Phase 9 verification pending a runnable GitHub Actions job**
+Status: **IMPLEMENTED + HARDENED — final Phase 9 verification pending a runnable GitHub Actions job**
 
 ## Completed phases
 
@@ -64,12 +64,15 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - Full-page screenshots: ✅
 - Console, request-failure, and HTTP diagnostics: ✅
 - Per-request browser route safety guard: ✅
+- Service Workers blocked so request routing cannot be bypassed: ✅
+- WebSocket network path blocked during research: ✅
 - Unsafe redirect/final-URL fail-closed handling: ✅
 - Cloud-side bounded result schema: ✅
 - Non-empty results and duplicate-final-URL rejection: ✅
 - Operator/prospect/job ownership validation: ✅
 - Source-only D1 persistence: ✅
-- Immutable/idempotent source-record collision protection: ✅
+- Retry-safe immutable source replay semantics: ✅
+- Source identity collision rejection: ✅
 - No Phase 9 promotion to evidence or verified facts: ✅
 - Real-D1 Phase 9 acceptance fixture: ✅
 - Permanent Phase 9 audit/scripts/CI wiring: ✅
@@ -86,7 +89,7 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 
 ## Current CI condition
 
-Latest Phase 9 GitHub Actions attempts are terminating before checkout with no executable steps/logs. The latest observed run is `33770465463` on commit `90ba0dc04ad9dddc84fec83d6d27357d02b33ba4`. This is treated as an external verification blocker, not as a passing or failing product test.
+GitHub Actions attempts are terminating before checkout with no executable steps/logs. The latest observed run is `33771404248` on commit `1611adae9fc8ed0ad48031cc9dd61631c8fa9605`. This is treated as an external verification blocker, not as a passing or failing product test.
 
 ## Blocked
 

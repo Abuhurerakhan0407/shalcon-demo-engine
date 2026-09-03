@@ -38,6 +38,9 @@ for (const contract of [
   '_SAFE_NON_NETWORK_SCHEMES',
   'route.abort("blockedbyclient")',
   'final_url = self.validator(candidate)',
+  'service_workers="block"',
+  'route_web_socket',
+  'web_socket.close',
 ]) {
   if (!research.includes(contract)) throw new Error(`Missing Phase 9 browser contract: ${contract}`);
 }

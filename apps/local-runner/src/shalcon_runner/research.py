@@ -107,6 +107,14 @@ class BrowserResearchEngine:
 
         context.route("**/*", guard)
 
+    def _block_web_sockets(self, context: BrowserContext) -> None:
+        # Research only needs rendered HTTP(S) source material. Keeping WebSockets disconnected
+        # closes a separate browser network path that is not governed by normal request routing.
+        context.route_web_socket(
+            "**/*",
+            lambda web_socket: web_socket.close(code=1008, reason="Research network policy"),
+        )
+
     def _discover_links(self, page: Page, base_url: str) -> list[str]:
         try:
             raw_links = page.locator("a[href]").evaluate_all(
@@ -214,7 +222,7 @@ class BrowserResearchEngine:
                 candidate = page.url
                 if candidate and candidate != "about:blank":
                     final_url = self.validator(candidate)
-            except (UnsafeResearchUrl, ValueError, Exception):  # noqa: BLE001 - unsafe failed target must not escape.
+            except Exception:  # noqa: BLE001 - unsafe failed target must not escape.
                 final_url = requested_url
         finally:
             page.close()
@@ -259,8 +267,10 @@ class BrowserResearchEngine:
                 viewport={"width": 1440, "height": 900},
                 ignore_https_errors=False,
                 java_script_enabled=True,
+                service_workers="block",
             )
             self._route_guard(context)
+            self._block_web_sockets(context)
             try:
                 while queue and len(pages) < page_limit:
                     current = queue.pop(0)

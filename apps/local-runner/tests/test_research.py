@@ -90,3 +90,34 @@ def test_js_rendered_site_discovery_screenshots_and_diagnostics(tmp_path: Path) 
         assert page["requestedUrl"].startswith(base)
         assert len(page["html"]) <= 120_000
         assert len(page["text"]) <= 60_000
+
+
+def test_websocket_guard_closes_without_connecting() -> None:
+    class FakeWebSocket:
+        def __init__(self) -> None:
+            self.closed = False
+            self.code: int | None = None
+            self.reason: str | None = None
+
+        def close(self, *, code: int, reason: str) -> None:
+            self.closed = True
+            self.code = code
+            self.reason = reason
+
+    class FakeContext:
+        def __init__(self) -> None:
+            self.pattern: str | None = None
+            self.socket = FakeWebSocket()
+
+        def route_web_socket(self, pattern: str, handler) -> None:
+            self.pattern = pattern
+            handler(self.socket)
+
+    context = FakeContext()
+    engine = BrowserResearchEngine(validator=lambda url: url)
+    engine._block_web_sockets(context)  # type: ignore[arg-type]
+
+    assert context.pattern == "**/*"
+    assert context.socket.closed is True
+    assert context.socket.code == 1008
+    assert context.socket.reason == "Research network policy"
