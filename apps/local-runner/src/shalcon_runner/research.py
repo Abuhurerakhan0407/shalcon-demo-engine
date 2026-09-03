@@ -50,6 +50,8 @@ _RELEVANT_TERMS = (
     "team",
 )
 
+_SAFE_NON_NETWORK_SCHEMES = {"about", "blob", "data"}
+
 
 def _safe_job_segment(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-.")
@@ -96,7 +98,12 @@ class BrowserResearchEngine:
                 except (UnsafeResearchUrl, ValueError):
                     route.abort("blockedbyclient")
                     return
-            route.continue_()
+                route.continue_()
+                return
+            if scheme in _SAFE_NON_NETWORK_SCHEMES:
+                route.continue_()
+                return
+            route.abort("blockedbyclient")
 
         context.route("**/*", guard)
 
@@ -204,10 +211,11 @@ class BrowserResearchEngine:
         except Exception as exc:  # noqa: BLE001 - browser boundary reports safely.
             navigation_error = f"{type(exc).__name__}: navigation failed safely."[:500]
             try:
-                if page.url and page.url != "about:blank":
-                    final_url = page.url
-            except Exception:  # noqa: BLE001
-                pass
+                candidate = page.url
+                if candidate and candidate != "about:blank":
+                    final_url = self.validator(candidate)
+            except (UnsafeResearchUrl, ValueError, Exception):  # noqa: BLE001 - unsafe failed target must not escape.
+                final_url = requested_url
         finally:
             page.close()
 
