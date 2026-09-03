@@ -50,7 +50,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isOneOf<T extends readonly string[]>(value: unknown, options: T): value is T[number] {
-  return typeof value === 'string' && options.includes(value as T[number]);
+  return typeof value === 'string' && options.some((option) => option === value);
 }
 
 export function isThemeDNA(value: unknown): value is ThemeDNA {
