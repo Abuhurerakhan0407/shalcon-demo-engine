@@ -18,6 +18,8 @@ TOKEN = "runner-test-token-that-is-long-enough"
         "https://api.example.com/worker",
         "https://api.example.com?mode=runner",
         "https://api.example.com#runner",
+        "https://api.example.com:99999",
+        "https://api.example.com:not-a-port",
     ],
 )
 def test_insecure_or_ambiguous_runner_api_base_urls_are_rejected(base_url: str) -> None:
