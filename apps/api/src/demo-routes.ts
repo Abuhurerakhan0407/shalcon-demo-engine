@@ -1,15 +1,17 @@
 import { DemoRepository, type D1DatabaseLike } from '@shalcon/db';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 
 import type { Bindings } from './context';
 import { hashDemoToken, isValidDemoToken, renderDemoRecord } from './demo-renderer';
+
+type AppContext = Context<Bindings>;
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
   if (!db) throw new Error('D1 binding is not configured.');
   return db;
 }
 
-function setDemoSecurityHeaders(c: Parameters<Parameters<Hono<Bindings>['get']>[1]>[0]) {
+function setDemoSecurityHeaders(c: AppContext) {
   c.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
   c.header('Cache-Control', 'private, no-store, max-age=0');
   c.header('Pragma', 'no-cache');
@@ -17,7 +19,7 @@ function setDemoSecurityHeaders(c: Parameters<Parameters<Hono<Bindings>['get']>[
   c.header('X-Content-Type-Options', 'nosniff');
 }
 
-function unavailable(c: Parameters<Parameters<Hono<Bindings>['get']>[1]>[0]) {
+function unavailable(c: AppContext) {
   setDemoSecurityHeaders(c);
   return c.html(
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Preview unavailable</title></head><body><main><h1>Preview unavailable</h1><p>This private concept preview is unavailable or has expired.</p></main></body></html>',
