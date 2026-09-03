@@ -171,11 +171,50 @@ export class RunnerJobRepository {
     resultJson: string,
     now: string,
   ): Promise<RunnerJobClaim> {
-    const context = await this.contexts.getByJobId(jobId);
-    if (!context || context.userId !== userId) throw new Error(`Job ${jobId} is not owned by this operator.`);
-    const job = await this.jobs.complete(jobId, owner, now);
-    const updatedContext = await this.contexts.setResult(jobId, userId, resultJson, now);
-    return { job, context: updatedContext };
+    const writes = await this.db.batch([
+      this.db
+        .prepare(`
+          UPDATE job_contexts
+          SET result_json = ?, updated_at = ?
+          WHERE job_id = ? AND user_id = ?
+            AND EXISTS (
+              SELECT 1 FROM jobs
+              WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+            )
+        `)
+        .bind(resultJson, now, jobId, userId, jobId, owner),
+      this.db
+        .prepare(`
+          UPDATE jobs
+          SET status = 'COMPLETED', completed_at = ?, lease_owner = NULL,
+            lease_expires_at = NULL, updated_at = ?
+          WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+            AND EXISTS (
+              SELECT 1 FROM job_contexts
+              WHERE job_id = ? AND user_id = ?
+            )
+        `)
+        .bind(now, now, jobId, owner, jobId, userId),
+    ]);
+
+    if (writes.length !== 2 || writes.some((write) => write.meta?.changes !== 1)) {
+      throw new Error(`Job ${jobId} is not owned by this operator and runner.`);
+    }
+
+    const [job, context] = await Promise.all([
+      this.jobs.getById(jobId),
+      this.contexts.getByJobId(jobId),
+    ]);
+    if (
+      !job ||
+      job.status !== 'COMPLETED' ||
+      !context ||
+      context.userId !== userId ||
+      context.resultJson !== resultJson
+    ) {
+      throw new Error(`Job ${jobId} completion did not persist atomically.`);
+    }
+    return { job, context };
   }
 
   async failWithRetry(
