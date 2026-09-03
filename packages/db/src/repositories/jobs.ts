@@ -196,7 +196,7 @@ export class JobRepository {
     const recovered: JobRecord[] = [];
     for (const row of expired.results) {
       const attempts = row.attempts + 1;
-      const status = nextFailureStatus(attempts, row.maxAttempts);
+      const status = nextFailureStatus(attempts, row.max_attempts);
       const updated = await this.db
         .prepare(`
           UPDATE jobs
