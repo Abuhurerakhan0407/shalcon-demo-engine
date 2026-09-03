@@ -151,7 +151,7 @@ demoAdminRoutes.post('/prospects/:prospectId/demos', async (c) => {
     );
   }
 
-  const rawInput = await c.req.json().catch(() => ({}));
+  const rawInput: unknown = await c.req.json().catch(() => ({}));
   const facts = await new ProspectFactRepository(db).listForProspect(prospect.id);
   const build = buildManualSalonDemoConfig(prospect, facts, rawInput);
   const now = new Date();
@@ -236,7 +236,7 @@ demoAdminRoutes.put('/demos/:demoId', async (c) => {
     return c.json({ error: { code: 'DEMO_STATE_NOT_FOUND', message: 'Demo builder state not found.' } }, 404);
   }
 
-  const rawInput = await c.req.json().catch(() => ({}));
+  const rawInput: unknown = await c.req.json().catch(() => ({}));
   const facts = await new ProspectFactRepository(db).listForProspect(prospect.id);
   const build = buildManualSalonDemoConfig(prospect, facts, rawInput);
   const now = new Date();
