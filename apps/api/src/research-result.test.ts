@@ -73,6 +73,8 @@ describe('Phase 9 research result contract', () => {
     expect(canonicalResearchUrl('http://localhost/')).toBeNull();
     expect(canonicalResearchUrl('https://service.internal/')).toBeNull();
     expect(canonicalResearchUrl('https://example.com:8443/')).toBeNull();
+    expect(canonicalResearchUrl('https://93.184.216.34/')).toBeNull();
+    expect(canonicalResearchUrl('https://[2606:4700:4700::1111]/')).toBeNull();
     expect(canonicalResearchUrl('file:///etc/passwd')).toBeNull();
   });
 
