@@ -9,6 +9,7 @@ const required = [
   'packages/db/src/repositories/runner-jobs.ts',
   'apps/local-runner/src/shalcon_runner/client.py',
   'apps/local-runner/src/shalcon_runner/worker.py',
+  'apps/local-runner/tests/test_client.py',
   'scripts/verify-phase8-d1.mjs',
 ];
 for (const path of required) await access(path);
@@ -58,7 +59,17 @@ if (!api.includes("app.use('/api/v1/runner/operator/*', requireAuth)")) throw ne
 if (!api.includes("app.route('/api/v1/runner', runnerRoutes)")) throw new Error('Runner routes are not mounted.');
 
 const client = await readFile('apps/local-runner/src/shalcon_runner/client.py', 'utf8');
-for (const contract of ['Authorization', 'Bearer', '/agent/heartbeat', '/agent/jobs/claim', '/complete', '/fail']) {
+for (const contract of [
+  'Authorization',
+  'Bearer',
+  '/agent/heartbeat',
+  '/agent/jobs/claim',
+  '/complete',
+  '/fail',
+  '_validated_base_url',
+  '_loopback_host',
+  'requires HTTPS except for loopback',
+]) {
   if (!client.includes(contract)) throw new Error(`Missing local runner client contract: ${contract}`);
 }
 
