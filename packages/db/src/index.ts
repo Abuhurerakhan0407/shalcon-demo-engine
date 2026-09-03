@@ -23,6 +23,7 @@ export {
   type IdentityResolutionRecord,
   type JobRecord,
   type JobStatus,
+  type ProspectAliasRecord,
   type ProspectFactRecord,
   type ProspectIdentityKeyRecord,
   type ProspectObservationRecord,
