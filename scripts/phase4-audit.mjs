@@ -7,6 +7,9 @@ const required = [
   'packages/evidence/src/index.ts',
   'packages/evidence/src/index.test.ts',
   'packages/db/src/repositories/evidence.ts',
+  'apps/web/src/prospects/ProspectsPage.tsx',
+  'apps/web/src/prospects/prospects.css',
+  'tests/e2e/prospects.spec.ts',
   'scripts/verify-phase4-d1.mjs',
 ];
 for (const path of required) await access(path);
@@ -22,37 +25,26 @@ for (const contract of [
 }
 
 const evidence = await readFile('packages/evidence/src/index.ts', 'utf8');
-for (const contract of [
-  'SOURCE_QUALITY',
-  'normalizeBusinessName',
-  'normalizeDomain',
-  'normalizePhone',
-  'summarizeFieldEvidence',
-  'canVerifyFact',
-]) {
+for (const contract of ['SOURCE_QUALITY','normalizeBusinessName','normalizeDomain','normalizePhone','summarizeFieldEvidence','canVerifyFact']) {
   if (!evidence.includes(contract)) throw new Error(`Missing Phase 4 evidence contract: ${contract}`);
 }
 
 const routes = await readFile('apps/api/src/prospect-routes.ts', 'utf8');
-for (const contract of [
-  "prospectRoutes.post('/',",
-  "prospectRoutes.patch('/:id'",
-  "prospectRoutes.delete('/:id'",
-  "prospectRoutes.post('/:id/sources'",
-  "prospectRoutes.post('/:id/evidence'",
-  "prospectRoutes.put('/:id/facts/:field'",
-  "prospectRoutes.get('/:id/evidence-bundle'",
-  'VERIFIED_EVIDENCE_REQUIRED',
-]) {
+for (const contract of ["prospectRoutes.post('/',","prospectRoutes.patch('/:id'","prospectRoutes.delete('/:id'","prospectRoutes.post('/:id/sources'","prospectRoutes.post('/:id/evidence'","prospectRoutes.put('/:id/facts/:field'","prospectRoutes.get('/:id/evidence-bundle'",'VERIFIED_EVIDENCE_REQUIRED']) {
   if (!routes.includes(contract)) throw new Error(`Missing Phase 4 API contract: ${contract}`);
 }
 
 const api = await readFile('apps/api/src/index.ts', 'utf8');
-if (!api.includes("app.use('/api/v1/prospects/*', requireAuth)")) {
-  throw new Error('Prospect subroutes are not protected by session middleware.');
+if (!api.includes("app.use('/api/v1/prospects/*', requireAuth)")) throw new Error('Prospect subroutes are not protected.');
+if (!api.includes("app.route('/api/v1/prospects', prospectRoutes)")) throw new Error('Prospect routes are not mounted.');
+
+const ui = await readFile('apps/web/src/prospects/ProspectsPage.tsx', 'utf8');
+for (const contract of ['Facts earn their way in.','Conflicting candidate values','Source provenance','No evidence captured yet.','Create prospect']) {
+  if (!ui.includes(contract)) throw new Error(`Missing Phase 4 evidence UI contract: ${contract}`);
 }
-if (!api.includes("app.route('/api/v1/prospects', prospectRoutes)")) {
-  throw new Error('Prospect routes are not mounted.');
+const browser = await readFile('tests/e2e/prospects.spec.ts', 'utf8');
+for (const contract of ['1 conflict','OFFICIAL_WEBSITE','Create prospect','No evidence captured yet.']) {
+  if (!browser.includes(contract)) throw new Error(`Missing Phase 4 browser acceptance: ${contract}`);
 }
 
 console.log('Phase 4 audit passed.');
