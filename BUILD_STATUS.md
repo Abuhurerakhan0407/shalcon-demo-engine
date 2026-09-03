@@ -1,89 +1,50 @@
 # Build Status
 
-Current phase: **Phase 3 — Salon Template v1**  
-Status: **IN PROGRESS — Phase 2 fully verified; Phase 3 implementation staged for clean CI**
+Current phase: **Phase 3 — Salon Template v1 / ÉLANE v8 integration**  
+Status: **IN PROGRESS — ÉLANE v8 replacement committed; clean CI verification pending**
 
 ## Completed
 
 ### Phase 0 — Repository + Engineering Foundation
 
-- Monorepo/workspace, React frontend, Hono Worker backend, Python runner skeleton, shared packages, strict TypeScript, ESLint, Prettier, Vitest, Playwright, Pytest, environment baseline, architecture docs, and CI are green.
+- Engineering foundation and CI baseline: ✅
 
 ### Phase 1 — Data Layer + State Machine
 
-- D1 initial migration and typed repositories implemented.
-- Prospect state machine, audit trail, retries, leases, dead-letter behavior, and deterministic idempotency implemented.
-- Fresh/repeated migrations, real D1 integration, typecheck, lint, unit, build, Worker smoke, Playwright, Python, and audits are green.
+- D1 schema, repositories, state machine, idempotency, live D1 verification: ✅
 
 ### Phase 2 — Authentication + Dashboard Shell
 
-- Google OAuth code flow implemented with signed, short-lived return state.
-- Google access token is used only to establish verified identity; Google passwords/tokens are not stored by Shalcon.
-- Google identities are bound by stable provider subject (`sub`), not by mutable email.
-- Email/identity collision handling rejects ambiguous account linking.
-- App session tokens are random, stored only by SHA-256 hash, expiring, touchable, and revocable.
-- Auth/session middleware protects dashboard API routes.
-- Credentialed CORS is restricted to the configured web origin.
-- Login surface, loading/error states, dashboard shell, sidebar/topbar, all master routes, responsive mobile drawer, operator identity, and logout are implemented.
-- Real D1 auth integration verifies anonymous rejection, valid-session access, identity uniqueness, CORS behavior, logout revocation, migration reproducibility, and foreign-key integrity.
-- Playwright verifies dashboard navigation, logout, mobile navigation, and zero console errors.
-- Full clean GitHub Actions run is green on commit `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
+- Secure Google OAuth architecture, stable provider-subject identity binding, hashed/revocable D1 sessions, protected responsive dashboard, CORS and browser/runtime tests: ✅
+- Last fully verified Phase 2 commit: `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
 
-## Phase 2 acceptance
+## Phase 3 — ÉLANE v8
 
-- Google OAuth implementation: ✅
-- Session/auth middleware: ✅
-- Unauthorized API blocked: ✅
-- All dashboard routes render: ✅
-- Mobile navigation works: ✅
-- Logout revokes session: ✅
-- No console errors: ✅
-- Playwright navigation test: ✅
-- Stable Google subject identity binding: ✅
-- Production-origin CORS contract: ✅
-- Live D1 auth integration: ✅
-- Typecheck/lint/unit/build/smoke/audits/Python: ✅
-
-## Phase 3 scope
-
-- First high-quality Salon & Spa template.
-- Template registry and versioning.
-- Theme DNA schema.
-- CSS token system.
-- Responsive design.
-- Section component contract.
-- Safe fallback sections.
-- Shalcon concept disclosure.
-- Noindex support.
-- Long, short, and missing-data QA fixtures.
-- Static valid-config preview route.
-- Desktop/mobile browser screenshots retained as CI artifacts.
+- User-provided ÉLANE v8 is the canonical Salon & Spa visual master.
+- Original template source preserved losslessly and fingerprinted.
+- Runtime source preserved and fingerprinted.
+- Deterministic generator adds only engine hooks; it does not redesign the template.
+- Template registry/versioning updated to `elane-v8@8.0.0`.
+- Prospect config is injected through safe DOM/runtime operations rather than generated website code.
+- Long, short, and minimal evidence fixtures implemented.
+- Unsupported services/process/space/reviews/FAQ/contact facts hide or disable rather than being invented.
+- Public QA preview renders the canonical ÉLANE document in an iframe.
+- Browser tests cover cinematic sections, finder personalization, sparse-data fallbacks, booking safety, mobile overflow, and retained screenshots.
 
 ## Phase 3 acceptance
 
-- Visually approved.
-- Desktop/mobile complete.
-- No broken components.
-- Long/short fixture data works.
-- Missing fields gracefully hide/fallback.
-- Visual snapshots captured.
-- Route renders from static valid config.
-- Full clean CI passes.
+- Source fingerprint: pending clean CI.
+- Runtime fingerprint: pending clean CI.
+- Typecheck/lint/unit: pending clean CI.
+- Prior Phase 1/2 D1 regressions: pending clean CI.
+- Build/Worker smoke/audits: pending clean CI.
+- ÉLANE desktop/mobile Playwright: pending clean CI.
+- Visual screenshot inspection: pending clean CI artifact.
 
 ## Blocked
 
-None for Phase 3 implementation. Real Google OAuth client credentials remain required only for provider-level manual OAuth verification and production deployment; secrets must never be committed.
-
-## Known issues
-
-- The D1 database id in `wrangler.jsonc` is a local-development placeholder. Production D1 provisioning belongs to the deployment phase.
-- Production Google OAuth client credentials and session secret must be provisioned as Worker secrets.
-- Phase 3 abstract visual treatments intentionally avoid stock/remote imagery. Real prospect photography must be evidence-backed or explicitly supplied later.
-
-## Last verified commit
-
-Phase 2: `41facc71fceb3ab004c55a10ff747ca98bf28fdc` — all Phase 0 + Phase 1 + Phase 2 gates green.
+None currently.
 
 ## Next action
 
-Push the Phase 3 template/runtime/browser slice, run the complete CI suite, inspect retained desktop/mobile screenshots, and fix every acceptance failure before starting Phase 4.
+Run the complete clean CI gate on the final ÉLANE v8 state, fix every failure, inspect screenshots, then close Phase 3 before Phase 4 begins.
