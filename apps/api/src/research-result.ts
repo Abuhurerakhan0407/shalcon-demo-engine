@@ -50,8 +50,8 @@ export const playwrightResearchResultSchema = z
     prospectId: z.string().min(1).max(160),
     requestedUrl: httpUrlSchema,
     capturedAt: z.string().datetime({ offset: true }),
-    pages: z.array(researchPageResultSchema).max(6),
-    pageCount: z.number().int().min(0).max(6),
+    pages: z.array(researchPageResultSchema).min(1).max(6),
+    pageCount: z.number().int().min(1).max(6),
     sourceOnly: z.literal(true),
   })
   .superRefine((value, context) => {
