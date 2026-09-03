@@ -1,7 +1,7 @@
 import { AuthSessionRepository, UserRepository, type D1DatabaseLike, type UserRecord } from '@shalcon/db';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { deleteCookie, setCookie } from 'hono/cookie';
 import { logger } from 'hono/logger';
 
 import {
@@ -54,6 +54,17 @@ function cookieSecurity(env: Env): boolean {
   return env.APP_ENV === 'production';
 }
 
+function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const segment of cookieHeader.split(';')) {
+    const trimmed = segment.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator < 1) continue;
+    if (trimmed.slice(0, separator) === name) return trimmed.slice(separator + 1);
+  }
+  return undefined;
+}
+
 async function authenticatedUser(env: Env, rawToken: string | undefined): Promise<UserRecord | null> {
   if (!rawToken || !env.DB) return null;
   const tokenHash = await hashSessionToken(rawToken);
@@ -79,7 +90,10 @@ app.use(
 );
 
 app.use('/api/v1/dashboard/*', async (c, next) => {
-  const user = await authenticatedUser(c.env, getCookie(c, SESSION_COOKIE));
+  const user = await authenticatedUser(
+    c.env,
+    readCookie(c.req.header('Cookie'), SESSION_COOKIE),
+  );
   if (!user) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
   }
@@ -126,7 +140,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
 app.get('/api/v1/auth/google/callback', async (c) => {
   const state = c.req.query('state');
   const code = c.req.query('code');
-  const stateCookie = getCookie(c, OAUTH_STATE_COOKIE);
+  const stateCookie = readCookie(c.req.header('Cookie'), OAUTH_STATE_COOKIE);
   deleteCookie(c, OAUTH_STATE_COOKIE, { path: '/api/v1/auth/google' });
 
   if (!state || !code || !stateCookie || state !== stateCookie) {
@@ -180,7 +194,10 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 });
 
 app.get('/api/v1/auth/session', async (c) => {
-  const user = await authenticatedUser(c.env, getCookie(c, SESSION_COOKIE));
+  const user = await authenticatedUser(
+    c.env,
+    readCookie(c.req.header('Cookie'), SESSION_COOKIE),
+  );
   if (!user) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
   }
@@ -188,7 +205,7 @@ app.get('/api/v1/auth/session', async (c) => {
 });
 
 app.post('/api/v1/auth/logout', async (c) => {
-  const rawToken = getCookie(c, SESSION_COOKIE);
+  const rawToken = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
   if (rawToken && c.env.DB) {
     const tokenHash = await hashSessionToken(rawToken);
     await new AuthSessionRepository(c.env.DB).revokeByTokenHash(tokenHash, new Date().toISOString());
