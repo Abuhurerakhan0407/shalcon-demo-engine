@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 const BLOCKED_HOST_SUFFIXES = ['.localhost', '.local', '.internal'] as const;
 
+function isIpLiteralHostname(hostname: string): boolean {
+  if (hostname.includes(':')) return true;
+  const parts = hostname.split('.');
+  return (
+    parts.length === 4 &&
+    parts.every((part) => /^\d{1,3}$/u.test(part) && Number(part) >= 0 && Number(part) <= 255)
+  );
+}
+
 export function canonicalResearchUrl(value: string): string | null {
   try {
     const url = new URL(value);
@@ -14,6 +23,7 @@ export function canonicalResearchUrl(value: string): string | null {
       !hostname ||
       hostname === 'localhost' ||
       hostname.includes('%') ||
+      isIpLiteralHostname(hostname) ||
       BLOCKED_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
     ) {
       return null;
