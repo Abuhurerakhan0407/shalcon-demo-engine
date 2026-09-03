@@ -174,9 +174,10 @@ export class JobRepository {
         UPDATE jobs
         SET lease_expires_at = ?, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+          AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
         RETURNING *
       `)
-      .bind(leaseExpiresAt, now, id, owner)
+      .bind(leaseExpiresAt, now, id, owner, now)
       .first<JobRow>();
     if (!renewed) throw new Error(`Job ${id} lease cannot be renewed by ${owner}.`);
     return mapJob(renewed);
@@ -195,7 +196,7 @@ export class JobRepository {
     const recovered: JobRecord[] = [];
     for (const row of expired.results) {
       const attempts = row.attempts + 1;
-      const status = nextFailureStatus(attempts, row.max_attempts);
+      const status = nextFailureStatus(attempts, row.maxAttempts);
       const updated = await this.db
         .prepare(`
           UPDATE jobs
@@ -221,9 +222,10 @@ export class JobRepository {
         SET status = 'COMPLETED', completed_at = ?, lease_owner = NULL,
           lease_expires_at = NULL, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+          AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
         RETURNING *
       `)
-      .bind(now, now, id, owner)
+      .bind(now, now, id, owner, now)
       .first<JobRow>();
 
     if (!completed) {
@@ -241,7 +243,13 @@ export class JobRepository {
     retryAt = now,
   ): Promise<JobRecord> {
     const current = await this.getById(id);
-    if (!current || current.status !== 'RUNNING' || current.leaseOwner !== owner) {
+    if (
+      !current ||
+      current.status !== 'RUNNING' ||
+      current.leaseOwner !== owner ||
+      current.leaseExpiresAt === null ||
+      current.leaseExpiresAt <= now
+    ) {
       throw new Error(`Job ${id} is not owned by ${owner}.`);
     }
     const attempts = current.attempts + 1;
@@ -254,9 +262,10 @@ export class JobRepository {
           scheduled_for = CASE WHEN ? = 'FAILED' THEN ? ELSE scheduled_for END,
           last_error_code = ?, last_error_safe_message = ?, updated_at = ?
         WHERE id = ? AND status = 'RUNNING' AND lease_owner = ?
+          AND lease_expires_at IS NOT NULL AND lease_expires_at > ?
         RETURNING *
       `)
-      .bind(status, attempts, status, retryAt, errorCode, safeMessage, now, id, owner)
+      .bind(status, attempts, status, retryAt, errorCode, safeMessage, now, id, owner, now)
       .first<JobRow>();
 
     if (!failed) {
