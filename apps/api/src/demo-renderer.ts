@@ -8,7 +8,7 @@ import { findTemplateDefinition } from '@shalcon/templates';
 
 const PUBLIC_DEMO_STATUSES = new Set<DemoRecord['status']>(['READY', 'SENT', 'CONVERTED']);
 const DEMO_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/u;
-type SalonTemplateConfig = Parameters<typeof renderElaneDocument>[1];
+type SalonTemplateConfig = Parameters<typeof validateSalonTemplateConfig>[0];
 
 export type DemoRenderResult =
   | { ok: true; html: string; demoId: string }
