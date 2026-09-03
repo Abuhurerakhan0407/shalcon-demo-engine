@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import hashlib
@@ -12,6 +13,7 @@ from urllib.parse import urljoin, urlsplit
 from playwright.sync_api import BrowserContext, Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 from .client import ClaimedJob
+from .egress_proxy import PublicSocksProxy
 from .url_safety import UnsafeResearchUrl, validate_public_http_url
 
 UrlValidator = Callable[[str], str]
@@ -79,12 +81,14 @@ class BrowserResearchEngine:
         validator: UrlValidator = validate_public_http_url,
         artifacts_root: Path | None = None,
         limits: ResearchLimits | None = None,
+        egress_proxy_factory: Callable[[], Any] | None = PublicSocksProxy,
     ) -> None:
         self.validator = validator
         self.artifacts_root = artifacts_root or Path(
             os.environ.get("SHALCON_ARTIFACTS_DIR", "artifacts/research")
         )
         self.limits = limits or ResearchLimits()
+        self.egress_proxy_factory = egress_proxy_factory
 
     def _route_guard(self, context: BrowserContext) -> None:
         validator = self.validator
@@ -108,8 +112,6 @@ class BrowserResearchEngine:
         context.route("**/*", guard)
 
     def _block_web_sockets(self, context: BrowserContext) -> None:
-        # Research only needs rendered HTTP(S) source material. Keeping WebSockets disconnected
-        # closes a separate browser network path that is not governed by normal request routing.
         context.route_web_socket(
             "**/*",
             lambda web_socket: web_socket.close(code=1008, reason="Research network policy"),
@@ -120,7 +122,7 @@ class BrowserResearchEngine:
             raw_links = page.locator("a[href]").evaluate_all(
                 "els => els.map(a => ({href: a.getAttribute('href') || '', text: (a.textContent || '').trim()}))"
             )
-        except Exception:  # noqa: BLE001 - discovery failure should not fail source capture.
+        except Exception:
             return []
 
         base_host = (urlsplit(base_url).hostname or "").lower()
@@ -204,7 +206,7 @@ class BrowserResearchEngine:
             title = _bounded(page.title(), 500)
             try:
                 text = _bounded(page.locator("body").inner_text(timeout=3_000), self.limits.max_text_chars)
-            except Exception:  # noqa: BLE001 - retain the page even when text extraction fails.
+            except Exception:
                 text = ""
             html = _bounded(page.content(), self.limits.max_html_chars)
             discovered_links = self._discover_links(page, final_url)
@@ -214,15 +216,15 @@ class BrowserResearchEngine:
             try:
                 page.screenshot(path=str(screenshot_file), full_page=True, animations="disabled")
                 screenshot_path = str(screenshot_file)
-            except Exception:  # noqa: BLE001 - screenshot failure is diagnostic, not source loss.
+            except Exception:
                 screenshot_path = None
-        except Exception as exc:  # noqa: BLE001 - browser boundary reports safely.
+        except Exception as exc:
             navigation_error = f"{type(exc).__name__}: navigation failed safely."[:500]
             try:
                 candidate = page.url
                 if candidate and candidate != "about:blank":
                     final_url = self.validator(candidate)
-            except Exception:  # noqa: BLE001 - unsafe failed target must not escape.
+            except Exception:
                 final_url = requested_url
         finally:
             page.close()
@@ -261,8 +263,19 @@ class BrowserResearchEngine:
         visited: set[str] = set()
         queue: list[str] = [start_url]
 
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+        proxy_context = (
+            self.egress_proxy_factory()
+            if self.egress_proxy_factory is not None
+            else nullcontext(None)
+        )
+        with proxy_context as egress_proxy, sync_playwright() as playwright:
+            launch_options: dict[str, Any] = {}
+            if isinstance(egress_proxy, str):
+                launch_options["proxy"] = {
+                    "server": egress_proxy,
+                    "bypass": "<-loopback>",
+                }
+            browser = playwright.chromium.launch(headless=True, **launch_options)
             context = browser.new_context(
                 viewport={"width": 1440, "height": 900},
                 ignore_https_errors=False,

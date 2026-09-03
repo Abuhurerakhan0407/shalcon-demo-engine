@@ -11,17 +11,12 @@ class FixtureHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         return
 
-    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract.
+    def do_GET(self) -> None:
         if self.path == "/":
             body = """<!doctype html><html><head><title>Aura Salon Fixture</title></head><body>
-            <h1>Aura</h1>
-            <div id='dynamic'></div>
-            <a href='/services'>Our Services</a>
-            <a href='/services-error'>Services Error Fixture</a>
-            <script>
-              document.getElementById('dynamic').textContent='JS-rendered premium salon content';
-              console.warn('fixture warning');
-            </script>
+            <h1>Aura</h1><div id='dynamic'></div>
+            <a href='/services'>Our Services</a><a href='/services-error'>Services Error Fixture</a>
+            <script>document.getElementById('dynamic').textContent='JS-rendered premium salon content';console.warn('fixture warning');</script>
             </body></html>"""
             self.send_response(200)
         elif self.path == "/services":
@@ -55,6 +50,7 @@ def test_js_rendered_site_discovery_screenshots_and_diagnostics(tmp_path: Path) 
             validator=lambda url: url,
             artifacts_root=tmp_path,
             limits=ResearchLimits(max_pages=3, settle_ms=50, navigation_timeout_ms=5_000),
+            egress_proxy_factory=None,
         )
         result = engine.research(
             job_id="job-phase9-browser",
@@ -115,7 +111,7 @@ def test_websocket_guard_closes_without_connecting() -> None:
 
     context = FakeContext()
     engine = BrowserResearchEngine(validator=lambda url: url)
-    engine._block_web_sockets(context)  # type: ignore[arg-type]
+    engine._block_web_sockets(context)
 
     assert context.pattern == "**/*"
     assert context.socket.closed is True

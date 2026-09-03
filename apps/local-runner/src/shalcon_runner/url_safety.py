@@ -14,6 +14,7 @@ class UnsafeResearchUrl(ValueError):
 
 _BLOCKED_HOST_SUFFIXES = (".localhost", ".local", ".internal")
 _ALLOWED_SCHEMES = {"http", "https"}
+_ALLOWED_WEB_PORTS = {80, 443}
 _MAX_URL_LENGTH = 2048
 
 
@@ -45,6 +46,7 @@ def validate_public_http_url(raw_url: str, resolver: Resolver = socket.getaddrin
 
     Production research is public-web only. Every resolved address must be globally routable;
     mixed public/private DNS answers are rejected instead of choosing the public answer.
+    Standard web ports only are accepted so the browser cannot be used as a generic port scanner.
     """
 
     candidate = raw_url.strip()
@@ -65,19 +67,15 @@ def validate_public_http_url(raw_url: str, resolver: Resolver = socket.getaddrin
         raise UnsafeResearchUrl("Research URL must contain a hostname.")
 
     hostname = parsed.hostname.rstrip(".").lower()
-    if (
-        hostname == "localhost"
-        or hostname.endswith(_BLOCKED_HOST_SUFFIXES)
-        or "%" in hostname
-    ):
+    if hostname == "localhost" or hostname.endswith(_BLOCKED_HOST_SUFFIXES) or "%" in hostname:
         raise UnsafeResearchUrl("Research hostname is not allowed.")
 
     try:
         port = parsed.port or (443 if scheme == "https" else 80)
     except ValueError as exc:
         raise UnsafeResearchUrl("Research URL contains an invalid port.") from exc
-    if port < 1 or port > 65535:
-        raise UnsafeResearchUrl("Research URL contains an invalid port.")
+    if port not in _ALLOWED_WEB_PORTS:
+        raise UnsafeResearchUrl("Research URL must use standard web ports 80 or 443.")
 
     try:
         literal_ip = ipaddress.ip_address(hostname)

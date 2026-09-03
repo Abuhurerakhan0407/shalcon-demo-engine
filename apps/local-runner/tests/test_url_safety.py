@@ -38,9 +38,10 @@ def test_public_url_is_normalized_and_fragment_removed() -> None:
         "file:///etc/passwd",
         "ftp://example.com/file",
         "https://user:pass@example.com/",
+        "https://example.com:8080/",
     ],
 )
-def test_private_or_non_http_targets_are_rejected(url: str) -> None:
+def test_private_non_http_or_non_web_targets_are_rejected(url: str) -> None:
     with pytest.raises(UnsafeResearchUrl):
         validate_public_http_url(url, resolver=resolver_for("93.184.216.34"))
 
