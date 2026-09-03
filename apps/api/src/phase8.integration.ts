@@ -124,7 +124,7 @@ integration.get('/phase8', async (c) => {
   const thirdClaim = await jobs.claimNextForUser(
     USER_ID,
     runnerTwo.id,
-    '2026-09-03T12:04:30.000Z',
+    '2026-09-03T12:06:00.000Z',
     AFTER_CRASH,
   );
   const deadLetter = thirdClaim
