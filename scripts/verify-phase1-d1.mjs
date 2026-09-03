@@ -1,5 +1,6 @@
-import { rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { rm } from 'node:fs/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const persistDir = '.wrangler/phase1-d1-test';
 
@@ -30,13 +31,13 @@ async function waitForIntegration(url, timeoutMs = 60_000) {
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url);
+      const response = await globalThis.fetch(url);
       if (response.ok) return response;
       lastError = new Error(`HTTP ${response.status}`);
     } catch (error) {
       lastError = error;
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await sleep(500);
   }
   throw lastError instanceof Error ? lastError : new Error('Timed out waiting for D1 integration worker.');
 }
@@ -84,6 +85,6 @@ try {
   throw error;
 } finally {
   worker.kill('SIGTERM');
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await sleep(500);
   if (!worker.killed) worker.kill('SIGKILL');
 }
