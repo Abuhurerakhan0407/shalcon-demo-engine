@@ -11,6 +11,7 @@ const required = [
   'apps/local-runner/src/shalcon_runner/client.py',
   'apps/local-runner/src/shalcon_runner/worker.py',
   'apps/local-runner/tests/test_client.py',
+  'apps/local-runner/tests/test_worker.py',
   'scripts/verify-phase8-d1.mjs',
 ];
 for (const path of required) await access(path);
@@ -89,8 +90,13 @@ for (const contract of [
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');
-for (const contract of ['PHASE8_ECHO', 'UNSUPPORTED_JOB_TYPE', 'LOCAL_EXECUTION_FAILED', 'run_forever']) {
+for (const contract of ['PHASE8_ECHO', 'UNSUPPORTED_JOB_TYPE', 'LOCAL_EXECUTION_FAILED', 'run_forever', 'if capabilities is None else list(capabilities)']) {
   if (!worker.includes(contract)) throw new Error(`Missing local execution safety contract: ${contract}`);
+}
+
+const workerTest = await readFile('apps/local-runner/tests/test_worker.py', 'utf8');
+if (!workerTest.includes('test_explicit_empty_capabilities_stay_empty')) {
+  throw new Error('Local runner does not test explicit empty capability advertisement.');
 }
 
 const integration = await readFile('apps/api/src/phase8.integration.ts', 'utf8');
