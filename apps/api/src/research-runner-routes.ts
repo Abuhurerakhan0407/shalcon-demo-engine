@@ -1,0 +1,99 @@
+import {
+  JobRepository,
+  LocalRunnerRepository,
+  RunnerJobRepository,
+  type D1DatabaseLike,
+  type LocalRunnerRecord,
+} from '@shalcon/db';
+import { Hono } from 'hono';
+import { z } from 'zod';
+
+import { hashSessionToken } from './auth';
+import type { Bindings } from './context';
+import { persistResearchSourcesIfNeeded } from './research-persistence';
+
+const completeSchema = z.object({ result: z.unknown() });
+
+function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
+  if (!db) throw new Error('D1 binding is not configured.');
+  return db;
+}
+
+function bearerToken(header: string | undefined): string | null {
+  if (!header) return null;
+  const [scheme, token] = header.trim().split(/\s+/, 2);
+  if (scheme?.toLowerCase() !== 'bearer' || !token || token.length < 24) return null;
+  return token;
+}
+
+async function authenticatedRunner(
+  db: D1DatabaseLike,
+  authorization: string | undefined,
+): Promise<LocalRunnerRecord | null> {
+  const token = bearerToken(authorization);
+  if (!token) return null;
+  return new LocalRunnerRepository(db).getActiveByTokenHash(await hashSessionToken(token));
+}
+
+export const researchRunnerRoutes = new Hono<Bindings>();
+
+researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
+  const db = requireDb(c.env.DB);
+  const runner = await authenticatedRunner(db, c.req.header('Authorization'));
+  if (!runner) {
+    return c.json(
+      { error: { code: 'RUNNER_UNAUTHORIZED', message: 'Valid runner token required.' } },
+      401,
+    );
+  }
+
+  const input = completeSchema.parse(await c.req.json().catch(() => ({})));
+  const job = await new JobRepository(db).getById(c.req.param('jobId'));
+  if (!job || job.jobType !== 'PLAYWRIGHT_RESEARCH') {
+    return c.json(
+      { error: { code: 'RESEARCH_JOB_NOT_FOUND', message: 'Research job not found.' } },
+      404,
+    );
+  }
+  if (job.status !== 'RUNNING' || job.leaseOwner !== runner.id) {
+    return c.json(
+      { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this active research job.' } },
+      409,
+    );
+  }
+
+  let sources;
+  try {
+    sources = await persistResearchSourcesIfNeeded(db, runner.userId, job, input.result);
+  } catch {
+    return c.json(
+      {
+        error: {
+          code: 'INVALID_RESEARCH_RESULT',
+          message: 'Research result failed validation or ownership checks.',
+        },
+      },
+      422,
+    );
+  }
+
+  try {
+    const completed = await new RunnerJobRepository(db).completeWithResult(
+      job.id,
+      runner.userId,
+      runner.id,
+      JSON.stringify(input.result),
+      new Date().toISOString(),
+    );
+    return c.json({
+      job: { id: completed.job.id, status: completed.job.status },
+      sourcePersistence: sources,
+      resultAccepted: true,
+    });
+  } catch {
+    return c.json(
+      { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this active research job.' } },
+      409,
+    );
+  }
+});
