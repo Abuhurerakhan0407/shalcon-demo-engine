@@ -62,6 +62,19 @@ export const playwrightResearchResultSchema = z
         message: 'pageCount must equal pages.length.',
       });
     }
+
+    const seenFinalUrls = new Set<string>();
+    value.pages.forEach((page, index) => {
+      if (seenFinalUrls.has(page.finalUrl)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['pages', index, 'finalUrl'],
+          message: 'Research pages must have unique finalUrl values.',
+        });
+        return;
+      }
+      seenFinalUrls.add(page.finalUrl);
+    });
   });
 
 export type PlaywrightResearchResult = z.infer<typeof playwrightResearchResultSchema>;
