@@ -1,83 +1,79 @@
 # Build Status
 
-Current phase: **Phase 5 — Identity Resolution + Deduplication**  
-Status: **IN PROGRESS — Phase 4 fully verified; Phase 5 implementation starting**
+Current phase: **Phase 9 — Playwright Research Engine**  
+Launch progress: **~29% (Phases 0–8 of 0–30 fully verified)**  
+Status: **IN PROGRESS — Phase 8 fully green; Phase 9 implementation starting**
 
-## Completed
+## Completed phases
 
-### Phase 0 — Repository + Engineering Foundation
+### Phase 0 — Repository + Engineering Foundation ✅
+Monorepo, React/Vite/TypeScript, Hono/Cloudflare Worker, Python runner foundation, strict tooling, tests, CI, docs.
 
-- Engineering foundation and CI baseline: ✅
+### Phase 1 — Data Layer + State Machine ✅
+D1 schema/repositories, deterministic prospect state machine, idempotent job ledger, leases, audit events, live-D1 verification.
 
-### Phase 1 — Data Layer + State Machine
+### Phase 2 — Authentication + Dashboard Shell ✅
+Google OAuth architecture, stable Google subject identity, hashed/revocable sessions, protected responsive dashboard, CORS/runtime/browser tests.
 
-- D1 schema, repositories, state machine, idempotency, live D1 verification: ✅
+### Phase 3 — Salon Template v1 / ÉLANE v8 ✅
+User-provided ÉLANE v8 preserved by fingerprint, deterministic adapter/runtime, `elane-v8@8.0.0`, noindex/disclosure, sparse-data fallbacks, desktop/mobile browser QA.
 
-### Phase 2 — Authentication + Dashboard Shell
+### Phase 4 — Prospect + Evidence Core ✅
+Prospect CRUD/manual entry, immutable source records, evidence candidates, canonical facts, DB-enforced verification provenance, conflict/provenance operator UI.
 
-- Secure Google OAuth architecture, stable provider-subject identity binding, hashed/revocable D1 sessions, protected responsive dashboard, CORS and browser/runtime tests: ✅
-- Verified Phase 2 commit: `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
+### Phase 5 — Identity Resolution + Deduplication ✅
+Strong-key dedupe, weak-match review, conflict handling, canonical observations/decisions, terminal duplicate aliases, operator review UI, live-D1 identity acceptance.
 
-### Phase 3 — Salon Template v1 / ÉLANE v8
+### Phase 6 — Universal Demo Renderer ✅
+One `/d/:token` renderer, hashed tokens, exact template-version resolution, D1 config load, expiry/disable, non-enumerating unavailable path, config fail-closed behavior, one deployment serving many businesses.
 
-- User-provided ÉLANE v8 is the canonical Salon & Spa visual master.
-- Original template source is preserved losslessly and enforced by SHA-256 fingerprint.
-- Runtime source is fingerprinted and regenerated deterministically during install/build.
-- Adapter adds only engine hooks, noindex/disclosure, safe config injection, and evidence-safe hiding.
-- Template registry/versioning: `elane-v8@8.0.0`.
-- Long, short, and minimal evidence fixtures are implemented.
-- Unsupported services/process/space/reviews/FAQ/contact facts hide or disable rather than being invented.
-- Browser tests cover cinematic sections, finder personalization, sparse-data fallbacks, booking safety, mobile overflow, and retained screenshots.
-- Full clean GitHub Actions run `33742603033` is green on commit `8b15eee16cc62e69c709714ba7cb7cad65ae3c0d`.
+### Phase 7 — Manual Prospect → Instant Demo Vertical Slice ✅
+Verified-fact manual builder, controlled ÉLANE DNA, private preview, safe edits/hiding, config-only regeneration, desktop/mobile preview, disable/fail-closed behavior, evidence mapping and ownership isolation.
 
-### Phase 4 — Prospect + Evidence Core
+### Phase 8 — Local Runner + Job System ✅
+Runner registration/token auth, heartbeat, job claim/leases, retries, completion/failure, D1 canonical ledger, queue signalling/reconciliation, dead-letter visibility, offline/crash/restart recovery, cross-operator isolation and token revocation.
 
-- Prospect CRUD and manual Salon & Spa prospect entry: ✅
-- Source records and immutable evidence candidates: ✅
-- Canonical prospect facts with verification status/confidence: ✅
-- Database-enforced verified-fact provenance: ✅
-- Cross-prospect evidence rejection: ✅
-- Source quality + field conflict summaries: ✅
-- Evidence/provenance operator UI: ✅
-- Manual-create selection race fixed at query-cache boundary: ✅
-- Full clean GitHub Actions run `33744432744` is green on commit `38a640805b04c23d5603e142a1a77c4e926fbe5e`.
+## Latest full verification
 
-## Phase 4 acceptance
+- Commit: `d7ee30a65e8afa223d29bff370817012089ccca4`
+- GitHub Actions run: `33767184933`
+- JavaScript: ✅
+- Typecheck: ✅
+- Lint: ✅
+- Unit tests: ✅
+- Phase 1 D1: ✅
+- Phase 2 D1: ✅
+- Phase 4 D1: ✅
+- Phase 5 D1: ✅
+- Phase 6 D1: ✅
+- Phase 7 D1: ✅
+- Phase 8 D1: ✅
+- Production build: ✅
+- Worker smoke: ✅
+- Phase 0–8 audits: ✅
+- Playwright E2E: ✅
+- Python/Pytest: ✅
 
-- Every factual field can map to evidence: ✅
-- Unsupported fields cannot be marked verified without matching evidence: ✅
-- Cross-prospect and wrong-field evidence are rejected by D1: ✅
-- Conflict display works: ✅
-- Source provenance is visible: ✅
-- Typecheck/lint/unit: ✅
-- Phase 1/2/4 real D1 integration: ✅
-- Production build + Worker smoke: ✅
-- Phase 0/1/2/3/4 audits: ✅
-- Playwright prospect/evidence + ÉLANE regressions: ✅
-- Python regression: ✅
+## Phase 9 scope
 
-## Phase 5 scope
+- Safe public-URL validation.
+- Playwright browser research service in the local runner.
+- Browser-rendered page fetch.
+- Relevant same-site page discovery.
+- Bounded HTML/text extraction.
+- Full-page screenshot artifacts.
+- Console/network diagnostics.
+- Cloud-side source-record persistence.
+- SSRF/private-network protections.
 
-- Deterministic identity keys for normalized domain, phone, name + city, and address + city.
-- One canonical prospect per real business per operator.
-- Exact strong-identifier dedupe before a new canonical prospect is created.
-- Ambiguous/composite matches go to review; they never silently merge.
-- Conflicting strong identifiers stop in identity review.
-- Discovery/entry observations remain auditable even when deduplicated.
-- Identity resolution records store candidates, reason codes, confidence, and outcome.
-- Canonical prospect identity can progress from `NORMALIZED` → `IDENTITY_PENDING` → `IDENTITY_VERIFIED` only after deterministic resolution.
-- Existing evidence/source provenance must never be reassigned across businesses by a merge shortcut.
-- Operator UI must show duplicate/review outcomes clearly.
+## Phase 9 acceptance
 
-## Phase 5 acceptance
-
-- Same normalized domain cannot create two canonical prospects for one operator.
-- Same normalized phone cannot create two canonical prospects for one operator.
-- Name + city alone never auto-merges.
-- Conflicting domain/phone candidates require review.
-- Deduplicated observations are recorded against the canonical prospect.
-- Identity decisions are explainable and auditable.
-- Real D1 integration tests prove exact-match, ambiguous, conflict, and no-match behavior.
+- Official-site style fixtures researched.
+- JavaScript-rendered content captured.
+- Source URLs stored in D1.
+- Private-network URLs rejected by production URL policy.
+- Failed navigation/HTTP diagnostics visible.
+- Research creates source material only; it does not invent or verify business facts.
 - Full regression suite remains green.
 
 ## Blocked
@@ -86,4 +82,4 @@ None currently.
 
 ## Next action
 
-Implement Phase 5 identity keys, resolver, canonicalization, audit trail, API/UI behavior, then run the complete regression suite before starting Phase 6.
+Implement Phase 9 strictly to the master acceptance criteria, then run the complete CI suite before starting Phase 10.
