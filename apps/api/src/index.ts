@@ -26,6 +26,11 @@ import {
 import { demoAdminRoutes } from './demo-admin-routes';
 import { demoRoutes } from './demo-routes';
 import { prospectRoutes } from './prospect-routes';
+import { runnerRoutes } from './runner-routes';
+
+interface JobSignalQueueLike {
+  send(message: unknown): Promise<void>;
+}
 
 interface Env {
   DB?: D1DatabaseLike;
@@ -35,6 +40,7 @@ interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   SESSION_SECRET?: string;
+  JOB_QUEUE?: JobSignalQueueLike;
 }
 
 type Bindings = {
@@ -122,14 +128,15 @@ app.use('/api/v1/dashboard/*', requireAuth);
 app.use('/api/v1/prospects', requireAuth);
 app.use('/api/v1/prospects/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
+app.use('/api/v1/runner/operator/*', requireAuth);
 
-app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 7, status: 'ok' }));
+app.get('/', (c) => c.json({ service: 'shalcon-demo-engine-api', phase: 8, status: 'ok' }));
 
 app.get('/api/v1/health', (c) =>
   c.json({
     ok: true,
     service: 'api',
-    phase: 7,
+    phase: 8,
     environment: c.env.APP_ENV,
     timestamp: new Date().toISOString(),
   }),
@@ -254,20 +261,23 @@ app.get('/api/v1/dashboard/summary', (c) => {
   const user = c.get('authUser');
   return c.json({
     user: { id: user.id, email: user.email, name: user.name },
-    phase: 7,
+    phase: 8,
     system: 'ready',
   });
 });
 
 app.route('/api/v1/prospects', prospectRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
+app.route('/api/v1/runner', runnerRoutes);
 app.route('/d', demoRoutes);
 
 app.get('/api/v1/runner/health', (c) =>
   c.json({
     ok: true,
-    runner: 'not-connected',
-    message: 'Local runner connection begins in Phase 8.',
+    phase: 8,
+    runnerControlPlane: 'ready',
+    d1Canonical: true,
+    queueRole: c.env.JOB_QUEUE ? 'signal-accelerator' : 'd1-polling',
   }),
 );
 
