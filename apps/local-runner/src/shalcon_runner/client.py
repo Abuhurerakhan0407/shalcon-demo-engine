@@ -105,6 +105,13 @@ class RunnerApiClient:
     def complete(self, job_id: str, result: Any) -> dict[str, Any]:
         return self._request("POST", f"/api/v1/runner/agent/jobs/{job_id}/complete", {"result": result})
 
+    def complete_research(self, job_id: str, result: Any) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"/api/v1/runner/research/jobs/{job_id}/complete",
+            {"result": result},
+        )
+
     def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
         return self._request(
             "POST",
