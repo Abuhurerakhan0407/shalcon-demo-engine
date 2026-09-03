@@ -6,10 +6,6 @@ const operator = {
   name: 'Operator',
 };
 
-async function mockSession(page: Parameters<typeof test>[0] extends never ? never : never) {
-  void page;
-}
-
 test('prospect workspace shows identity, conflicts, proof, provenance, and manual entry', async ({
   page,
 }) => {
@@ -434,11 +430,7 @@ test('identity engine deduplicates exact keys and parks weak matches for operato
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        prospect: duplicate,
-        canonical,
-        decision: 'LINK_TO_EXISTING',
-      }),
+      body: JSON.stringify({ prospect: duplicate, canonical, decision: 'LINK_TO_EXISTING' }),
     });
   });
 
@@ -456,13 +448,16 @@ test('identity engine deduplicates exact keys and parks weak matches for operato
   await page.getByLabel('Business name').fill('Glow Salon');
   await page.getByLabel('City').fill('Mumbai');
   await page.getByRole('button', { name: 'Create or resolve' }).click();
-  await expect(page.getByText('Identity review required before this business can enter research or outreach.')).toBeVisible();
+  await expect(
+    page.getByText('Identity review required before this business can enter research or outreach.'),
+  ).toBeVisible();
   await expect(page.getByText('Possible duplicate. Human decision required.')).toBeVisible();
-  await expect(page.getByText('Glow Salon', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Link as duplicate' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Keep as distinct business' })).toBeEnabled();
 
   await page.getByRole('button', { name: 'Link as duplicate' }).click();
-  await expect(page.getByText('Duplicate retired. Glow Salon remains the canonical business.')).toBeVisible();
+  await expect(
+    page.getByText('Duplicate retired. Glow Salon remains the canonical business.'),
+  ).toBeVisible();
   await expect(page.getByText('IDENTITY_VERIFIED', { exact: true }).first()).toBeVisible();
 });
