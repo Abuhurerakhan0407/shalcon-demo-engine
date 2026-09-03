@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { URL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
 const sourcePath = new URL('../packages/templates/source/elane-v8/original.html.gz.b64', import.meta.url);
