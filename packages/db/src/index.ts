@@ -9,6 +9,7 @@ export {
   ProspectFactRepository,
   SourceRecordRepository,
 } from './repositories/evidence';
+export { IdentityRepository } from './repositories/identity';
 export { JobRepository, isLeaseExpired, nextFailureStatus } from './repositories/jobs';
 export { ProspectRepository } from './repositories/prospects';
 export { UserRepository } from './repositories/users';
@@ -19,9 +20,12 @@ export {
   type AuthSessionRecord,
   type CampaignRecord,
   type EvidenceRecord,
+  type IdentityResolutionRecord,
   type JobRecord,
   type JobStatus,
   type ProspectFactRecord,
+  type ProspectIdentityKeyRecord,
+  type ProspectObservationRecord,
   type ProspectRecord,
   type ProspectStateEventRecord,
   type SourceRecord,
