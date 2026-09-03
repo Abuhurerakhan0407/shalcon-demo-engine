@@ -1,3 +1,4 @@
+import type { VerificationStatus } from '@shalcon/evidence';
 import type { ProspectState } from '@shalcon/state-machine';
 
 export type UtcTimestamp = string;
@@ -52,6 +53,43 @@ export interface ProspectRecord {
   domain: string | null;
   phoneNormalized: string | null;
   city: string | null;
+  addressNormalized?: string | null;
+  createdAt: UtcTimestamp;
+  updatedAt: UtcTimestamp;
+}
+
+export interface SourceRecord {
+  id: string;
+  prospectId: string;
+  provider: string;
+  sourceType: string;
+  sourceUrl: string;
+  rawJson: string;
+  capturedAt: UtcTimestamp;
+}
+
+export interface EvidenceRecord {
+  id: string;
+  prospectId: string;
+  field: string;
+  value: string;
+  sourceRecordId: string;
+  sourceUrl: string;
+  sourceQuality: number;
+  confidence: number;
+  verificationStatus: VerificationStatus;
+  excerpt: string | null;
+  capturedAt: UtcTimestamp;
+}
+
+export interface ProspectFactRecord {
+  id: string;
+  prospectId: string;
+  field: string;
+  value: string;
+  verificationStatus: VerificationStatus;
+  confidence: number;
+  evidenceId: string | null;
   createdAt: UtcTimestamp;
   updatedAt: UtcTimestamp;
 }
