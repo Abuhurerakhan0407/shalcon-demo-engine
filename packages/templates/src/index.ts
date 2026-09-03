@@ -1,10 +1,15 @@
 export const TEMPLATE_SECTION_IDS = [
   'hero',
-  'services',
+  'belief',
+  'rituals',
   'services-fallback',
-  'story',
-  'gallery',
-  'contact',
+  'interlude',
+  'finder',
+  'process',
+  'space',
+  'testimonials',
+  'faq',
+  'booking',
   'contact-fallback',
   'disclosure',
 ] as const;
@@ -12,8 +17,8 @@ export const TEMPLATE_SECTION_IDS = [
 export type TemplateSectionId = (typeof TEMPLATE_SECTION_IDS)[number];
 
 export const THEME_DNA_OPTIONS = {
-  paletteId: ['obsidian-ivory', 'warm-stone'] as const,
-  typographyId: ['editorial-serif', 'modern-contrast'] as const,
+  paletteId: ['elane-paper', 'warm-stone'] as const,
+  typographyId: ['instrument-editorial', 'modern-contrast'] as const,
   radius: ['sharp', 'soft', 'rounded'] as const,
   density: ['airy', 'balanced', 'dense'] as const,
   heroVariant: ['editorial', 'split', 'immersive'] as const,
@@ -36,6 +41,7 @@ export type TemplateDefinition = {
   readonly niche: string;
   readonly archetype: string;
   readonly version: string;
+  readonly sourceFingerprint: string;
   readonly supportedSections: readonly TemplateSectionId[];
   readonly supportedFields: readonly string[];
   readonly requiredFields: readonly string[];
@@ -71,18 +77,24 @@ export function parseThemeDNA(value: unknown): ThemeDNA {
   return value;
 }
 
-export const SALON_TEMPLATE_V1 = {
-  id: 'salon-editorial',
+export const ELANE_V8_TEMPLATE = {
+  id: 'elane-v8',
   niche: 'salon-and-spa',
-  archetype: 'premium-local-service',
-  version: '1.0.0',
+  archetype: 'premium-cinematic-salon-spa',
+  version: '8.0.0',
+  sourceFingerprint: 'ed9e8d651e0d24a759968f10febdb43d8ea7d036e53727d3cee8521ad7886dbf',
   supportedSections: [
     'hero',
-    'services',
+    'belief',
+    'rituals',
     'services-fallback',
-    'story',
-    'gallery',
-    'contact',
+    'interlude',
+    'finder',
+    'process',
+    'space',
+    'testimonials',
+    'faq',
+    'booking',
     'contact-fallback',
     'disclosure',
   ],
@@ -90,17 +102,29 @@ export const SALON_TEMPLATE_V1 = {
     'business.name',
     'business.descriptor',
     'business.city',
+    'business.area',
     'hero.eyebrow',
     'hero.headline',
+    'hero.accentHeadline',
+    'hero.resolveHeadline',
+    'hero.resolveAccentHeadline',
     'hero.subhead',
+    'hero.primaryCtaLabel',
+    'belief.headline',
+    'belief.body',
     'services',
-    'story.kicker',
-    'story.headline',
-    'story.body',
-    'gallery',
+    'finderOptions',
+    'process',
+    'space',
+    'testimonials',
+    'faq',
     'contact.phone',
+    'contact.whatsapp',
+    'contact.email',
     'contact.address',
-    'contact.hours',
+    'contact.hoursSummary',
+    'contact.bookingUrl',
+    'images',
     'disclosure.text',
   ],
   requiredFields: ['business.name', 'hero.headline', 'disclosure.text'],
@@ -114,8 +138,8 @@ export const SALON_TEMPLATE_V1 = {
     'motionPreset',
   ],
   defaultTheme: {
-    paletteId: 'obsidian-ivory',
-    typographyId: 'editorial-serif',
+    paletteId: 'elane-paper',
+    typographyId: 'instrument-editorial',
     radius: 'soft',
     density: 'airy',
     heroVariant: 'editorial',
@@ -126,7 +150,7 @@ export const SALON_TEMPLATE_V1 = {
   conceptDisclosureRequired: true,
 } as const satisfies TemplateDefinition;
 
-export const TEMPLATE_REGISTRY: readonly TemplateDefinition[] = [SALON_TEMPLATE_V1];
+export const TEMPLATE_REGISTRY: readonly TemplateDefinition[] = [ELANE_V8_TEMPLATE];
 
 export function findTemplateDefinition(id: string, version?: string): TemplateDefinition | null {
   return (
