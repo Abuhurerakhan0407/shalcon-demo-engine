@@ -1,8 +1,8 @@
 # Build Status
 
 Current phase: **Phase 9 — Playwright Research Engine**  
-Launch progress: **~29% (Phases 0–8 of 0–30 fully verified)**  
-Status: **IN PROGRESS — Phase 8 fully green; Phase 9 implementation starting**
+Launch progress: **~31%**  
+Status: **IMPLEMENTED — final Phase 9 verification pending a runnable GitHub Actions job**
 
 ## Completed phases
 
@@ -33,7 +33,7 @@ Verified-fact manual builder, controlled ÉLANE DNA, private preview, safe edits
 ### Phase 8 — Local Runner + Job System ✅
 Runner registration/token auth, heartbeat, job claim/leases, retries, completion/failure, D1 canonical ledger, queue signalling/reconciliation, dead-letter visibility, offline/crash/restart recovery, cross-operator isolation and token revocation.
 
-## Latest full verification
+## Last fully verified baseline
 
 - Commit: `d7ee30a65e8afa223d29bff370817012089ccca4`
 - GitHub Actions run: `33767184933`
@@ -54,32 +54,44 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - Playwright E2E: ✅
 - Python/Pytest: ✅
 
-## Phase 9 scope
+## Phase 9 implementation
 
-- Safe public-URL validation.
-- Playwright browser research service in the local runner.
-- Browser-rendered page fetch.
-- Relevant same-site page discovery.
-- Bounded HTML/text extraction.
-- Full-page screenshot artifacts.
-- Console/network diagnostics.
-- Cloud-side source-record persistence.
-- SSRF/private-network protections.
+- Public HTTP(S) URL validator with DNS/IP safety checks: ✅
+- Local Playwright browser research service: ✅
+- JavaScript-rendered page capture: ✅
+- Same-site relevant-page discovery: ✅
+- Bounded HTML/text extraction: ✅
+- Full-page screenshots: ✅
+- Console, request-failure, and HTTP diagnostics: ✅
+- Per-request browser route safety guard: ✅
+- Unsafe redirect/final-URL fail-closed handling: ✅
+- Cloud-side bounded result schema: ✅
+- Non-empty results and duplicate-final-URL rejection: ✅
+- Operator/prospect/job ownership validation: ✅
+- Source-only D1 persistence: ✅
+- Immutable/idempotent source-record collision protection: ✅
+- No Phase 9 promotion to evidence or verified facts: ✅
+- Real-D1 Phase 9 acceptance fixture: ✅
+- Permanent Phase 9 audit/scripts/CI wiring: ✅
 
-## Phase 9 acceptance
+## Phase 9 acceptance state
 
-- Official-site style fixtures researched.
-- JavaScript-rendered content captured.
-- Source URLs stored in D1.
-- Private-network URLs rejected by production URL policy.
-- Failed navigation/HTTP diagnostics visible.
-- Research creates source material only; it does not invent or verify business facts.
-- Full regression suite remains green.
+- Official-site-style fixture research implemented: ✅
+- JS-rendered content capture implemented/tested: ✅
+- Source URL persistence implemented/tested by D1 fixture: ✅
+- Private-network URL rejection implemented/tested: ✅
+- Failed navigation/HTTP diagnostics implemented/tested: ✅
+- Unsupported fact generation prohibited by architecture and D1 acceptance fixture: ✅
+- Full clean CI regression: ⏳ pending runnable hosted job
+
+## Current CI condition
+
+Latest Phase 9 GitHub Actions attempts are terminating before checkout with no executable steps/logs. The latest observed run is `33770465463` on commit `90ba0dc04ad9dddc84fec83d6d27357d02b33ba4`. This is treated as an external verification blocker, not as a passing or failing product test.
 
 ## Blocked
 
-None currently.
+- Final Phase 9 closure requires one clean runnable GitHub Actions regression. Do not start Phase 10 until that gate is green.
 
 ## Next action
 
-Implement Phase 9 strictly to the master acceptance criteria, then run the complete CI suite before starting Phase 10.
+Re-run the complete Phase 9 gate once GitHub Actions allocates hosted jobs normally. If a real test failure appears, fix it before Phase 10. If the run is green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
