@@ -61,9 +61,7 @@ def _utc_now() -> str:
 
 
 def _bounded(value: str, limit: int) -> str:
-    if len(value) <= limit:
-        return value
-    return value[:limit]
+    return value if len(value) <= limit else value[:limit]
 
 
 def _link_score(url: str, text: str) -> tuple[int, str]:
@@ -128,8 +126,7 @@ class BrowserResearchEngine:
                 continue
             candidates.setdefault(normalized, text if isinstance(text, str) else "")
 
-        ordered = sorted(candidates, key=lambda url: _link_score(url, candidates[url]))
-        return ordered
+        return sorted(candidates, key=lambda url: _link_score(url, candidates[url]))
 
     def _capture_page(self, context: BrowserContext, requested_url: str, job_dir: Path) -> dict[str, Any]:
         page = context.new_page()
@@ -204,7 +201,7 @@ class BrowserResearchEngine:
                 screenshot_path = str(screenshot_file)
             except Exception:  # noqa: BLE001 - screenshot failure is diagnostic, not source loss.
                 screenshot_path = None
-        except (UnsafeResearchUrl, PlaywrightTimeoutError, Exception) as exc:  # noqa: BLE001 - browser boundary reports safely.
+        except Exception as exc:  # noqa: BLE001 - browser boundary reports safely.
             navigation_error = f"{type(exc).__name__}: navigation failed safely."[:500]
             try:
                 if page.url and page.url != "about:blank":
@@ -234,7 +231,10 @@ class BrowserResearchEngine:
         try:
             start_url = self.validator(raw_url)
         except (UnsafeResearchUrl, ValueError) as exc:
-            raise ResearchJobError("UNSAFE_RESEARCH_URL", "Research URL failed the public-network safety policy.") from exc
+            raise ResearchJobError(
+                "UNSAFE_RESEARCH_URL",
+                "Research URL failed the public-network safety policy.",
+            ) from exc
 
         requested_max = self.limits.max_pages if max_pages is None else int(max_pages)
         page_limit = min(max(requested_max, 1), 6)
