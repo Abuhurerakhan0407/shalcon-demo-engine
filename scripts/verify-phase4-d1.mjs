@@ -17,7 +17,7 @@ async function waitFor(url, timeoutMs = 60_000) {
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url);
+      const response = await globalThis.fetch(url);
       if (response.ok) return response;
       throw new Error(`Integration worker returned HTTP ${response.status}: ${await response.text()}`);
     } catch (error) {
