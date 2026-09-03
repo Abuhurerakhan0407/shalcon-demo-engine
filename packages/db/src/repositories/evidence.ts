@@ -77,6 +77,18 @@ function mapFact(row: FactRow): ProspectFactRecord {
   };
 }
 
+function sourceRecordsEqual(left: SourceRecord, right: SourceRecord): boolean {
+  return (
+    left.id === right.id &&
+    left.prospectId === right.prospectId &&
+    left.provider === right.provider &&
+    left.sourceType === right.sourceType &&
+    left.sourceUrl === right.sourceUrl &&
+    left.rawJson === right.rawJson &&
+    left.capturedAt === right.capturedAt
+  );
+}
+
 export class SourceRecordRepository {
   constructor(private readonly db: D1DatabaseLike) {}
 
@@ -117,8 +129,8 @@ export class SourceRecordRepository {
     if (row) return { source: mapSource(row), created: true };
     const existing = await this.getById(record.id);
     if (!existing) throw new Error('Source record insert was ignored without an existing row.');
-    if (existing.prospectId !== record.prospectId || existing.sourceUrl !== record.sourceUrl) {
-      throw new Error('Source record id collision detected.');
+    if (!sourceRecordsEqual(existing, record)) {
+      throw new Error('Source record id collision or immutable-content mismatch detected.');
     }
     return { source: existing, created: false };
   }
