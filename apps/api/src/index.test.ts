@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { app } from './index';
+import { CURRENT_PHASE } from './phase';
 
 const testEnv = {
   APP_ENV: 'test',
@@ -7,11 +8,11 @@ const testEnv = {
 };
 
 describe('public API', () => {
-  it('returns the current Phase 8 health response', async () => {
+  it('returns the current build phase in health', async () => {
     const response = await app.request('/api/v1/health', {}, testEnv);
     expect(response.status).toBe(200);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ ok: true, service: 'api', phase: 8 });
+    expect(body).toMatchObject({ ok: true, service: 'api', phase: CURRENT_PHASE });
   });
 
   it('allows credentialed CORS only for the configured web origin', async () => {
