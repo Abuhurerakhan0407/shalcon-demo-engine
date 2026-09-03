@@ -90,4 +90,5 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -e 'apps/local-runner[dev]'
+      - run: python -m playwright install --with-deps --only-shell chromium
       - run: python -m pytest apps/local-runner/tests -q
