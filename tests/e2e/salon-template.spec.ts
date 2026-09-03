@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-function captureConsoleErrors(page: import('@playwright/test').Page): string[] {
+function captureConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
@@ -8,62 +8,87 @@ function captureConsoleErrors(page: import('@playwright/test').Page): string[] {
   return errors;
 }
 
-test('salon template long fixture renders the complete sellable asset', async ({ page }) => {
-  const consoleErrors = captureConsoleErrors(page);
-  await page.goto('/template-preview/salon-v1');
+async function openTemplate(page: Page, suffix = '') {
+  await page.goto(`/template-preview/salon-v1${suffix}`);
+  const iframe = page.locator('iframe[data-template-id="elane-v8"]');
+  await expect(iframe).toHaveAttribute('data-template-version', '8.0.0');
+  const frame = page.frameLocator('iframe[data-template-id="elane-v8"]');
+  await expect(frame.locator('html')).toHaveAttribute('data-template-id', 'elane-v8');
+  await expect(frame.locator('html')).toHaveAttribute('data-template-version', '8.0.0');
+  await expect(frame.locator('#intro')).toHaveClass(/done/u, { timeout: 5_000 });
+  return { iframe, frame };
+}
 
-  await expect(page.getByRole('heading', { name: 'Beauty, edited with restraint.' })).toBeVisible();
-  await expect(page.getByText('Fictional QA fixture — not a real business')).toBeVisible();
-  await expect(page.locator('[data-template-id="salon-editorial"]')).toHaveAttribute(
-    'data-template-version',
-    '1.0.0',
-  );
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+test('ÉLANE v8 long fixture preserves the cinematic master template and engine config', async ({ page }) => {
+  const consoleErrors = captureConsoleErrors(page);
+  const { iframe, frame } = await openTemplate(page);
+  await expect(frame.locator('meta[name="robots"]')).toHaveAttribute(
     'content',
     'noindex,nofollow,noarchive',
   );
-  await expect(page.getByRole('heading', { name: 'A menu that reads like a point of view.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Less noise. Better attention.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'A visual system before real photography arrives.' })).toBeVisible();
-  await expect(page.getByText('Shalcon Intelligence concept preview.', { exact: false })).toBeVisible();
-
-  await page.screenshot({ path: 'test-results/phase3-salon-desktop.png', fullPage: true });
+  await expect(frame.locator('#heroTitle h1')).toContainText('Beauty,');
+  await expect(frame.locator('#heroTitle h1')).toContainText('unhurried.');
+  await expect(frame.locator('#rituals')).toBeVisible();
+  await expect(frame.locator('#finder')).toBeVisible();
+  await expect(frame.locator('#process')).toBeVisible();
+  await expect(frame.locator('#space')).toBeVisible();
+  await expect(frame.locator('#stories')).toBeHidden();
+  await expect(frame.locator('.faq')).toBeHidden();
+  await expect(frame.locator('footer')).toContainText(
+    'Concept preview prepared by Shalcon Intelligence',
+  );
+  await expect(frame.locator('footer')).toContainText('ÉLANE v8');
+  await iframe.screenshot({ path: 'test-results/phase3-elane-desktop-hero.png' });
+  await frame.locator('#rituals').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await iframe.screenshot({ path: 'test-results/phase3-elane-desktop-rituals.png' });
   expect(consoleErrors).toEqual([]);
 });
 
-test('salon template short fixture stays intentional with sparse data', async ({ page }) => {
+test('ÉLANE finder is driven by injected config rather than hardcoded prospect facts', async ({ page }) => {
   const consoleErrors = captureConsoleErrors(page);
-  await page.goto('/template-preview/salon-v1?fixture=short');
-
-  await expect(page.getByRole('heading', { name: 'A quieter way to book beauty.' })).toBeVisible();
-  await expect(page.getByText('Signature appointment')).toBeVisible();
-  await expect(page.getByText('Fictional short-data QA fixture')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Less noise. Better attention.' })).toHaveCount(0);
+  const { frame } = await openTemplate(page);
+  await frame.locator('#finder').scrollIntoViewIfNeeded();
+  await frame.getByRole('button', { name: /02 \/ Glowy/u }).click();
+  await expect(frame.locator('#resultName')).toHaveText('Lit From Within');
+  await expect(frame.locator('#resultPrice')).toHaveText('Fixture ₹3,400');
   expect(consoleErrors).toEqual([]);
 });
 
-test('salon template minimal fixture uses safe fallback sections', async ({ page }) => {
+test('ÉLANE short fixture hides unsupported cinematic fact sections rather than inventing data', async ({ page }) => {
   const consoleErrors = captureConsoleErrors(page);
-  await page.goto('/template-preview/salon-v1?fixture=minimal');
-
-  await expect(page.getByRole('heading', { name: 'Considered care, without the clutter.' })).toBeVisible();
-  await expect(page.getByText('Verified service list pending')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Ready when the verified details are.' })).toBeVisible();
-  await expect(page.getByText('Contact information is intentionally withheld', { exact: false })).toBeVisible();
+  const { frame } = await openTemplate(page, '?fixture=short');
+  await expect(frame.locator('.brand').first()).toHaveText('Mora Studio');
+  await expect(frame.locator('#heroTitle h1')).toContainText('considered.');
+  for (const selector of ['#rituals', '#finder', '#process', '#space', '#stories', '.faq']) {
+    await expect(frame.locator(selector)).toBeHidden();
+  }
+  await expect(frame.locator('footer')).toContainText('short-data fixture');
   expect(consoleErrors).toEqual([]);
 });
 
-test('salon template is mobile-complete without horizontal overflow', async ({ page }) => {
+test('ÉLANE minimal fixture is evidence-safe and disables booking inputs without contact data', async ({ page }) => {
+  const consoleErrors = captureConsoleErrors(page);
+  const { frame } = await openTemplate(page, '?fixture=minimal');
+  await expect(frame.locator('.brand').first()).toHaveText('Field Studio');
+  for (const selector of ['#belief', '#rituals', '#interlude', '#process', '#space']) {
+    await expect(frame.locator(selector)).toBeHidden();
+  }
+  await expect(frame.locator('#bookForm input').first()).toBeDisabled();
+  await expect(frame.locator('#bookForm .submit')).toBeDisabled();
+  await expect(frame.locator('.book-copy p')).toContainText('withheld until verified');
+  expect(consoleErrors).toEqual([]);
+});
+
+test('ÉLANE v8 keeps its mobile choreography without horizontal overflow', async ({ page }) => {
   const consoleErrors = captureConsoleErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/template-preview/salon-v1');
-
-  await expect(page.getByRole('heading', { name: 'Beauty, edited with restraint.' })).toBeVisible();
-  const hasHorizontalOverflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth + 1,
+  const { iframe, frame } = await openTemplate(page);
+  await expect(frame.locator('#heroTitle h1')).toContainText('unhurried.');
+  const hasHorizontalOverflow = await frame.locator('html').evaluate(
+    (html) => html.scrollWidth > (html.ownerDocument.defaultView?.innerWidth ?? 0) + 1,
   );
   expect(hasHorizontalOverflow).toBe(false);
-
-  await page.screenshot({ path: 'test-results/phase3-salon-mobile.png', fullPage: true });
+  await iframe.screenshot({ path: 'test-results/phase3-elane-mobile-hero.png' });
   expect(consoleErrors).toEqual([]);
 });
