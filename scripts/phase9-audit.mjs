@@ -55,8 +55,8 @@ if (persistence.includes('EvidenceRepository') || persistence.includes('Prospect
 }
 
 const sourceRepository = await readFile('packages/db/src/repositories/evidence.ts', 'utf8');
-for (const contract of ['createOrGet', 'sourceRecordsEqual', 'immutable-content mismatch']) {
-  if (!sourceRepository.includes(contract)) throw new Error(`Missing immutable source-record contract: ${contract}`);
+for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable identity mismatch', 'Browser retries']) {
+  if (!sourceRepository.includes(contract)) throw new Error(`Missing retry-safe immutable source-record contract: ${contract}`);
 }
 
 const resultSchema = await readFile('apps/api/src/research-result.ts', 'utf8');
@@ -78,6 +78,8 @@ for (const contract of [
   'sourceUrlsStored',
   'diagnosticsPersisted',
   'sourceMaterialOnly',
+  'retrySourceReplaySafe',
+  'retrySourceIdentityCollisionRejected',
   'mismatchedProspectRejected',
   'noUnsupportedFactsGenerated',
 ]) {

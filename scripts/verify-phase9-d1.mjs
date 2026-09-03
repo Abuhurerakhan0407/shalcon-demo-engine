@@ -79,6 +79,8 @@ try {
     checks.diagnosticsPersisted === true,
     checks.sourceMaterialOnly === true,
     checks.resultPersisted === true,
+    checks.retrySourceReplaySafe === true,
+    checks.retrySourceIdentityCollisionRejected === true,
     checks.mismatchedProspectRejected === true,
     checks.noUnsupportedFactsGenerated === true,
     checks.foreignKeyViolations === 0,

@@ -77,15 +77,13 @@ function mapFact(row: FactRow): ProspectFactRecord {
   };
 }
 
-function sourceRecordsEqual(left: SourceRecord, right: SourceRecord): boolean {
+function sourceIdentityMatches(left: SourceRecord, right: SourceRecord): boolean {
   return (
     left.id === right.id &&
     left.prospectId === right.prospectId &&
     left.provider === right.provider &&
     left.sourceType === right.sourceType &&
-    left.sourceUrl === right.sourceUrl &&
-    left.rawJson === right.rawJson &&
-    left.capturedAt === right.capturedAt
+    left.sourceUrl === right.sourceUrl
   );
 }
 
@@ -127,10 +125,14 @@ export class SourceRecordRepository {
       )
       .first<SourceRow>();
     if (row) return { source: mapSource(row), created: true };
+
     const existing = await this.getById(record.id);
     if (!existing) throw new Error('Source record insert was ignored without an existing row.');
-    if (!sourceRecordsEqual(existing, record)) {
-      throw new Error('Source record id collision or immutable-content mismatch detected.');
+    // Browser retries can recapture the same job + URL with a later timestamp or slightly
+    // different diagnostics. The deterministic source id represents the first immutable
+    // snapshot for that identity, so replay must reuse it rather than overwrite or deadlock.
+    if (!sourceIdentityMatches(existing, record)) {
+      throw new Error('Source record id collision or immutable identity mismatch detected.');
     }
     return { source: existing, created: false };
   }

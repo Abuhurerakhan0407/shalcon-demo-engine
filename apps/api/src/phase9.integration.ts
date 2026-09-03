@@ -200,6 +200,30 @@ integration.get('/phase9', async (c) => {
   const completedJob = await new JobRepository(db).getById(JOB_ID);
   const completedContext = await new JobContextRepository(db).getByJobId(JOB_ID);
 
+  const firstSource = sourcesAfterValid.find(
+    (source) => source.sourceUrl === 'https://aura-phase9.example/',
+  );
+  let retrySourceReplaySafe = false;
+  let retrySourceIdentityCollisionRejected = false;
+  if (firstSource) {
+    const replay = await sourceRepo.createOrGet({
+      ...firstSource,
+      rawJson: JSON.stringify({ retryCapture: true, changedDiagnostics: true }),
+      capturedAt: '2026-09-03T14:31:00.000Z',
+    });
+    retrySourceReplaySafe =
+      replay.created === false &&
+      replay.source.id === firstSource.id &&
+      replay.source.rawJson === firstSource.rawJson &&
+      replay.source.capturedAt === firstSource.capturedAt;
+
+    try {
+      await sourceRepo.createOrGet({ ...firstSource, provider: 'COLLIDING_PROVIDER' });
+    } catch {
+      retrySourceIdentityCollisionRejected = true;
+    }
+  }
+
   await createOwnedJob(db, researchJob(BAD_JOB_ID, OTHER_PROSPECT_ID), {
     url: 'https://other-phase9.example/',
     maxPages: 1,
@@ -248,6 +272,8 @@ integration.get('/phase9', async (c) => {
       resultPersisted:
         completedJob?.status === 'COMPLETED' &&
         completedContext?.resultJson?.includes('playwright-research.v1') === true,
+      retrySourceReplaySafe,
+      retrySourceIdentityCollisionRejected,
       mismatchedProspectRejected:
         badClaim?.job.id === BAD_JOB_ID && badCompletion.status === 422 && otherSourcesAfterBad.length === 0,
       noUnsupportedFactsGenerated:
