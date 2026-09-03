@@ -72,7 +72,9 @@ if (runtimeHash !== expectedRuntimeHash) {
   throw new Error(`ÉLANE runtime fingerprint mismatch: ${runtimeHash}`);
 }
 
+const generatedRuntime = `${runtimeSource}\n\nexport const ELANE_V8_DOCUMENT_SOURCE = ${JSON.stringify(adapted)};\n`;
+
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputPath, adapted, 'utf8');
-await writeFile(runtimeOutputPath, runtimeSource, 'utf8');
+await writeFile(runtimeOutputPath, generatedRuntime, 'utf8');
 console.log(`Prepared ÉLANE v8 from verified source ${expectedHash.slice(0, 12)}… and runtime ${expectedRuntimeHash.slice(0, 12)}…`);
