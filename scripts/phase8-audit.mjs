@@ -7,6 +7,7 @@ const required = [
   'apps/api/src/phase8.integration.ts',
   'packages/db/src/repositories/runners.ts',
   'packages/db/src/repositories/runner-jobs.ts',
+  'packages/db/src/repositories/runner-jobs.test.ts',
   'apps/local-runner/src/shalcon_runner/client.py',
   'apps/local-runner/src/shalcon_runner/worker.py',
   'apps/local-runner/tests/test_client.py',
@@ -24,6 +25,8 @@ for (const contract of [
   'reconcileExpiredLeases',
   'dueForSignal',
   'claimNextForUser',
+  'allowedJobTypes',
+  'j.job_type IN',
   'renewLease',
   'completeWithResult',
   'this.db.batch',
@@ -35,6 +38,15 @@ for (const contract of [
   if (!runnerJobs.includes(contract)) throw new Error(`Missing Phase 8 job contract: ${contract}`);
 }
 
+const capabilityTest = await readFile('packages/db/src/repositories/runner-jobs.test.ts', 'utf8');
+for (const contract of [
+  'filters due jobs to the runner advertised job types',
+  'does not query or claim any job when the runner advertises no capabilities',
+  "['PLAYWRIGHT_RESEARCH', 'PHASE8_ECHO', 'PLAYWRIGHT_RESEARCH']",
+]) {
+  if (!capabilityTest.includes(contract)) throw new Error(`Missing runner capability test contract: ${contract}`);
+}
+
 const routes = await readFile('apps/api/src/runner-routes.ts', 'utf8');
 for (const contract of [
   "runnerRoutes.post('/operator/register'",
@@ -44,6 +56,8 @@ for (const contract of [
   "runnerRoutes.post('/operator/reconcile'",
   "runnerRoutes.post('/agent/heartbeat'",
   "runnerRoutes.post('/agent/jobs/claim'",
+  'const capabilities = parseCapabilities(runner.capabilitiesJson)',
+  'capabilities,',
   "runnerRoutes.post('/agent/jobs/:jobId/renew'",
   "runnerRoutes.post('/agent/jobs/:jobId/complete'",
   "runnerRoutes.post('/agent/jobs/:jobId/fail'",
