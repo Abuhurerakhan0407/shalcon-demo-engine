@@ -2,11 +2,13 @@
 
 A free-first, evidence-driven sales-production system for Shalcon Intelligence.
 
-The system finds suitable businesses, verifies their real details, maps them into a prebuilt niche website template, renders a private demo, runs QA, sends controlled outreach, detects replies, and hands qualified conversations to Abu.
+The system will find suitable businesses, verify their real details, map them into a prebuilt niche website template, render a private demo, run QA, send controlled outreach, detect replies, and hand qualified conversations to Abu.
 
 ## Phase status
 
-Current build phase: **Phase 0 — Repository + Engineering Foundation**.
+**Phase 0 — Repository + Engineering Foundation: COMPLETE / GREEN.**
+
+Next planned phase: **Phase 1 — Data Layer + State Machine**.
 
 See [`BUILD_STATUS.md`](./BUILD_STATUS.md) for the exact verified state.
 
@@ -49,16 +51,17 @@ See [`BUILD_STATUS.md`](./BUILD_STATUS.md) for the exact verified state.
 
 ## Install JavaScript dependencies
 
+The repository contains a committed lockfile. Use reproducible installs:
+
 ```bash
-npm install
+npm ci
 ```
 
 ## Local runner
 
-For Phase 0 the runner has no external runtime dependency:
-
 ```bash
 cd apps/local-runner
+python3 -m pip install -e '.[dev]'
 PYTHONPATH=src python3 -m shalcon_runner health
 python3 -m pytest tests -q
 ```
@@ -74,19 +77,18 @@ The web app defaults to `http://localhost:5173` and the Worker to `http://localh
 
 ## Verification
 
-Full Phase 0 after dependencies are installed:
-
 ```bash
 npm run test:phase0
 ```
 
-Offline-safe checks that do not require downloaded npm packages:
+Offline-safe checks are also available:
 
 ```bash
 npm run test:phase0:offline
 ```
 
-## Build rules
+## Build contract
 
-The source of truth is `SHALCON_DEMO_FIRST_OUTBOUND_MASTER_HANDOFF.md` in the project root.
+The canonical long-form product/build contract is `SHALCON_DEMO_FIRST_OUTBOUND_MASTER_HANDOFF.md`, distributed with the project handoff archive. Supply that handoff file together with this repository when moving the build into a fresh ChatGPT coding session.
+
 Never skip phases or acceptance criteria. Never claim an integration is complete when only a mock exists.
