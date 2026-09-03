@@ -1,7 +1,7 @@
 # Build Status
 
-Current phase: **Phase 3 — Salon Template v1 / ÉLANE v8 integration**  
-Status: **IN PROGRESS — ÉLANE v8 replacement committed; clean CI verification pending**
+Current phase: **Phase 4 — Prospect + Evidence Core**  
+Status: **IN PROGRESS — Phase 3 fully verified; Phase 4 implementation starting**
 
 ## Completed
 
@@ -16,30 +16,57 @@ Status: **IN PROGRESS — ÉLANE v8 replacement committed; clean CI verification
 ### Phase 2 — Authentication + Dashboard Shell
 
 - Secure Google OAuth architecture, stable provider-subject identity binding, hashed/revocable D1 sessions, protected responsive dashboard, CORS and browser/runtime tests: ✅
-- Last fully verified Phase 2 commit: `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
+- Verified Phase 2 commit: `41facc71fceb3ab004c55a10ff747ca98bf28fdc`.
 
-## Phase 3 — ÉLANE v8
+### Phase 3 — Salon Template v1 / ÉLANE v8
 
 - User-provided ÉLANE v8 is the canonical Salon & Spa visual master.
-- Original template source preserved losslessly and fingerprinted.
-- Runtime source preserved and fingerprinted.
-- Deterministic generator adds only engine hooks; it does not redesign the template.
-- Template registry/versioning updated to `elane-v8@8.0.0`.
-- Prospect config is injected through safe DOM/runtime operations rather than generated website code.
-- Long, short, and minimal evidence fixtures implemented.
+- Original template source is preserved losslessly and enforced by SHA-256 fingerprint.
+- Runtime source is fingerprinted and regenerated deterministically during install/build.
+- Adapter adds only engine hooks, noindex/disclosure, safe config injection, and evidence-safe hiding.
+- Template registry/versioning: `elane-v8@8.0.0`.
+- Long, short, and minimal evidence fixtures are implemented.
 - Unsupported services/process/space/reviews/FAQ/contact facts hide or disable rather than being invented.
-- Public QA preview renders the canonical ÉLANE document in an iframe.
 - Browser tests cover cinematic sections, finder personalization, sparse-data fallbacks, booking safety, mobile overflow, and retained screenshots.
+- Full clean GitHub Actions run `33742603033` is green on commit `8b15eee16cc62e69c709714ba7cb7cad65ae3c0d`.
 
 ## Phase 3 acceptance
 
-- Source fingerprint: pending clean CI.
-- Runtime fingerprint: pending clean CI.
-- Typecheck/lint/unit: pending clean CI.
-- Prior Phase 1/2 D1 regressions: pending clean CI.
-- Build/Worker smoke/audits: pending clean CI.
-- ÉLANE desktop/mobile Playwright: pending clean CI.
-- Visual screenshot inspection: pending clean CI artifact.
+- Source fingerprint: ✅
+- Runtime fingerprint: ✅
+- Typecheck: ✅
+- Lint: ✅
+- Unit: ✅
+- Phase 1 D1 regression: ✅
+- Phase 2 D1 regression: ✅
+- Build: ✅
+- Worker smoke: ✅
+- Phase 0/1/2/3 audits: ✅
+- Playwright desktop/mobile/sparse-data/finder tests: ✅
+- Python regression: ✅
+- Visual screenshot artifacts retained: ✅
+- User visual approval of the ÉLANE master template: ✅
+
+## Phase 4 scope
+
+- Prospect CRUD.
+- Manual prospect entry.
+- Source records.
+- Evidence model.
+- Verified fields.
+- Source quality.
+- Confidence.
+- Conflicts.
+- Evidence UI.
+- Normalization.
+
+## Phase 4 acceptance
+
+- Every factual field can map to evidence.
+- Unsupported fields cannot be marked verified without evidence.
+- Conflict display works.
+- Source provenance is visible.
+- Unit and real D1 integration tests pass.
 
 ## Blocked
 
@@ -47,4 +74,4 @@ None currently.
 
 ## Next action
 
-Run the complete clean CI gate on the final ÉLANE v8 state, fix every failure, inspect screenshots, then close Phase 3 before Phase 4 begins.
+Implement Phase 4 strictly to the master contract, then run the complete regression suite before starting Phase 5.
