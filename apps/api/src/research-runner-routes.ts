@@ -1,4 +1,5 @@
 import {
+  JobContextRepository,
   JobRepository,
   LocalRunnerRepository,
   RunnerJobRepository,
@@ -26,6 +27,17 @@ function bearerToken(header: string | undefined): string | null {
   return token;
 }
 
+function payloadResearchUrl(payloadJson: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(payloadJson);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const url = (parsed as Record<string, unknown>).url;
+    return typeof url === 'string' && url.trim() ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 async function authenticatedRunner(
   db: D1DatabaseLike,
   authorization: string | undefined,
@@ -47,7 +59,6 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
     );
   }
 
-  const input = completeSchema.parse(await c.req.json().catch(() => ({})));
   const job = await new JobRepository(db).getById(c.req.param('jobId'));
   if (!job || job.jobType !== 'PLAYWRIGHT_RESEARCH') {
     return c.json(
@@ -62,9 +73,37 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
     );
   }
 
+  const context = await new JobContextRepository(db).getByJobId(job.id);
+  const expectedRequestedUrl = context ? payloadResearchUrl(context.payloadJson) : null;
+  if (!context || context.userId !== runner.userId || !expectedRequestedUrl) {
+    return c.json(
+      { error: { code: 'RESEARCH_JOB_NOT_FOUND', message: 'Research job not found.' } },
+      404,
+    );
+  }
+
+  const input = completeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!input.success) {
+    return c.json(
+      {
+        error: {
+          code: 'INVALID_RESEARCH_RESULT',
+          message: 'Research result failed validation or ownership checks.',
+        },
+      },
+      422,
+    );
+  }
+
   let sources;
   try {
-    sources = await persistResearchSourcesIfNeeded(db, runner.userId, job, input.result);
+    sources = await persistResearchSourcesIfNeeded(
+      db,
+      runner.userId,
+      job,
+      input.data.result,
+      expectedRequestedUrl,
+    );
   } catch {
     return c.json(
       {
@@ -82,7 +121,7 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
       job.id,
       runner.userId,
       runner.id,
-      JSON.stringify(input.result),
+      JSON.stringify(input.data.result),
       new Date().toISOString(),
     );
     return c.json({

@@ -27,6 +27,7 @@ const OTHER_PROSPECT_ID = 'phase9-other-prospect';
 const RUNNER_ID = 'phase9-runner';
 const JOB_ID = 'phase9-research-job';
 const BAD_JOB_ID = 'phase9-mismatch-job';
+const URL_MISMATCH_JOB_ID = 'phase9-url-mismatch-job';
 const RAW_TOKEN = 'rnr_phase9_fixture_token_1234567890';
 const NOW = '2026-09-03T14:30:00.000Z';
 
@@ -246,6 +247,42 @@ integration.get('/phase9', async (c) => {
     },
     env,
   );
+
+  await createOwnedJob(db, researchJob(URL_MISMATCH_JOB_ID, OTHER_PROSPECT_ID), {
+    url: 'https://other-phase9.example/',
+    maxPages: 2,
+  });
+  const urlMismatchClaim = await runnerJobs.claimNextForUser(
+    USER_ID,
+    runner.id,
+    '2026-09-03T14:37:00.000Z',
+    '2026-09-03T14:32:00.000Z',
+  );
+  const urlMismatchCompletion = await productionApp.request(
+    `http://local.test/api/v1/runner/research/jobs/${URL_MISMATCH_JOB_ID}/complete`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RAW_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ result: resultFor(URL_MISMATCH_JOB_ID, OTHER_PROSPECT_ID) }),
+    },
+    env,
+  );
+  const malformedCompletion = await productionApp.request(
+    `http://local.test/api/v1/runner/research/jobs/${URL_MISMATCH_JOB_ID}/complete`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RAW_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    },
+    env,
+  );
+
   const otherSourcesAfterBad = await sourceRepo.listForProspect(OTHER_PROSPECT_ID);
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
   const migrationCount = await db
@@ -275,7 +312,11 @@ integration.get('/phase9', async (c) => {
       retrySourceReplaySafe,
       retrySourceIdentityCollisionRejected,
       mismatchedProspectRejected:
-        badClaim?.job.id === BAD_JOB_ID && badCompletion.status === 422 && otherSourcesAfterBad.length === 0,
+        badClaim?.job.id === BAD_JOB_ID && badCompletion.status === 422,
+      requestedUrlMismatchRejected:
+        urlMismatchClaim?.job.id === URL_MISMATCH_JOB_ID && urlMismatchCompletion.status === 422,
+      malformedCompletionRejected: malformedCompletion.status === 422,
+      rejectedResultsPersistNothing: otherSourcesAfterBad.length === 0,
       noUnsupportedFactsGenerated:
         (await new EvidenceRepository(db).listForProspect(OTHER_PROSPECT_ID)).length === 0 &&
         (await new ProspectFactRepository(db).listForProspect(OTHER_PROSPECT_ID)).length === 0,

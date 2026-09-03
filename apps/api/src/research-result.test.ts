@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseResearchResultForJob, playwrightResearchResultSchema } from './research-result';
+import {
+  canonicalResearchUrl,
+  parseResearchResultForJob,
+  playwrightResearchResultSchema,
+} from './research-result';
 
 function validResult() {
   const pages = [
@@ -35,17 +39,41 @@ function validResult() {
 describe('Phase 9 research result contract', () => {
   it('accepts bounded source-only browser output', () => {
     expect(
-      parseResearchResultForJob(validResult(), 'job_phase9', 'prospect_phase9'),
+      parseResearchResultForJob(
+        validResult(),
+        'job_phase9',
+        'prospect_phase9',
+        'HTTPS://Example.COM/#operator-fragment',
+      ),
     ).toMatchObject({ sourceOnly: true, pageCount: 1 });
   });
 
-  it('rejects wrong job or prospect identity', () => {
+  it('binds a result to the exact claimed job and requested website', () => {
     expect(() =>
       parseResearchResultForJob(validResult(), 'different_job', 'prospect_phase9'),
     ).toThrow('does not match');
     expect(() =>
       parseResearchResultForJob(validResult(), 'job_phase9', 'different_prospect'),
     ).toThrow('does not match');
+    expect(() =>
+      parseResearchResultForJob(
+        validResult(),
+        'job_phase9',
+        'prospect_phase9',
+        'https://different.example/',
+      ),
+    ).toThrow('requested URL does not match');
+  });
+
+  it('canonicalizes safe web URLs and rejects unsafe cloud provenance URLs', () => {
+    expect(canonicalResearchUrl(' HTTPS://Example.COM/path#fragment ')).toBe(
+      'https://example.com/path',
+    );
+    expect(canonicalResearchUrl('https://user:pass@example.com/')).toBeNull();
+    expect(canonicalResearchUrl('http://localhost/')).toBeNull();
+    expect(canonicalResearchUrl('https://service.internal/')).toBeNull();
+    expect(canonicalResearchUrl('https://example.com:8443/')).toBeNull();
+    expect(canonicalResearchUrl('file:///etc/passwd')).toBeNull();
   });
 
   it('rejects inconsistent page counts, empty results, and unsupported protocols', () => {
@@ -63,12 +91,18 @@ describe('Phase 9 research result contract', () => {
     ).toBe(false);
   });
 
-  it('rejects duplicate final URLs so source persistence stays deterministic', () => {
+  it('requires the first captured page to represent the requested URL', () => {
+    const result = validResult();
+    result.pages[0]!.requestedUrl = 'https://different.example/';
+    expect(playwrightResearchResultSchema.safeParse(result).success).toBe(false);
+  });
+
+  it('rejects duplicate canonical final URLs so source persistence stays deterministic', () => {
     const result = validResult();
     result.pages.push({
       ...result.pages[0]!,
       requestedUrl: 'https://example.com/redirect',
-      finalUrl: 'https://example.com/',
+      finalUrl: 'https://EXAMPLE.com/#duplicate-fragment',
       title: 'Redirected duplicate',
     });
     result.pageCount = result.pages.length;

@@ -2,7 +2,7 @@
 
 Current phase: **Phase 9 — Playwright Research Engine**  
 Launch progress: **~31%**  
-Status: **IMPLEMENTED + SECURITY/RELIABILITY-HARDENED — final Phase 9 verification pending a runnable GitHub Actions job**
+Status: **IMPLEMENTED + SECURITY/RELIABILITY-HARDENED — final Phase 9 verification pending a runnable hosted CI job**
 
 ## Completed phases
 
@@ -53,6 +53,9 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - Chromium loopback/link-local proxy bypass explicitly removed: ✅
 - Redirect traffic forced through the public-only egress gate: ✅
 - Cloud-side bounded source-only result validation/persistence: ✅
+- Cloud result bound to the claimed job/prospect and original requested URL: ✅
+- Malformed research completion rejected before persistence: ✅
+- Job-context ownership checked before source writes: ✅
 - Retry-safe immutable source replay and identity-collision rejection: ✅
 - Long-running job lease renewal while Playwright executes: ✅
 - No Phase 9 promotion to evidence or verified facts: ✅
@@ -65,12 +68,12 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 
 ## Current CI condition
 
-Run `33772408453` demonstrated the current external failure mode: every `ubuntu-latest` job ended before checkout with `steps: []`, `runner_id: 0`, and no runner name. Subsequent Phase 9 changes remain unverified by hosted CI until GitHub allocates a runner normally. This is not treated as a passing product gate.
+A dedicated three-platform diagnostic workflow was run as `33774928734`: minimal `ubuntu-latest`, `windows-latest`, and `macos-latest` echo jobs all failed before executing a single step. This confirms the current failure is hosted-runner allocation/account infrastructure rather than the project test suite or one operating-system image. The temporary diagnostic workflow has been removed after collecting this evidence.
 
 ## Blocked
 
-- Final Phase 9 closure requires one clean runnable GitHub Actions regression. Do not start Phase 10 until that gate is green.
+- Final Phase 9 closure requires one clean runnable complete regression. Do not start Phase 10 until that gate is green.
 
 ## Next action
 
-As soon as a hosted runner is allocated, run the complete regression. Fix any real failure before Phase 10; otherwise mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
+Keep Phase 9 frozen at the strict gate until CI can execute. If the next runnable regression exposes a real code failure, fix it before Phase 10. If green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.

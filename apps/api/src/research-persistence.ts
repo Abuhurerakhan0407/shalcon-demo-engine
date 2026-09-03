@@ -22,6 +22,7 @@ export async function persistResearchSourcesIfNeeded(
   userId: string,
   job: JobRecord,
   rawResult: unknown,
+  expectedRequestedUrl?: string,
 ): Promise<ResearchPersistenceResult | null> {
   if (job.jobType !== 'PLAYWRIGHT_RESEARCH') return null;
 
@@ -30,7 +31,12 @@ export async function persistResearchSourcesIfNeeded(
     throw new Error('Research prospect is unavailable to this operator.');
   }
 
-  const result = parseResearchResultForJob(rawResult, job.id, prospect.id);
+  const result = parseResearchResultForJob(
+    rawResult,
+    job.id,
+    prospect.id,
+    expectedRequestedUrl,
+  );
   const sources = new SourceRecordRepository(db);
   const persisted: SourceRecord[] = [];
 

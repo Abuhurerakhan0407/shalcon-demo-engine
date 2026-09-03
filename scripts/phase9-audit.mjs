@@ -36,10 +36,15 @@ for (const contract of ['PLAYWRIGHT_RESEARCH','complete_research','_LeaseKeeper'
 }
 
 const persistence = await readFile('apps/api/src/research-persistence.ts', 'utf8');
-for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE']) {
+for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl']) {
   if (!persistence.includes(contract)) throw new Error(`Missing research persistence contract: ${contract}`);
 }
 if (persistence.includes('EvidenceRepository') || persistence.includes('ProspectFactRepository')) throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
+
+const runnerRoutes = await readFile('apps/api/src/research-runner-routes.ts', 'utf8');
+for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl']) {
+  if (!runnerRoutes.includes(contract)) throw new Error(`Missing research completion ownership/input contract: ${contract}`);
+}
 
 const sourceRepository = await readFile('packages/db/src/repositories/evidence.ts', 'utf8');
 for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable identity mismatch', 'Browser retries']) {
@@ -47,12 +52,12 @@ for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable ident
 }
 
 const resultSchema = await readFile('apps/api/src/research-result.ts', 'utf8');
-for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navigationError','requestFailures','httpErrors','.min(1).max(6)','unique finalUrl values']) {
+for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navigationError','requestFailures','httpErrors','.min(1).max(6)','unique finalUrl values','canonicalResearchUrl','requested URL does not match the claimed job payload','First research page must represent the requested URL']) {
   if (!resultSchema.includes(contract)) throw new Error(`Missing research-result validation contract: ${contract}`);
 }
 
 const integration = await readFile('apps/api/src/phase9.integration.ts', 'utf8');
-for (const contract of ['sourceUrlsStored','diagnosticsPersisted','sourceMaterialOnly','retrySourceReplaySafe','retrySourceIdentityCollisionRejected','mismatchedProspectRejected','noUnsupportedFactsGenerated']) {
+for (const contract of ['sourceUrlsStored','diagnosticsPersisted','sourceMaterialOnly','retrySourceReplaySafe','retrySourceIdentityCollisionRejected','mismatchedProspectRejected','requestedUrlMismatchRejected','malformedCompletionRejected','rejectedResultsPersistNothing','noUnsupportedFactsGenerated']) {
   if (!integration.includes(contract)) throw new Error(`Missing Phase 9 D1 acceptance: ${contract}`);
 }
 

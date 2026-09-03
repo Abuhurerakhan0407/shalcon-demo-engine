@@ -82,6 +82,9 @@ try {
     checks.retrySourceReplaySafe === true,
     checks.retrySourceIdentityCollisionRejected === true,
     checks.mismatchedProspectRejected === true,
+    checks.requestedUrlMismatchRejected === true,
+    checks.malformedCompletionRejected === true,
+    checks.rejectedResultsPersistNothing === true,
     checks.noUnsupportedFactsGenerated === true,
     checks.foreignKeyViolations === 0,
   ];

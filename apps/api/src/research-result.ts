@@ -1,16 +1,35 @@
 import { z } from 'zod';
 
+const BLOCKED_HOST_SUFFIXES = ['.localhost', '.local', '.internal'] as const;
+
+export function canonicalResearchUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (url.username || url.password) return null;
+    if (url.port !== '') return null;
+
+    const hostname = url.hostname.replace(/^\[|\]$/gu, '').toLowerCase();
+    if (
+      !hostname ||
+      hostname === 'localhost' ||
+      hostname.includes('%') ||
+      BLOCKED_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
+    ) {
+      return null;
+    }
+
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 const httpUrlSchema = z
   .string()
   .max(2048)
-  .refine((value) => {
-    try {
-      const url = new URL(value);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  }, 'Expected an HTTP(S) URL.');
+  .refine((value) => canonicalResearchUrl(value) !== null, 'Expected a safe HTTP(S) web URL.');
 
 const consoleSchema = z.object({
   type: z.enum(['warning', 'error']),
@@ -63,9 +82,21 @@ export const playwrightResearchResultSchema = z
       });
     }
 
+    const requested = canonicalResearchUrl(value.requestedUrl);
+    const firstRequested = canonicalResearchUrl(value.pages[0]?.requestedUrl ?? '');
+    if (!requested || firstRequested !== requested) {
+      context.addIssue({
+        code: 'custom',
+        path: ['pages', 0, 'requestedUrl'],
+        message: 'First research page must represent the requested URL.',
+      });
+    }
+
     const seenFinalUrls = new Set<string>();
     value.pages.forEach((page, index) => {
-      if (seenFinalUrls.has(page.finalUrl)) {
+      const canonicalFinal = canonicalResearchUrl(page.finalUrl);
+      if (!canonicalFinal) return;
+      if (seenFinalUrls.has(canonicalFinal)) {
         context.addIssue({
           code: 'custom',
           path: ['pages', index, 'finalUrl'],
@@ -73,7 +104,7 @@ export const playwrightResearchResultSchema = z
         });
         return;
       }
-      seenFinalUrls.add(page.finalUrl);
+      seenFinalUrls.add(canonicalFinal);
     });
   });
 
@@ -84,11 +115,21 @@ export function parseResearchResultForJob(
   raw: unknown,
   jobId: string,
   prospectId: string,
+  expectedRequestedUrl?: string,
 ): PlaywrightResearchResult {
   const result = playwrightResearchResultSchema.parse(raw);
   if (result.jobId !== jobId || result.prospectId !== prospectId) {
     throw new Error('Research result does not match the claimed job and prospect.');
   }
+
+  if (expectedRequestedUrl !== undefined) {
+    const expected = canonicalResearchUrl(expectedRequestedUrl);
+    const actual = canonicalResearchUrl(result.requestedUrl);
+    if (!expected || !actual || actual !== expected) {
+      throw new Error('Research result requested URL does not match the claimed job payload.');
+    }
+  }
+
   return result;
 }
 
@@ -103,7 +144,9 @@ export async function researchSourceId(
   prospectId: string,
   finalUrl: string,
 ): Promise<string> {
-  const input = new TextEncoder().encode(`phase9:${jobId}:${prospectId}:${finalUrl}`);
+  const canonicalUrl = canonicalResearchUrl(finalUrl);
+  if (!canonicalUrl) throw new Error('Research source URL is invalid.');
+  const input = new TextEncoder().encode(`phase9:${jobId}:${prospectId}:${canonicalUrl}`);
   const digest = await crypto.subtle.digest('SHA-256', input);
   return `src_pw_${toHex(digest).slice(0, 32)}`;
 }
