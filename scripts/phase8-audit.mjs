@@ -11,6 +11,7 @@ const required = [
   'apps/local-runner/src/shalcon_runner/client.py',
   'apps/local-runner/src/shalcon_runner/worker.py',
   'apps/local-runner/tests/test_client.py',
+  'apps/local-runner/tests/test_client_claim_schema.py',
   'apps/local-runner/tests/test_worker.py',
   'scripts/verify-phase8-d1.mjs',
 ];
@@ -87,6 +88,10 @@ for (const contract of [
   'requires HTTPS except for loopback',
   '_NoRedirect',
   'build_opener(_NoRedirect())',
+  '_strict_string',
+  '_strict_int',
+  'type(value) is not int',
+  'attempts > max_attempts',
 ]) {
   if (!client.includes(contract)) throw new Error(`Missing local runner client contract: ${contract}`);
 }
@@ -94,6 +99,16 @@ for (const contract of [
 const clientTest = await readFile('apps/local-runner/tests/test_client.py', 'utf8');
 if (!clientTest.includes('test_runner_api_redirects_are_not_followed_or_given_bearer_credentials')) {
   throw new Error('Runner client does not test bearer-safe redirect rejection.');
+}
+
+const claimSchemaTest = await readFile('apps/local-runner/tests/test_client_claim_schema.py', 'utf8');
+for (const contract of [
+  'test_claim_accepts_exact_expected_types',
+  'test_claim_rejects_coercible_or_out_of_range_job_fields',
+  'test_claim_rejects_invalid_lease_duration',
+  'test_claim_rejects_attempt_count_above_maximum',
+]) {
+  if (!claimSchemaTest.includes(contract)) throw new Error(`Missing strict claim schema test: ${contract}`);
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');

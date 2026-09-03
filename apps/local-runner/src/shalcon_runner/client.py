@@ -52,6 +52,19 @@ def _validated_base_url(raw_base_url: str) -> str:
     return candidate.rstrip("/")
 
 
+def _strict_string(value: Any, field: str, max_length: int) -> str:
+    if not isinstance(value, str) or not value or len(value) > max_length:
+        raise RunnerApiError(f"Claim response contained invalid {field}.")
+    return value
+
+
+def _strict_int(value: Any, field: str, minimum: int, maximum: int) -> int:
+    # bool is a subclass of int in Python, so an isinstance(value, int) check is not strict enough.
+    if type(value) is not int or value < minimum or value > maximum:
+        raise RunnerApiError(f"Claim response contained invalid {field}.")
+    return value
+
+
 @dataclass(frozen=True)
 class ClaimedJob:
     id: str
@@ -126,16 +139,23 @@ class RunnerApiClient:
             return None
         if not isinstance(raw_job, dict):
             raise RunnerApiError("Claim response contained an invalid job.")
-        required = ("id", "jobType", "entityId", "attempts", "maxAttempts")
-        if any(key not in raw_job for key in required):
-            raise RunnerApiError("Claim response is missing required job fields.")
+
+        job_id = _strict_string(raw_job.get("id"), "job id", 160)
+        job_type = _strict_string(raw_job.get("jobType"), "job type", 80)
+        entity_id = _strict_string(raw_job.get("entityId"), "entity id", 160)
+        attempts = _strict_int(raw_job.get("attempts"), "attempt count", 0, 10)
+        max_attempts = _strict_int(raw_job.get("maxAttempts"), "max attempts", 1, 10)
+        if attempts > max_attempts:
+            raise RunnerApiError("Claim response contained an invalid attempt count.")
+        lease_seconds = _strict_int(response.get("leaseSeconds"), "lease duration", 1, 3600)
+
         return ClaimedJob(
-            id=str(raw_job["id"]),
-            job_type=str(raw_job["jobType"]),
-            entity_id=str(raw_job["entityId"]),
-            attempts=int(raw_job["attempts"]),
-            max_attempts=int(raw_job["maxAttempts"]),
-            lease_seconds=int(response.get("leaseSeconds", 120)),
+            id=job_id,
+            job_type=job_type,
+            entity_id=entity_id,
+            attempts=attempts,
+            max_attempts=max_attempts,
+            lease_seconds=lease_seconds,
             payload=response.get("payload", {}),
         )
 
