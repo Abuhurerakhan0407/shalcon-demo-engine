@@ -8,6 +8,7 @@ import { findTemplateDefinition } from '@shalcon/templates';
 
 const PUBLIC_DEMO_STATUSES = new Set<DemoRecord['status']>(['READY', 'SENT', 'CONVERTED']);
 const DEMO_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/u;
+type SalonTemplateConfig = Parameters<typeof renderElaneDocument>[1];
 
 export type DemoRenderResult =
   | { ok: true; html: string; demoId: string }
@@ -49,13 +50,14 @@ export function renderDemoRecord(demo: DemoRecord, nowIso: string): DemoRenderRe
 
   const config = parseConfig(demo.configJson);
   if (!config) return { ok: false, reason: 'INVALID_CONFIG' };
-  const validation = validateSalonTemplateConfig(config);
+  const typedConfig = config as SalonTemplateConfig;
+  const validation = validateSalonTemplateConfig(typedConfig);
   if (!validation.ok) return { ok: false, reason: 'INVALID_CONFIG' };
 
   try {
     return {
       ok: true,
-      html: renderElaneDocument(ELANE_V8_DOCUMENT_SOURCE, config),
+      html: renderElaneDocument(ELANE_V8_DOCUMENT_SOURCE, typedConfig),
       demoId: demo.id,
     };
   } catch {
