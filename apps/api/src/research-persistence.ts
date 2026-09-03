@@ -7,6 +7,7 @@ import {
 } from '@shalcon/db';
 
 import {
+  canonicalResearchUrl,
   parseResearchResultForJob,
   researchPageRawJson,
   researchSourceId,
@@ -41,12 +42,15 @@ export async function persistResearchSourcesIfNeeded(
   const persisted: SourceRecord[] = [];
 
   for (const page of result.pages) {
+    const sourceUrl = canonicalResearchUrl(page.finalUrl);
+    if (!sourceUrl) throw new Error('Research source URL failed canonical validation.');
+
     const record: SourceRecord = {
-      id: await researchSourceId(job.id, prospect.id, page.finalUrl),
+      id: await researchSourceId(job.id, prospect.id, sourceUrl),
       prospectId: prospect.id,
       provider: 'PLAYWRIGHT',
       sourceType: 'WEBSITE_PAGE',
-      sourceUrl: page.finalUrl,
+      sourceUrl,
       rawJson: researchPageRawJson(result, page),
       capturedAt: page.capturedAt,
     };
