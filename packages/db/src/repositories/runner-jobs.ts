@@ -106,14 +106,8 @@ export class RunnerJobRepository {
     return reconciled;
   }
 
-  async claimNextForUser(
-    userId: string,
-    owner: string,
-    leaseExpiresAt: string,
-    now: string,
-  ): Promise<RunnerJobClaim | null> {
-    await this.reconcileExpiredLeases(userId, now);
-    const candidates = await this.db
+  async dueForSignal(userId: string, now: string, limit = 100): Promise<JobRecord[]> {
+    const result = await this.db
       .prepare(`
         SELECT j.*
         FROM jobs j
@@ -122,21 +116,30 @@ export class RunnerJobRepository {
           AND j.scheduled_for <= ?
           AND j.status IN ('PENDING', 'FAILED')
         ORDER BY j.priority DESC, j.scheduled_for ASC, j.created_at ASC
-        LIMIT 5
+        LIMIT ?
       `)
-      .bind(userId, now)
+      .bind(userId, now, limit)
       .all<JobRow>();
+    return result.results.map(mapJob);
+  }
 
-    for (const candidate of candidates.results) {
+  async claimNextForUser(
+    userId: string,
+    owner: string,
+    leaseExpiresAt: string,
+    now: string,
+  ): Promise<RunnerJobClaim | null> {
+    await this.reconcileExpiredLeases(userId, now);
+    const candidates = await this.dueForSignal(userId, now, 5);
+
+    for (const candidate of candidates) {
+      const context = await this.contexts.getByJobId(candidate.id);
+      if (!context || context.userId !== userId) continue;
       try {
         const job = await this.jobs.claim(candidate.id, owner, leaseExpiresAt, now);
-        const context = await this.contexts.getByJobId(candidate.id);
-        if (!context || context.userId !== userId) {
-          throw new Error(`Job context ${candidate.id} is unavailable for this runner.`);
-        }
         return { job, context };
       } catch {
-        // Another runner may have won the lease. Try the next candidate.
+        // Another runner may have won this lease. Try the next due candidate.
       }
     }
     return null;
@@ -186,20 +189,8 @@ export class RunnerJobRepository {
   ): Promise<JobRecord> {
     const context = await this.contexts.getByJobId(jobId);
     if (!context || context.userId !== userId) throw new Error(`Job ${jobId} is not owned by this operator.`);
-    const failed = await this.jobs.fail(jobId, owner, errorCode, safeMessage, now);
-    if (failed.status !== 'FAILED') return failed;
-
-    const row = await this.db
-      .prepare(`
-        UPDATE jobs
-        SET scheduled_for = ?, updated_at = ?
-        WHERE id = ? AND status = 'FAILED'
-        RETURNING *
-      `)
-      .bind(retryAt, now, jobId)
-      .first<JobRow>();
-    if (!row) throw new Error(`Job ${jobId} retry could not be scheduled.`);
-    return mapJob(row);
+    const failed = await this.jobs.fail(jobId, owner, errorCode, safeMessage, now, retryAt);
+    return failed;
   }
 
   async countsForUser(userId: string): Promise<RunnerJobCounts> {
