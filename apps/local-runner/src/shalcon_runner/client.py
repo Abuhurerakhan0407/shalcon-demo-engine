@@ -6,11 +6,18 @@ import json
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 class RunnerApiError(RuntimeError):
     """Safe runner API error that never embeds bearer credentials."""
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """Runner control-plane requests must never forward bearer credentials through redirects."""
+
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+        return None
 
 
 def _loopback_host(hostname: str) -> bool:
@@ -64,6 +71,7 @@ class RunnerApiClient:
         self._base_url = base
         self._token = token.strip()
         self._timeout_seconds = timeout_seconds
+        self._opener = build_opener(_NoRedirect())
 
     def _request(self, method: str, path: str, payload: Any | None = None) -> dict[str, Any]:
         body = None if payload is None else json.dumps(payload, separators=(",", ":")).encode("utf-8")
@@ -79,7 +87,7 @@ class RunnerApiClient:
             },
         )
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:  # noqa: S310 - URL passed strict transport validation.
+            with self._opener.open(request, timeout=self._timeout_seconds) as response:  # noqa: S310 - base URL passed strict transport validation and redirects are disabled.
                 raw = response.read().decode("utf-8")
         except HTTPError as exc:
             safe_message = f"Runner API returned HTTP {exc.code}."

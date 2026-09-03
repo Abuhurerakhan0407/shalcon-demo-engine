@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
+from typing import Any
+
 import pytest
 
-from shalcon_runner.client import RunnerApiClient
+from shalcon_runner.client import RunnerApiClient, RunnerApiError
 
 
 TOKEN = "runner-test-token-that-is-long-enough"
@@ -45,3 +49,39 @@ def test_https_or_loopback_development_runner_api_urls_are_accepted(base_url: st
 def test_runner_token_minimum_length_still_applies_after_transport_validation() -> None:
     with pytest.raises(ValueError, match="token"):
         RunnerApiClient("https://api.example.com", "too-short")
+
+
+def test_runner_api_redirects_are_not_followed_or_given_bearer_credentials() -> None:
+    requests: list[tuple[str, str | None]] = []
+
+    class RedirectHandler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler API.
+            requests.append((self.path, self.headers.get("Authorization")))
+            if self.path == "/api/v1/runner/agent/heartbeat":
+                self.send_response(302)
+                self.send_header("Location", "/redirect-target")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), RedirectHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        client = RunnerApiClient(f"http://127.0.0.1:{server.server_port}", TOKEN)
+        with pytest.raises(RunnerApiError, match="HTTP 302"):
+            client.heartbeat("0.1.0", ["PLAYWRIGHT_RESEARCH"])
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
+
+    assert requests == [
+        ("/api/v1/runner/agent/heartbeat", f"Bearer {TOKEN}"),
+    ]

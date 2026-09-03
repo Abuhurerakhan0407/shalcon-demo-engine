@@ -87,7 +87,7 @@ class LocalRunnerWorker:
     ) -> None:
         self.client = client
         self.handlers = dict(DEFAULT_HANDLERS if handlers is None else handlers)
-        self.capabilities = capabilities or sorted(self.handlers)
+        self.capabilities = sorted(self.handlers) if capabilities is None else list(capabilities)
 
     def heartbeat(self) -> None:
         self.client.heartbeat(__version__, self.capabilities)
