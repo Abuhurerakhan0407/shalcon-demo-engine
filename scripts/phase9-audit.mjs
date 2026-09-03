@@ -28,8 +28,13 @@ for (const contract of ['PublicSocksProxy','resolve_public_target','ipaddress.ip
 }
 
 const research = await readFile('apps/local-runner/src/shalcon_runner/research.py', 'utf8');
-for (const contract of ['sync_playwright','context.route','page.goto','inner_text','page.content','page.screenshot','requestfailed','discoveredLinks','sourceOnly','_SAFE_NON_NETWORK_SCHEMES','route.abort("blockedbyclient")','final_url = self.validator(candidate)','service_workers="block"','route_web_socket','web_socket.close','PublicSocksProxy','"bypass": "<-loopback>"']) {
+for (const contract of ['sync_playwright','context.route','page.goto','inner_text','page.content','page.screenshot','requestfailed','discoveredLinks','sourceOnly','_SAFE_NON_NETWORK_SCHEMES','route.abort("blockedbyclient")','final_url = self.validator(candidate)','service_workers="block"','route_web_socket','web_socket.close','PublicSocksProxy','"bypass": "<-loopback>"','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','"args": [_WEBRTC_POLICY_ARG]']) {
   if (!research.includes(contract)) throw new Error(`Missing Phase 9 browser contract: ${contract}`);
+}
+
+const researchTests = await readFile('apps/local-runner/tests/test_research.py', 'utf8');
+if (!researchTests.includes('test_webrtc_cannot_use_non_proxied_udp')) {
+  throw new Error('WebRTC egress policy is not locked by a Python test.');
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');
@@ -51,6 +56,7 @@ for (const contract of [
   'completeResearchWithSources',
   'db.batch',
   'activeLeaseSql',
+  'completionAtOverride ?? new Date().toISOString()',
   'ResearchLeaseLostError',
   'sourceIdentityMatches',
   'runnerId',
