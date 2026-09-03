@@ -148,6 +148,6 @@ test('manual demo workspace builds, previews, regenerates, hides fields, and dis
   await expect(page.locator('.visible-data-list').getByText('Bandra West, Mumbai')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Disable preview' }).click();
-  await expect(page.getByText('Preview disabled')).toBeVisible();
+  await expect(page.getByText('Preview disabled', { exact: true })).toBeVisible();
   await expect(page.getByText('The private URL currently fails closed.')).toBeVisible();
 });
