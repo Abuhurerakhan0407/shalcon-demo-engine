@@ -227,9 +227,28 @@ runnerRoutes.post('/operator/jobs', async (c) => {
 
 runnerRoutes.post('/operator/reconcile', async (c) => {
   const user = c.get('authUser');
-  const jobs = new RunnerJobRepository(requireDb(c.env.DB));
-  const reconciled = await jobs.reconcileExpiredLeases(user.id, new Date().toISOString());
-  return c.json({ reconciled: reconciled.map(jobSummary), count: reconciled.length });
+  const db = requireDb(c.env.DB);
+  const now = new Date().toISOString();
+  const jobs = new RunnerJobRepository(db);
+  const reconciled = await jobs.reconcileExpiredLeases(user.id, now);
+  const due = await jobs.dueForSignal(user.id, now, 100);
+  const signals = await Promise.all(
+    due.map(async (job) => ({
+      jobId: job.id,
+      result: await signalJob(c.env.JOB_QUEUE, {
+        jobId: job.id,
+        userId: user.id,
+        jobType: job.jobType,
+      }),
+    })),
+  );
+  return c.json({
+    reconciled: reconciled.map(jobSummary),
+    count: reconciled.length,
+    signals,
+    signalCount: signals.length,
+    d1Canonical: true,
+  });
 });
 
 runnerRoutes.get('/operator/dead-letters', async (c) => {
