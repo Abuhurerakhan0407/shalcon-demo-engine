@@ -2,7 +2,7 @@
 
 Current phase: **Phase 9 — Playwright Research Engine**  
 Launch progress: **~31%**  
-Status: **IMPLEMENTED + HARDENED — final Phase 9 verification pending a runnable GitHub Actions job**
+Status: **IMPLEMENTED + SECURITY-HARDENED — final Phase 9 verification pending a runnable GitHub Actions job**
 
 ## Completed phases
 
@@ -57,6 +57,7 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 ## Phase 9 implementation
 
 - Public HTTP(S) URL validator with DNS/IP safety checks: ✅
+- Standard web-port restriction (80/443): ✅
 - Local Playwright browser research service: ✅
 - JavaScript-rendered page capture: ✅
 - Same-site relevant-page discovery: ✅
@@ -66,6 +67,10 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - Per-request browser route safety guard: ✅
 - Service Workers blocked so request routing cannot be bypassed: ✅
 - WebSocket network path blocked during research: ✅
+- Public-only SOCKS5 egress gate: ✅
+- DNS resolved once and connection pinned to the exact validated public IP: ✅
+- Chromium loopback/link-local proxy bypass explicitly removed: ✅
+- Redirect traffic forced through the same public-only egress gate: ✅
 - Unsafe redirect/final-URL fail-closed handling: ✅
 - Cloud-side bounded result schema: ✅
 - Non-empty results and duplicate-final-URL rejection: ✅
@@ -89,7 +94,7 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 
 ## Current CI condition
 
-GitHub Actions attempts are terminating before checkout with no executable steps/logs. The latest observed run is `33771404248` on commit `1611adae9fc8ed0ad48031cc9dd61631c8fa9605`. This is treated as an external verification blocker, not as a passing or failing product test.
+Latest attempted gate: run `33772408453` on commit `574839765802ba8bcdc201175e8d648e7198bf92`. All three `ubuntu-latest` jobs terminated before checkout with `steps: []`, `runner_id: 0`, and no runner name. This is an external runner-allocation failure, not a product test result.
 
 ## Blocked
 
@@ -97,4 +102,4 @@ GitHub Actions attempts are terminating before checkout with no executable steps
 
 ## Next action
 
-Re-run the complete Phase 9 gate once GitHub Actions allocates hosted jobs normally. If a real test failure appears, fix it before Phase 10. If the run is green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
+Re-run the complete Phase 9 gate once GitHub Actions allocates a hosted runner. If a real test failure appears, fix it before Phase 10. If the run is green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.

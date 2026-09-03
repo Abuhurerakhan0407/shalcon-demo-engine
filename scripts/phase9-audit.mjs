@@ -21,7 +21,7 @@ for (const contract of ['validate_public_http_url','address.is_global','localhos
 }
 
 const egress = await readFile('apps/local-runner/src/shalcon_runner/egress_proxy.py', 'utf8');
-for (const contract of ['PublicSocksProxy','resolve_public_target','address.is_global','_ALLOWED_WEB_PORTS','socket.getaddrinfo','remote.connect(target)','DNS is resolved once here']) {
+for (const contract of ['PublicSocksProxy','resolve_public_target','ipaddress.ip_address(ip).is_global','_ALLOWED_WEB_PORTS','socket.getaddrinfo','remote.connect(target)','DNS is resolved once here']) {
   if (!egress.includes(contract)) throw new Error(`Missing Phase 9 egress contract: ${contract}`);
 }
 
