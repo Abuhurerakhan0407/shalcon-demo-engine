@@ -107,6 +107,64 @@ export class DemoRepository {
     return row ? mapDemo(row) : null;
   }
 
+  async getByIdForUser(id: string, userId: string): Promise<DemoRecord | null> {
+    const row = await this.db
+      .prepare(`
+        ${SELECT_DEMO}
+        JOIN prospects prospect ON prospect.id = demo.prospect_id
+        JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+        WHERE demo.id = ? AND campaign.user_id = ?
+        LIMIT 1
+      `)
+      .bind(id, userId)
+      .first<DemoRow>();
+    return row ? mapDemo(row) : null;
+  }
+
+  async listForProspectForUser(prospectId: string, userId: string): Promise<DemoRecord[]> {
+    const result = await this.db
+      .prepare(`
+        ${SELECT_DEMO}
+        JOIN prospects prospect ON prospect.id = demo.prospect_id
+        JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+        WHERE demo.prospect_id = ? AND campaign.user_id = ?
+        ORDER BY demo.updated_at DESC
+      `)
+      .bind(prospectId, userId)
+      .all<DemoRow>();
+    return result.results.map(mapDemo);
+  }
+
+  async updateConfigurationForUser(
+    id: string,
+    userId: string,
+    configJson: string,
+    status: DemoStatus,
+    expiresAt: string | null,
+    at: string,
+  ): Promise<DemoRecord> {
+    const row = await this.db
+      .prepare(`
+        UPDATE demos
+        SET config_json = ?, status = ?, expires_at = ?, updated_at = ?, last_qa_at = NULL,
+          fact_qa_status = 'MANUAL_PHASE7', visual_qa_status = 'PENDING_PHASE18',
+          sales_qa_status = 'MANUAL_PHASE7'
+        WHERE id = ? AND prospect_id IN (
+          SELECT prospect.id
+          FROM prospects prospect
+          JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+          WHERE campaign.user_id = ?
+        )
+        RETURNING id, prospect_id, token_hash, template_id, template_version, schema_version,
+          config_json, status, expires_at, created_at, updated_at, last_qa_at,
+          fact_qa_status, visual_qa_status, sales_qa_status
+      `)
+      .bind(configJson, status, expiresAt, at, id, userId)
+      .first<DemoRow>();
+    if (!row) throw new Error(`Demo ${id} was not found for this operator.`);
+    return mapDemo(row);
+  }
+
   async updateStatus(id: string, status: DemoStatus, at: string): Promise<DemoRecord> {
     const row = await this.db
       .prepare(`
@@ -119,6 +177,31 @@ export class DemoRepository {
       .bind(status, at, id)
       .first<DemoRow>();
     if (!row) throw new Error(`Demo ${id} was not found.`);
+    return mapDemo(row);
+  }
+
+  async updateStatusForUser(
+    id: string,
+    userId: string,
+    status: DemoStatus,
+    at: string,
+  ): Promise<DemoRecord> {
+    const row = await this.db
+      .prepare(`
+        UPDATE demos SET status = ?, updated_at = ?
+        WHERE id = ? AND prospect_id IN (
+          SELECT prospect.id
+          FROM prospects prospect
+          JOIN campaigns campaign ON campaign.id = prospect.campaign_id
+          WHERE campaign.user_id = ?
+        )
+        RETURNING id, prospect_id, token_hash, template_id, template_version, schema_version,
+          config_json, status, expires_at, created_at, updated_at, last_qa_at,
+          fact_qa_status, visual_qa_status, sales_qa_status
+      `)
+      .bind(status, at, id, userId)
+      .first<DemoRow>();
+    if (!row) throw new Error(`Demo ${id} was not found for this operator.`);
     return mapDemo(row);
   }
 }
