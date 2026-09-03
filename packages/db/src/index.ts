@@ -4,6 +4,10 @@ export { AgentRunRepository } from './repositories/agent-runs';
 export { AuthIdentityRepository } from './repositories/auth-identities';
 export { AuthSessionRepository } from './repositories/auth-sessions';
 export { CampaignRepository } from './repositories/campaigns';
+export {
+  DemoBuilderStateRepository,
+  type DemoBuilderStateRecord,
+} from './repositories/demo-builder';
 export { DemoRepository } from './repositories/demos';
 export {
   EvidenceRepository,
