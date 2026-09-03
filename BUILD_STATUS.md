@@ -1,11 +1,16 @@
 # Build Status
 
-Current phase: **Phase 1 — Data Layer + State Machine**  
-Status: **IN PROGRESS — implementation complete locally; awaiting full GitHub CI verification**
+Current phase: **Phase 2 — Authentication + Dashboard Shell**  
+Status: **IN PROGRESS — Phase 1 fully verified; Phase 2 implementation starting**
 
 ## Completed
 
-- Phase 0 repository and engineering foundation remains green.
+### Phase 0 — Repository + Engineering Foundation
+
+- Monorepo/workspace, React frontend, Hono Worker backend, Python runner skeleton, shared packages, strict TypeScript, ESLint, Prettier, Vitest, Playwright, Pytest, environment baseline, architecture docs, and CI are green.
+
+### Phase 1 — Data Layer + State Machine
+
 - D1 initial migration created from the master database design.
 - D1 binding and migration directory configured for local Worker development.
 - Typed D1 repository contract created without tying domain packages to runtime globals.
@@ -19,45 +24,62 @@ Status: **IN PROGRESS — implementation complete locally; awaiting full GitHub 
 - Phase 1 fixtures and unit tests implemented.
 - Real local-D1 integration harness implemented through Wrangler.
 - Migration reproducibility check applies the migration twice against the same local D1 state.
+- D1 write/concurrency paths use atomic returned-row semantics rather than relying on trigger-influenced change counts.
+- D1 integration harness terminates the full local Wrangler/workerd process tree after verification.
 - Phase 1 structural/state/idempotency audit added.
+- Full GitHub Actions run is green on commit `2fbc441bcf355cfbe5ac3483441275cfcdb7bc8f`.
 
-## In progress
+## Phase 1 acceptance
 
-- GitHub Actions verification on a clean checkout.
-- Root-cause fixes for any failures exposed by real D1/Wrangler CI.
+- Fresh migration: ✅
+- Migration reproducibility: ✅
+- State transition tests: ✅
+- Illegal transition rejection: ✅
+- Idempotency tests: ✅
+- Live D1 repository integration: ✅
+- Typecheck: ✅
+- Lint: ✅
+- Unit: ✅
+- Build: ✅
+- Worker smoke: ✅
+- Phase 0 audit: ✅
+- Phase 1 audit: ✅
+- Playwright: ✅
+- Pytest: ✅
+
+## Phase 2 scope
+
+- Google OAuth.
+- Session/auth middleware.
+- Protected routes.
+- Sidebar/topbar.
+- Route shell.
+- Loading, empty, and error states.
+- Responsive navigation.
+- Dashboard skeleton.
+
+## Phase 2 acceptance
+
+- Login/logout works.
+- Unauthorized API requests are blocked.
+- All dashboard routes render.
+- Mobile navigation works.
+- No console errors.
+- Playwright navigation test passes.
 
 ## Blocked
 
-None currently.
-
-## Tests
-
-- Typecheck: pending CI
-- Lint: pending CI
-- Unit: pending CI
-- D1 migration fresh apply: pending CI
-- D1 migration reproducibility: pending CI
-- D1 repository integration: pending CI
-- State transitions: implemented; pending CI
-- Illegal transition rejection: implemented; pending CI
-- Idempotency: implemented; pending CI
-- Playwright: Phase 0 foundation test retained; pending CI
-- Pytest: Phase 0 runner tests retained; pending CI
+None currently. Real Google OAuth credentials will be required only for production/manual OAuth verification; implementation and automated verification must not require secrets in the repository.
 
 ## Known issues
 
 - The D1 database id in `wrangler.jsonc` is a local-development placeholder. Production D1 provisioning belongs to the deployment phase; no fake production resource is claimed.
-- Phase 1 intentionally does not add auth, discovery, scraping, AI, outreach, or production data.
-
-## Risks
-
-- Wrangler/D1 local persistence semantics must be validated by CI rather than inferred.
-- Future phases may require additive migrations; the initial migration must not be edited after production deployment.
+- Production Google OAuth client credentials and session secret must be provisioned as Worker secrets, never committed.
 
 ## Last verified commit
 
-Phase 0 code: `53c3123cb6ec06d57fa6e9db3e9f16267f0159ae` (all Phase 0 gates green).
+Phase 1: `2fbc441bcf355cfbe5ac3483441275cfcdb7bc8f` — all Phase 0 + Phase 1 gates green.
 
 ## Next action
 
-Push Phase 1 implementation, run CI, fix every failure, and mark Phase 1 complete only when all acceptance criteria are green.
+Implement Phase 2 strictly to the master acceptance criteria, then run the complete CI suite and fix every failure before starting Phase 3.
