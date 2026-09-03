@@ -25,6 +25,8 @@ for (const contract of [
   'claimNextForUser',
   'renewLease',
   'completeWithResult',
+  'this.db.batch',
+  "context.resultJson !== resultJson",
   'failWithRetry',
   "'DEAD_LETTER'",
 ]) {
@@ -70,6 +72,9 @@ for (const contract of [
   'duplicateCouldNotProcessTwice',
   'expiredLeaseRecovered',
   'permanentFailureDeadLettered',
+  'staleOwnerCompletionRejected',
+  'staleOwnerResultNotPersisted',
+  'canonicalReclaimedCompletionAtomic',
   'missingSignalDiscoverable',
   'queueSignalRecreated',
   'restartRecoveredOfflineJob',
