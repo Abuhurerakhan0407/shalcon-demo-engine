@@ -42,7 +42,7 @@ for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResear
 if (persistence.includes('EvidenceRepository') || persistence.includes('ProspectFactRepository')) throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
 
 const runnerRoutes = await readFile('apps/api/src/research-runner-routes.ts', 'utf8');
-for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl']) {
+for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl','job.leaseExpiresAt === null','job.leaseExpiresAt <= ownershipCheckAt']) {
   if (!runnerRoutes.includes(contract)) throw new Error(`Missing research completion ownership/input contract: ${contract}`);
 }
 
