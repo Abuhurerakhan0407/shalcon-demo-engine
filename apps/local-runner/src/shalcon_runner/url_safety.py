@@ -44,9 +44,10 @@ def _resolved_ips(hostname: str, port: int, resolver: Resolver) -> list[ipaddres
 def validate_public_http_url(raw_url: str, resolver: Resolver = socket.getaddrinfo) -> str:
     """Normalize and validate one navigation URL against the SSRF policy.
 
-    Production research is public-web only. Every resolved address must be globally routable;
-    mixed public/private DNS answers are rejected instead of choosing the public answer.
-    Standard web ports only are accepted so the browser cannot be used as a generic port scanner.
+    Production research is public-web only. User-facing research targets must be hostnames rather
+    than literal IP addresses. Every DNS answer must be globally routable; mixed public/private
+    answers are rejected instead of choosing the public answer. Standard web ports only are
+    accepted so the browser cannot be used as a generic port scanner.
     """
 
     candidate = raw_url.strip()
@@ -71,25 +72,24 @@ def validate_public_http_url(raw_url: str, resolver: Resolver = socket.getaddrin
         raise UnsafeResearchUrl("Research hostname is not allowed.")
 
     try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        raise UnsafeResearchUrl("Research URL must use a public hostname, not a literal IP address.")
+
+    try:
         port = parsed.port or (443 if scheme == "https" else 80)
     except ValueError as exc:
         raise UnsafeResearchUrl("Research URL contains an invalid port.") from exc
     if port not in _ALLOWED_WEB_PORTS:
         raise UnsafeResearchUrl("Research URL must use standard web ports 80 or 443.")
 
-    try:
-        literal_ip = ipaddress.ip_address(hostname)
-    except ValueError:
-        addresses = _resolved_ips(hostname, port, resolver)
-    else:
-        addresses = [literal_ip]
-
+    addresses = _resolved_ips(hostname, port, resolver)
     if any(not address.is_global for address in addresses):
         raise UnsafeResearchUrl("Research URL resolved to a non-public network address.")
 
     normalized_netloc = hostname
-    if ":" in hostname and not hostname.startswith("["):
-        normalized_netloc = f"[{hostname}]"
     default_port = 443 if scheme == "https" else 80
     if port != default_port:
         normalized_netloc = f"{normalized_netloc}:{port}"
