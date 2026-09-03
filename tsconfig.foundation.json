@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "lib": ["ES2022"]
+  },
+  "include": [
+    "packages/shared/src/**/*.ts",
+    "packages/templates/src/**/*.ts",
+    "packages/state-machine/src/**/*.ts"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "shalcon-demo-first-outbound-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo-first outbound engine for Shalcon Intelligence",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev:web",
+    "dev:web": "npm --workspace @shalcon/web run dev",
+    "dev:api": "npm --workspace @shalcon/api run dev",
+    "dev:runner": "cd apps/local-runner && PYTHONPATH=src python3 -m shalcon_runner health",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:foundation": "tsc -p tsconfig.foundation.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:python": "cd apps/local-runner && PYTHONPATH=src python3 -m pytest tests -q",
+    "test:phase0:audit": "node scripts/phase0-audit.mjs",
+    "test:phase0:offline": "npm run typecheck:foundation && npm run test:python && npm run test:phase0:audit",
+    "test:phase0": "npm run typecheck && npm run lint && npm run test:unit && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.9.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.18.0",
+    "eslint": "^10.9.1",
+    "prettier": "^3.9.6",
+    "typescript": ">=5.8.3 <6.1.0",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  }
+}
