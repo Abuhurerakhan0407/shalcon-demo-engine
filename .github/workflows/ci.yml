@@ -13,10 +13,43 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Preserve generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock-${{ github.sha }}
+          path: package-lock.json
+          retention-days: 1
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run build
+      - name: Smoke Worker dev server
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --workspace @shalcon/api run dev -- --port 8787 > /tmp/shalcon-worker.log 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$worker_pid" 2>/dev/null || true
+            wait "$worker_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for _ in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8787/api/v1/health > /tmp/shalcon-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/shalcon-worker.log
+            exit 1
+          fi
+
+          cat /tmp/shalcon-health.json
       - run: npm run test:phase0:audit
 
   playwright:
