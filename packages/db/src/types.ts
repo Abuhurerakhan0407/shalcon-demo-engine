@@ -9,6 +9,16 @@ export interface UserRecord {
   createdAt: UtcTimestamp;
 }
 
+export interface AuthSessionRecord {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: UtcTimestamp;
+  createdAt: UtcTimestamp;
+  lastSeenAt: UtcTimestamp;
+  revokedAt: UtcTimestamp | null;
+}
+
 export interface CampaignRecord {
   id: string;
   userId: string;

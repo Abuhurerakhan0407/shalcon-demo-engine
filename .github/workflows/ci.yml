@@ -17,6 +17,7 @@ jobs:
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run test:phase1:d1
+      - run: npm run test:phase2:d1
       - run: npm run build
       - name: Smoke Worker dev server
         shell: bash
@@ -47,6 +48,7 @@ jobs:
           cat /tmp/shalcon-health.json
       - run: npm run test:phase0:audit
       - run: npm run test:phase1:audit
+      - run: npm run test:phase2:audit
 
   playwright:
     runs-on: ubuntu-latest

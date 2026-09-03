@@ -10,7 +10,9 @@
     "test": "vitest run",
     "cf:types": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase1-d1-test",
-    "test:d1:worker": "wrangler dev src/phase1.integration.ts --local --port 8790 --persist-to ../../.wrangler/phase1-d1-test"
+    "db:migrate:phase2:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase2-d1-test",
+    "test:d1:worker": "wrangler dev src/phase1.integration.ts --local --port 8790 --persist-to ../../.wrangler/phase1-d1-test",
+    "test:d1:phase2-worker": "wrangler dev src/phase2.integration.ts --local --port 8791 --persist-to ../../.wrangler/phase2-d1-test"
   },
   "dependencies": {
     "hono": "^4.13.5",

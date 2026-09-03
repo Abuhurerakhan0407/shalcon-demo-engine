@@ -32,7 +32,10 @@
     "db:migrate:local": "npm --workspace @shalcon/api run db:migrate:local",
     "test:phase1:d1": "node scripts/verify-phase1-d1.mjs",
     "test:phase1:audit": "node scripts/phase1-audit.mjs",
-    "test:phase1": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:python && npm run build && npm run test:phase1:audit"
+    "test:phase1": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:python && npm run build && npm run test:phase1:audit",
+    "test:phase2:d1": "node scripts/verify-phase2-d1.mjs",
+    "test:phase2:audit": "node scripts/phase2-audit.mjs",
+    "test:phase2": "npm run typecheck && npm run lint && npm run test:unit && npm run test:phase1:d1 && npm run test:phase2:d1 && npm run test:e2e && npm run test:python && npm run build && npm run test:phase0:audit && npm run test:phase1:audit && npm run test:phase2:audit"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
