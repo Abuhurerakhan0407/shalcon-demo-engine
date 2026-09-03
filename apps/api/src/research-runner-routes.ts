@@ -11,7 +11,10 @@ import { z } from 'zod';
 
 import { hashSessionToken } from './auth';
 import type { Bindings } from './context';
-import { persistResearchSourcesIfNeeded } from './research-persistence';
+import {
+  ResearchLeaseLostError,
+  persistResearchSourcesIfNeeded,
+} from './research-persistence';
 
 const completeSchema = z.object({ result: z.unknown() });
 
@@ -106,11 +109,18 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
     sources = await persistResearchSourcesIfNeeded(
       db,
       runner.userId,
+      runner.id,
       job,
       input.data.result,
       expectedRequestedUrl,
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof ResearchLeaseLostError) {
+      return c.json(
+        { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this active research job.' } },
+        409,
+      );
+    }
     return c.json(
       {
         error: {

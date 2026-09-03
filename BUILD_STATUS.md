@@ -57,7 +57,9 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - Malformed research completion rejected before persistence: ✅
 - Job-context ownership checked before source writes: ✅
 - Retry-safe immutable source replay and identity-collision rejection: ✅
+- Source writes atomically require the runner's still-active lease: ✅
 - Long-running job lease renewal while Playwright executes: ✅
+- Terminal runner writes reject expired leases: ✅
 - No Phase 9 promotion to evidence or verified facts: ✅
 - Real-D1 Phase 9 acceptance fixture and permanent audit/CI wiring: ✅
 
@@ -68,7 +70,7 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 
 ## Current CI condition
 
-A dedicated three-platform diagnostic workflow was run as `33774928734`: minimal `ubuntu-latest`, `windows-latest`, and `macos-latest` echo jobs all failed before executing a single step. This confirms the current failure is hosted-runner allocation/account infrastructure rather than the project test suite or one operating-system image. The temporary diagnostic workflow has been removed after collecting this evidence.
+A dedicated three-platform diagnostic workflow was run as `33774928734`: minimal `ubuntu-latest`, `windows-latest`, and `macos-latest` echo jobs all failed before executing a single step. Subsequent normal CI jobs continue to terminate before checkout with empty step lists, so the final gate remains externally blocked rather than falsely marked pass/fail.
 
 ## Blocked
 

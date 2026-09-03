@@ -37,6 +37,13 @@ interface FactRow {
   updated_at: string;
 }
 
+export interface ActiveSourceLease {
+  jobId: string;
+  userId: string;
+  runnerId: string;
+  now: string;
+}
+
 function mapSource(row: SourceRow): SourceRecord {
   return {
     id: row.id,
@@ -131,6 +138,73 @@ export class SourceRecordRepository {
     // Browser retries can recapture the same job + URL with a later timestamp or slightly
     // different diagnostics. The deterministic source id represents the first immutable
     // snapshot for that identity, so replay must reuse it rather than overwrite or deadlock.
+    if (!sourceIdentityMatches(existing, record)) {
+      throw new Error('Source record id collision or immutable identity mismatch detected.');
+    }
+    return { source: existing, created: false };
+  }
+
+  async createOrGetForActiveLease(
+    record: SourceRecord,
+    lease: ActiveSourceLease,
+  ): Promise<{ source: SourceRecord; created: boolean } | null> {
+    const row = await this.db
+      .prepare(`
+        INSERT OR IGNORE INTO source_records(
+          id, prospect_id, provider, source_type, source_url, raw_json, captured_at
+        )
+        SELECT ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1
+          FROM jobs j
+          INNER JOIN job_contexts jc ON jc.job_id = j.id
+          WHERE j.id = ?
+            AND jc.user_id = ?
+            AND j.status = 'RUNNING'
+            AND j.lease_owner = ?
+            AND j.lease_expires_at IS NOT NULL
+            AND j.lease_expires_at > ?
+        )
+        RETURNING *
+      `)
+      .bind(
+        record.id,
+        record.prospectId,
+        record.provider,
+        record.sourceType,
+        record.sourceUrl,
+        record.rawJson,
+        record.capturedAt,
+        lease.jobId,
+        lease.userId,
+        lease.runnerId,
+        lease.now,
+      )
+      .first<SourceRow>();
+    if (row) return { source: mapSource(row), created: true };
+
+    const existingRow = await this.db
+      .prepare(`
+        SELECT s.*
+        FROM source_records s
+        WHERE s.id = ?
+          AND EXISTS (
+            SELECT 1
+            FROM jobs j
+            INNER JOIN job_contexts jc ON jc.job_id = j.id
+            WHERE j.id = ?
+              AND jc.user_id = ?
+              AND j.status = 'RUNNING'
+              AND j.lease_owner = ?
+              AND j.lease_expires_at IS NOT NULL
+              AND j.lease_expires_at > ?
+          )
+      `)
+      .bind(record.id, lease.jobId, lease.userId, lease.runnerId, lease.now)
+      .first<SourceRow>();
+    if (!existingRow) return null;
+
+    const existing = mapSource(existingRow);
     if (!sourceIdentityMatches(existing, record)) {
       throw new Error('Source record id collision or immutable identity mismatch detected.');
     }

@@ -11,6 +11,8 @@ const required = [
   'apps/api/src/research-persistence.ts',
   'apps/api/src/research-runner-routes.ts',
   'apps/api/src/phase9.integration.ts',
+  'apps/api/src/phase9-lease.integration.ts',
+  'apps/api/src/phase9.test-worker.ts',
   'scripts/verify-phase9-d1.mjs',
 ];
 for (const path of required) await access(path);
@@ -36,19 +38,19 @@ for (const contract of ['PLAYWRIGHT_RESEARCH','complete_research','_LeaseKeeper'
 }
 
 const persistence = await readFile('apps/api/src/research-persistence.ts', 'utf8');
-for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl', 'canonicalResearchUrl', 'sourceUrl']) {
+for (const contract of ['SourceRecordRepository', 'getByIdForUser', 'parseResearchResultForJob', 'WEBSITE_PAGE', 'expectedRequestedUrl', 'canonicalResearchUrl', 'sourceUrl', 'createOrGetForActiveLease', 'ResearchLeaseLostError', 'runnerId']) {
   if (!persistence.includes(contract)) throw new Error(`Missing research persistence contract: ${contract}`);
 }
 if (persistence.includes('EvidenceRepository') || persistence.includes('ProspectFactRepository')) throw new Error('Phase 9 research persistence must not promote source material to evidence/facts.');
 
 const runnerRoutes = await readFile('apps/api/src/research-runner-routes.ts', 'utf8');
-for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl','job.leaseExpiresAt === null','job.leaseExpiresAt <= ownershipCheckAt']) {
+for (const contract of ['JobContextRepository','payloadResearchUrl','context.userId !== runner.userId','completeSchema.safeParse','expectedRequestedUrl','job.leaseExpiresAt === null','job.leaseExpiresAt <= ownershipCheckAt','ResearchLeaseLostError']) {
   if (!runnerRoutes.includes(contract)) throw new Error(`Missing research completion ownership/input contract: ${contract}`);
 }
 
 const sourceRepository = await readFile('packages/db/src/repositories/evidence.ts', 'utf8');
-for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable identity mismatch', 'Browser retries']) {
-  if (!sourceRepository.includes(contract)) throw new Error(`Missing retry-safe immutable source-record contract: ${contract}`);
+for (const contract of ['createOrGet', 'sourceIdentityMatches', 'immutable identity mismatch', 'Browser retries', 'createOrGetForActiveLease', "j.status = 'RUNNING'", 'j.lease_owner = ?', 'j.lease_expires_at > ?']) {
+  if (!sourceRepository.includes(contract)) throw new Error(`Missing retry/lease-safe immutable source-record contract: ${contract}`);
 }
 
 const resultSchema = await readFile('apps/api/src/research-result.ts', 'utf8');
@@ -59,6 +61,16 @@ for (const contract of ['playwright-research.v1','sourceOnly','pageCount','navig
 const integration = await readFile('apps/api/src/phase9.integration.ts', 'utf8');
 for (const contract of ['sourceUrlsStored','diagnosticsPersisted','sourceMaterialOnly','retrySourceReplaySafe','retrySourceIdentityCollisionRejected','mismatchedProspectRejected','requestedUrlMismatchRejected','malformedCompletionRejected','rejectedResultsPersistNothing','noUnsupportedFactsGenerated']) {
   if (!integration.includes(contract)) throw new Error(`Missing Phase 9 D1 acceptance: ${contract}`);
+}
+
+const leaseIntegration = await readFile('apps/api/src/phase9-lease.integration.ts', 'utf8');
+for (const contract of ['activeLeaseAllowsSourceWrite','completedJobBlocksSourceWrite','expiredLeaseBlocksSourceWrite','staleSourceRowsAbsent','createOrGetForActiveLease']) {
+  if (!leaseIntegration.includes(contract)) throw new Error(`Missing Phase 9 source-write lease acceptance: ${contract}`);
+}
+
+const apiPackage = JSON.parse(await readFile('apps/api/package.json', 'utf8'));
+if (!String(apiPackage.scripts?.['test:d1:phase9-worker'] ?? '').includes('phase9.test-worker.ts')) {
+  throw new Error('Phase 9 D1 worker does not mount the lease-race acceptance route.');
 }
 
 const ci = await readFile('.github/workflows/ci.yml', 'utf8');

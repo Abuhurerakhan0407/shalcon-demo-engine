@@ -18,9 +18,17 @@ export interface ResearchPersistenceResult {
   sourceIds: string[];
 }
 
+export class ResearchLeaseLostError extends Error {
+  constructor() {
+    super('Research source persistence requires an active runner lease.');
+    this.name = 'ResearchLeaseLostError';
+  }
+}
+
 export async function persistResearchSourcesIfNeeded(
   db: D1DatabaseLike,
   userId: string,
+  runnerId: string,
   job: JobRecord,
   rawResult: unknown,
   expectedRequestedUrl?: string,
@@ -54,7 +62,13 @@ export async function persistResearchSourcesIfNeeded(
       rawJson: researchPageRawJson(result, page),
       capturedAt: page.capturedAt,
     };
-    const stored = await sources.createOrGet(record);
+    const stored = await sources.createOrGetForActiveLease(record, {
+      jobId: job.id,
+      userId,
+      runnerId,
+      now: new Date().toISOString(),
+    });
+    if (!stored) throw new ResearchLeaseLostError();
     persisted.push(stored.source);
   }
 

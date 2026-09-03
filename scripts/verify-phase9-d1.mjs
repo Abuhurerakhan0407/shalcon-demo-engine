@@ -91,7 +91,25 @@ try {
   if (required.some((value) => !value)) {
     throw new Error(`Phase 9 D1 assertion failed: ${JSON.stringify(result, null, 2)}`);
   }
-  console.log(JSON.stringify(result, null, 2));
+
+  const leaseResponse = await waitFor('http://127.0.0.1:8797/phase9-lease');
+  const leaseResult = await leaseResponse.json();
+  const leaseChecks = leaseResult.checks ?? {};
+  const leaseRequired = [
+    leaseResult.ok === true,
+    leaseChecks.activeLeaseClaimed === true,
+    leaseChecks.activeLeaseAllowsSourceWrite === true,
+    leaseChecks.completedJobBlocksSourceWrite === true,
+    leaseChecks.expiringJobClaimed === true,
+    leaseChecks.expiredLeaseBlocksSourceWrite === true,
+    leaseChecks.staleSourceRowsAbsent === true,
+    leaseChecks.foreignKeyViolations === 0,
+  ];
+  if (leaseRequired.some((value) => !value)) {
+    throw new Error(`Phase 9 lease assertion failed: ${JSON.stringify(leaseResult, null, 2)}`);
+  }
+
+  console.log(JSON.stringify({ research: result, lease: leaseResult }, null, 2));
 } catch (error) {
   console.error(logs);
   throw error;
