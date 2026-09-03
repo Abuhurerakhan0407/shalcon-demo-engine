@@ -72,6 +72,16 @@ def test_explicit_empty_capabilities_stay_empty() -> None:
     assert client.heartbeats[0][1] == []
 
 
+def test_explicit_capabilities_are_limited_to_installed_handlers() -> None:
+    client = FakeClient(None)
+    outcome = LocalRunnerWorker(
+        client,
+        capabilities=["NOT_INSTALLED", "PHASE8_ECHO", "PHASE8_ECHO"],
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "IDLE"
+    assert client.heartbeats[0][1] == ["PHASE8_ECHO"]
+
+
 def test_echo_job_renews_before_terminal_completion() -> None:
     client = FakeClient(job())
     outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
