@@ -1,0 +1,123 @@
+name: Phase 9 Self-hosted Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase9:
+    name: Phase 9 gate
+    runs-on: [self-hosted]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install Python runner dependencies
+        run: python -m pip install -e "apps/local-runner[dev]"
+
+      - name: Install Playwright browsers on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          npx playwright install --with-deps chromium
+          python -m playwright install --with-deps --only-shell chromium
+
+      - name: Install Playwright browsers on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npx playwright install chromium
+          python -m playwright install chromium
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Phase 1 D1
+        run: npm run test:phase1:d1
+
+      - name: Phase 2 D1
+        run: npm run test:phase2:d1
+
+      - name: Phase 4 D1
+        run: npm run test:phase4:d1
+
+      - name: Phase 5 D1
+        run: npm run test:phase5:d1
+
+      - name: Phase 6 D1
+        run: npm run test:phase6:d1
+
+      - name: Phase 7 D1
+        run: npm run test:phase7:d1
+
+      - name: Phase 8 D1
+        run: npm run test:phase8:d1
+
+      - name: Phase 9 D1
+        run: npm run test:phase9:d1
+
+      - name: Browser E2E
+        run: npm run test:e2e
+
+      - name: Python tests
+        working-directory: apps/local-runner
+        env:
+          PYTHONPATH: src
+        run: python -m pytest tests -q
+
+      - name: Production build
+        run: npm run build
+
+      - name: Phase 0 audit
+        run: npm run test:phase0:audit
+
+      - name: Phase 1 audit
+        run: npm run test:phase1:audit
+
+      - name: Phase 2 audit
+        run: npm run test:phase2:audit
+
+      - name: Phase 3 audit
+        run: npm run test:phase3:audit
+
+      - name: Phase 4 audit
+        run: npm run test:phase4:audit
+
+      - name: Phase 5 audit
+        run: npm run test:phase5:audit
+
+      - name: Phase 6 audit
+        run: npm run test:phase6:audit
+
+      - name: Phase 7 audit
+        run: npm run test:phase7:audit
+
+      - name: Phase 8 audit
+        run: npm run test:phase8:audit
+
+      - name: Phase 9 audit
+        run: npm run test:phase9:audit
