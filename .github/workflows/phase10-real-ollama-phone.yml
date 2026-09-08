@@ -1,0 +1,101 @@
+name: Phase 10 Real Ollama Acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ollama-smoke:
+    name: Real Ollama structured extraction
+    runs-on: [self-hosted, Linux, ARM64, abu-phone-arm64]
+    timeout-minutes: 45
+    env:
+      RUNNER_ALLOW_RUNASROOT: "1"
+      OLLAMA_HOST: "127.0.0.1:11434"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install local runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e 'apps/local-runner[dev]'
+
+      - name: Install Ollama ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl zstd
+          curl -fsSL https://ollama.com/download/ollama-linux-arm64.tar.zst \
+            | tar --zstd -x -C /usr
+          ollama --version
+
+      - name: Start Ollama and pull acceptance model
+        shell: bash
+        run: |
+          set -euo pipefail
+          ollama serve > /tmp/phase10-ollama.log 2>&1 &
+          echo $! > /tmp/phase10-ollama.pid
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/phase10-tags.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/phase10-ollama.log
+            exit 1
+          fi
+          ollama pull qwen3:0.6b
+          ollama list
+
+      - name: Run production Phase 10 smoke command
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m shalcon_runner ai-smoke --model qwen3:0.6b \
+            | tee /tmp/phase10-ollama-smoke.json
+
+      - name: Validate real extraction evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('/tmp/phase10-ollama-smoke.json').read_text(encoding='utf-8'))
+          assert data['ok'] is True
+          assert data['provider'] == 'ollama'
+          assert data['model'] == 'qwen3:0.6b'
+          assert data['schemaVersion'] == 'business-extraction.v1'
+          assert data['sourceOnly'] is True
+          assert data['verified'] is False
+          extracted = data['extracted']
+          assert extracted['businessName']
+          assert extracted['email'] == 'hello@example.com'
+          assert extracted['phone'] is None
+          assert extracted['openingHours'] == []
+          services = ' '.join(extracted['services']).lower()
+          assert 'haircut' in services
+          assert 'styling' in services
+          print('Real Ollama Phase 10 acceptance passed.')
+          PY
+
+      - name: Stop Ollama
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/phase10-ollama.pid ]; then
+            kill "$(cat /tmp/phase10-ollama.pid)" 2>/dev/null || true
+          fi
+          tail -n 80 /tmp/phase10-ollama.log 2>/dev/null || true
