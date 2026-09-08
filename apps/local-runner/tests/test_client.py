@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 from threading import Thread
 from typing import Any
 
@@ -84,4 +85,40 @@ def test_runner_api_redirects_are_not_followed_or_given_bearer_credentials() -> 
 
     assert requests == [
         ("/api/v1/runner/agent/heartbeat", f"Bearer {TOKEN}"),
+    ]
+
+
+def test_ai_completion_uses_dedicated_cloud_validation_route() -> None:
+    received: list[tuple[str, dict[str, Any], str | None]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler API.
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            received.append((self.path, body, self.headers.get("Authorization")))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        client = RunnerApiClient(f"http://127.0.0.1:{server.server_port}", TOKEN)
+        client.complete_ai("job_ai", {"schemaVersion": "business-extraction.v1"})
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
+
+    assert received == [
+        (
+            "/api/v1/runner/ai/jobs/job_ai/complete",
+            {"result": {"schemaVersion": "business-extraction.v1"}},
+            f"Bearer {TOKEN}",
+        )
     ]
