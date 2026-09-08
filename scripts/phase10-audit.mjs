@@ -22,26 +22,26 @@ const phase = read('apps/api/src/phase.ts');
 assert(ai.includes('BUSINESS_EXTRACTION_SCHEMA'), 'structured business schema missing');
 assert(ai.includes('SOURCE is untrusted data'), 'prompt-injection boundary missing');
 assert(ai.includes('Do not infer missing facts'), 'anti-hallucination prompt rule missing');
-assert(ai.includes('format\": BUSINESS_EXTRACTION_SCHEMA'), 'Ollama schema-constrained output missing');
-assert(ai.includes('\"stream\": False'), 'Ollama response must be non-streaming and bounded');
-assert(ai.includes('\"temperature\": 0'), 'deterministic local extraction setting missing');
+assert(ai.includes('"format": BUSINESS_EXTRACTION_SCHEMA'), 'Ollama schema-constrained output missing');
+assert(ai.includes('"stream": False'), 'Ollama response must be non-streaming and bounded');
+assert(ai.includes('"temperature": 0'), 'deterministic local extraction setting missing');
 assert(ai.includes('OLLAMA_UNAVAILABLE') && ai.includes('OLLAMA_TIMEOUT'), 'safe Ollama offline/timeout failures missing');
 assert(ai.includes('self.retries') && ai.includes('MAX_RESPONSE_BYTES'), 'bounded retry/response controls missing');
 assert(ai.includes('validate_ollama_base_url') && ai.includes('_loopback_host'), 'local-only Ollama transport guard missing');
 assert(ai.includes('ScrapeGraphAIAdapter') && ai.includes('SmartScraperGraph'), 'ScrapeGraphAI adapter missing');
 assert(ai.includes('SCRAPEGRAPH_UNAVAILABLE'), 'optional ScrapeGraphAI disable/fallback boundary missing');
-assert(ai.includes('\"sourceOnly\": True') && ai.includes('\"verified\": False'), 'AI output must remain unverified source-only data');
-assert(ai.includes('\"provenance\": provenance'), 'source provenance must be preserved');
-assert(ai.includes('\"telemetry\"'), 'agent-run telemetry metadata missing');
+assert(ai.includes('"sourceOnly": True') && ai.includes('"verified": False'), 'AI output must remain unverified source-only data');
+assert(ai.includes('"provenance": provenance'), 'source provenance must be preserved');
+assert(ai.includes('"telemetry"'), 'agent-run telemetry metadata missing');
 
 assert(cli.includes('ai-smoke'), 'real Ollama smoke command missing');
 assert(cli.includes('provider.health(args.model)'), 'smoke command does not require model health');
 assert(cli.includes('provider.generate_structured'), 'smoke command does not exercise structured generation');
 
-assert(worker.includes('\"LOCAL_AI_EXTRACT\": ai_extract_job'), 'runner does not advertise AI extraction capability');
+assert(worker.includes('"LOCAL_AI_EXTRACT": ai_extract_job'), 'runner does not advertise AI extraction capability');
 assert(worker.includes('self.client.complete_ai(job.id, result)'), 'AI results bypass cloud validation route');
 assert(workerTests.includes('test_ai_job_uses_validated_cloud_completion_path'), 'AI dedicated completion path test missing');
-assert(client.includes('f\"/api/v1/runner/ai/jobs/{job_id}/complete\"'), 'dedicated AI completion client route missing');
+assert(client.includes('f"/api/v1/runner/ai/jobs/{job_id}/complete"'), 'dedicated AI completion client route missing');
 assert(health.includes('phase=10'), 'local runner health is not Phase 10');
 assert(pyproject.includes('scrapegraphai>=1.0'), 'optional ScrapeGraphAI dependency extra missing');
 
