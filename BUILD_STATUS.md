@@ -1,8 +1,8 @@
 # Build Status
 
 Current phase: **Phase 10 — ScrapeGraphAI + Ollama**  
-Launch progress: **~34%**  
-Status: **PHASE 9 CLOSED — PHASE 10 IMPLEMENTATION IN PROGRESS**
+Launch progress: **~36%**  
+Status: **PHASE 9 CLOSED — PHASE 10 HOSTED REGRESSION GREEN; REAL OLLAMA ACCEPTANCE PENDING**
 
 ## Completed phases
 
@@ -48,40 +48,55 @@ Hosted closure evidence:
 
 The earlier Android → Termux → Ubuntu/proot ARM64 self-hosted run remains useful supplemental evidence, but Phase 9 closure is based on the clean hosted Buildkite regression above.
 
-## Phase 10 target
+## Phase 10 — ScrapeGraphAI + Ollama
 
-Implement the local structured-extraction layer without weakening Phase 9 provenance or the manual path:
+Implemented:
 
 - ScrapeGraphAI adapter
 - Ollama local provider
+- local-only Ollama transport guard
 - model health check
-- structured business extraction schema
-- bounded retry/timeout behavior
-- safe prompt construction
-- agent-run telemetry/log metadata
-- malformed model output rejected before persistence
-- Ollama-offline behavior fails safely
-- source provenance preserved
-- optional integration can be disabled without breaking manual prospect/demo workflows
+- strict structured business extraction schema
+- bounded retry/timeout and response-size handling
+- prompt-injection-resistant source wrapping
+- provider/model/source provenance
+- agent-run telemetry metadata
+- dedicated cloud AI completion validation route
+- malformed output rejection before persistence
+- Ollama offline/timeout safe failures
+- source-only / `verified: false` invariant
+- no automatic evidence/fact promotion
+- optional integration path that does not break the manual workflow
+- real Ollama smoke CLI command
+
+Hosted regression evidence:
+
+- Buildkite Build **#44**
+- Commit: `463e7327519a27d02176fc636f3d1cea2e10c8b3`
+- Hosted queue: `linux-small`
+- Pipeline upload: ✅
+- Full Phase 10 hosted regression: ✅
+- Build result: **Passed in 3m 10s**
+- Covers typecheck, lint, unit, D1/workerd gates, Chromium E2E, Python local-runner tests, production build, Phase 0–10 audits, schema/provenance/lease/cloud-completion contracts, and Ollama offline behavior.
 
 ## Phase 10 acceptance gates
 
-- Local model can extract the sample business schema from bounded source content: ⏳
-- Structured result is schema validated before completion/persistence: ⏳
-- Malformed model output is rejected and never promoted to verified facts: ⏳
-- Runner handles Ollama offline/timeout safely with a non-secret error: ⏳
-- Provider/model/source provenance is retained in the result: ⏳
-- ScrapeGraphAI/Ollama integration can be disabled without breaking the existing manual path: ⏳
-- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green: ⏳
+- Local model can extract the sample business schema from bounded source content: ⏳ **real Ollama run still required**
+- Structured result is schema validated before completion/persistence: ✅
+- Malformed model output is rejected and never promoted to verified facts: ✅
+- Runner handles Ollama offline/timeout safely with a non-secret error: ✅
+- Provider/model/source provenance is retained in the result: ✅
+- ScrapeGraphAI/Ollama integration can be disabled without breaking the existing manual path: ✅
+- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green: ✅ Buildkite #44
 
 ## Current CI condition
 
-GitHub-hosted private-repository allocation remains unavailable on this account, but Buildkite hosted Linux is now the clean zero-cost fallback regression environment for private-repository phase gates. `.buildkite/pipeline.yml` is connected and operational.
+GitHub-hosted private-repository allocation remains unavailable on this account, but Buildkite hosted Linux is the clean zero-cost fallback regression environment for private-repository phase gates. `.buildkite/pipeline.yml` is connected and operational.
 
 ## Blocked
 
-No Phase 10 implementation blocker is currently known. A real local Ollama model acceptance run will require an environment with Ollama and an installed model after the code path is implemented and regression-clean.
+Phase 10 code/regression is not blocked. Final Phase 10 closure requires exactly one real local Ollama model acceptance run so the production adapter is proven against an actual model rather than mocks/offline behavior only.
 
 ## Next action
 
-Implement the Phase 10 local AI extraction adapter/provider, add strict tests and audit coverage, run the hosted regression, then perform one real Ollama sample extraction before closing Phase 10.
+Run the real Ollama smoke extraction on a local machine, capture the structured result/model health evidence, update this status, close Phase 10 only if that run is valid, then proceed to Phase 11.
