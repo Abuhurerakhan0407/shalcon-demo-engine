@@ -6,11 +6,13 @@ const assert = (condition, message) => {
 };
 
 const ai = read('apps/local-runner/src/shalcon_runner/ai_extract.py');
+const cli = read('apps/local-runner/src/shalcon_runner/__main__.py');
 const worker = read('apps/local-runner/src/shalcon_runner/worker.py');
 const client = read('apps/local-runner/src/shalcon_runner/client.py');
 const health = read('apps/local-runner/src/shalcon_runner/health.py');
 const pyproject = read('apps/local-runner/pyproject.toml');
 const pythonTests = read('apps/local-runner/tests/test_ai_extract.py');
+const workerTests = read('apps/local-runner/tests/test_worker.py');
 const apiResult = read('apps/api/src/ai-result.ts');
 const apiRoutes = read('apps/api/src/ai-runner-routes.ts');
 const apiResultTests = read('apps/api/src/ai-result.test.ts');
@@ -32,8 +34,13 @@ assert(ai.includes('"sourceOnly": True') && ai.includes('"verified": False'), 'A
 assert(ai.includes('"provenance": provenance'), 'source provenance must be preserved');
 assert(ai.includes('"telemetry"'), 'agent-run telemetry metadata missing');
 
+assert(cli.includes('ai-smoke'), 'real Ollama smoke command missing');
+assert(cli.includes('provider.health(args.model)'), 'smoke command does not require model health');
+assert(cli.includes('provider.generate_structured'), 'smoke command does not exercise structured generation');
+
 assert(worker.includes('"LOCAL_AI_EXTRACT": ai_extract_job'), 'runner does not advertise AI extraction capability');
 assert(worker.includes('self.client.complete_ai(job.id, result)'), 'AI results bypass cloud validation route');
+assert(workerTests.includes('test_ai_job_uses_validated_cloud_completion_path'), 'AI dedicated completion path test missing');
 assert(client.includes('/api/v1/runner/ai/jobs/${job_id}/complete'), 'dedicated AI completion client route missing');
 assert(health.includes('phase=10'), 'local runner health is not Phase 10');
 assert(pyproject.includes('scrapegraphai>=1.0'), 'optional ScrapeGraphAI dependency extra missing');
@@ -44,6 +51,11 @@ assert(apiResult.includes('verified: z.literal(false)'), 'cloud verified=false i
 assert(apiResult.includes("provider: z.literal('ollama')"), 'cloud provider guard missing');
 assert(apiResult.includes('.strict()'), 'cloud AI result schemas must reject extra fields');
 assert(apiRoutes.includes("job.jobType !== 'LOCAL_AI_EXTRACT'"), 'cloud completion does not bind job type');
+assert(apiRoutes.includes('JobContextRepository'), 'cloud completion does not load claimed job context');
+assert(apiRoutes.includes('context.userId !== runner.userId'), 'cloud completion does not bind operator ownership');
+assert(apiRoutes.includes('sameSources(payload.data.sources, parsed.data.result.provenance)'), 'cloud completion does not bind source provenance to claimed payload');
+assert(apiRoutes.includes("code: 'AI_PROVENANCE_MISMATCH'"), 'provenance mismatch rejection missing');
+assert(apiRoutes.includes("code: 'AI_MODEL_MISMATCH'"), 'claimed model mismatch rejection missing');
 assert(apiRoutes.includes('completeWithResult'), 'validated AI result is not stored through active job lease path');
 assert(apiRoutes.includes('verifiedFactPromotion: false'), 'cloud completion must declare no verified-fact promotion');
 assert(!apiRoutes.includes('EvidenceRepository') && !apiRoutes.includes('ProspectFact'), 'Phase 10 AI route must not promote evidence/facts');
