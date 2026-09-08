@@ -59,7 +59,6 @@ def _strict_string(value: Any, field: str, max_length: int) -> str:
 
 
 def _strict_int(value: Any, field: str, minimum: int, maximum: int) -> int:
-    # bool is a subclass of int in Python, so an isinstance(value, int) check is not strict enough.
     if type(value) is not int or value < minimum or value > maximum:
         raise RunnerApiError(f"Claim response contained invalid {field}.")
     return value
@@ -169,6 +168,13 @@ class RunnerApiClient:
         return self._request(
             "POST",
             f"/api/v1/runner/research/jobs/{job_id}/complete",
+            {"result": result},
+        )
+
+    def complete_ai(self, job_id: str, result: Any) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"/api/v1/runner/ai/jobs/{job_id}/complete",
             {"result": result},
         )
 
