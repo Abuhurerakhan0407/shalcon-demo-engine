@@ -3,6 +3,7 @@ from __future__ import annotations
 from threading import Event
 from typing import Any
 
+from shalcon_runner.ai_extract import AiExtractionError
 from shalcon_runner.client import ClaimedJob
 from shalcon_runner.research import ResearchJobError
 from shalcon_runner.worker import LocalRunnerWorker
@@ -142,6 +143,23 @@ def test_research_policy_failure_preserves_specific_safe_error_code() -> None:
     assert client.research_completed == []
     assert client.failed == [
         ("job_test", "UNSAFE_RESEARCH_URL", "Research URL failed policy.")
+    ]
+
+
+def test_ai_policy_failure_preserves_specific_safe_error_code() -> None:
+    client = FakeClient(job("LOCAL_AI_EXTRACT"))
+
+    def offline(_: ClaimedJob) -> Any:
+        raise AiExtractionError("OLLAMA_UNAVAILABLE", "Ollama is unavailable on the local machine.")
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"LOCAL_AI_EXTRACT": offline},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "FAILED"
+    assert client.completed == []
+    assert client.failed == [
+        ("job_test", "OLLAMA_UNAVAILABLE", "Ollama is unavailable on the local machine.")
     ]
 
 
