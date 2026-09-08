@@ -2,7 +2,7 @@
 
 Current phase: **Phase 9 — Playwright Research Engine**  
 Launch progress: **~31%**  
-Status: **IMPLEMENTED + SECURITY/RELIABILITY-HARDENED — final Phase 9 verification pending a runnable hosted CI job**
+Status: **IMPLEMENTED + SECURITY/RELIABILITY-HARDENED — strict hosted Phase 9 verification still pending**
 
 ## Completed phases
 
@@ -33,7 +33,7 @@ Verified-fact manual builder, controlled ÉLANE DNA, private preview, safe edits
 ### Phase 8 — Local Runner + Job System ✅
 Runner registration/token auth, heartbeat, job claim/leases, retries, completion/failure, D1 canonical ledger, queue signalling/reconciliation, dead-letter visibility, offline/crash/restart recovery, cross-operator isolation and token revocation.
 
-## Last fully verified baseline
+## Last fully verified hosted baseline
 
 - Commit: `d7ee30a65e8afa223d29bff370817012089ccca4`
 - GitHub Actions run: `33767184933`
@@ -63,19 +63,40 @@ Runner registration/token auth, heartbeat, job claim/leases, retries, completion
 - No Phase 9 promotion to evidence or verified facts: ✅
 - Real-D1 Phase 9 acceptance fixture and permanent audit/CI wiring: ✅
 
+## Phase 9 mobile self-hosted verification
+
+GitHub Actions run `34259171162` executed on the Android → Termux → Ubuntu/proot ARM64 self-hosted runner at commit `b064578e21f3bce1a12df8707f0e7fa878338b3b`.
+
+Substantive gates completed green:
+
+- Node/Python dependency setup + Playwright browser installation: ✅
+- Typecheck: ✅
+- Lint: ✅
+- Unit tests: ✅
+- Chromium browser E2E: ✅
+- Python local-runner tests: ✅
+- Production web + Worker dry-run build: ✅
+- Phase 0–9 static audits: ✅
+
+D1/workerd gates are intentionally **not counted as passed** on this Android/proot runner. `workerd` is not viable in this environment, so the D1 Phase 1/2/4/5/6/7/8/9 steps remain visibly skipped here. At the time this status was recorded, GitHub's post-job Node cache cleanup was still in progress after all substantive steps had completed successfully.
+
 ## Phase 9 acceptance state
 
 - Implementation/security/reliability work: ✅
-- Full clean CI regression: ⏳ pending runnable hosted job
+- Strong self-hosted non-D1 regression: ✅
+- Full clean hosted regression including D1/workerd: ⏳ pending
 
 ## Current CI condition
 
-A dedicated three-platform diagnostic workflow was run as `33774928734`: minimal `ubuntu-latest`, `windows-latest`, and `macos-latest` echo jobs all failed before executing a single step. Subsequent normal CI jobs continue to terminate before checkout with empty step lists, so the final gate remains externally blocked rather than falsely marked pass/fail.
+GitHub-hosted private-repository jobs continue to terminate before checkout because no hosted runner is allocated. Public-repository control runs receive GitHub-hosted runners normally, so product code must not be changed to work around this account/platform allocation issue.
+
+A zero-cost hosted fallback is prepared in `.buildkite/pipeline.yml`. It targets Buildkite's hosted `linux-small` queue and runs the permanent `npm run test:phase9` gate, including the D1/workerd checks that the Android/proot runner cannot execute. Connecting the private GitHub repository to Buildkite requires operator authorization in the Buildkite/GitHub UI.
 
 ## Blocked
 
-- Final Phase 9 closure requires one clean runnable complete regression. Do not start Phase 10 until that gate is green.
+- Final Phase 9 closure requires one clean hosted complete regression including D1/workerd.
+- Do not start Phase 10 until that gate is green.
 
 ## Next action
 
-Keep Phase 9 frozen at the strict gate until CI can execute. If the next runnable regression exposes a real code failure, fix it before Phase 10. If green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
+Authorize the private repository in Buildkite and run the prepared hosted Phase 9 pipeline. If it exposes a real code failure, fix the root cause and rerun. If the complete hosted gate is green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
