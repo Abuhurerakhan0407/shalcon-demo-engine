@@ -14,7 +14,7 @@ permissions:
 jobs:
   phase9:
     name: Phase 9 gate
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Linux, ARM64, abu-phone-arm64]
     timeout-minutes: 60
 
     steps:
