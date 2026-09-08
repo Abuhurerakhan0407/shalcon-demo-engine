@@ -8,6 +8,7 @@ steps:
     command: |
       bash -lc '
         set -euo pipefail
+        export CI=true
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
