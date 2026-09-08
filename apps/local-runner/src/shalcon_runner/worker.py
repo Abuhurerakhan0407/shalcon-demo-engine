@@ -6,6 +6,7 @@ import time
 from typing import Any, Callable
 
 from . import __version__
+from .ai_extract import AiExtractionError, ai_extract_job
 from .client import ClaimedJob, RunnerApiClient, RunnerApiError
 from .research import ResearchJobError, research_job
 
@@ -32,6 +33,7 @@ def _echo(job: ClaimedJob) -> dict[str, Any]:
 DEFAULT_HANDLERS: dict[str, JobHandler] = {
     "PHASE8_ECHO": _echo,
     "PLAYWRIGHT_RESEARCH": research_job,
+    "LOCAL_AI_EXTRACT": ai_extract_job,
 }
 
 
@@ -71,9 +73,6 @@ class _LeaseKeeper:
             raise RunnerApiError("Lease renewal did not stop safely.")
 
     def ensure_current(self) -> None:
-        # Always renew once synchronously immediately before the terminal API call. This gives
-        # result persistence/failure handling a fresh lease window and proves the runner still
-        # owns the job after any long browser execution or transient background-renewal error.
         self.client.renew(self.job.id)
         self.last_error = None
 
@@ -90,8 +89,6 @@ class LocalRunnerWorker:
         if capabilities is None:
             self.capabilities = sorted(self.handlers)
         else:
-            # Never advertise a job type this process cannot actually execute. Explicit capability
-            # lists can narrow the runner, but cannot make the control plane hand it unknown work.
             self.capabilities = sorted(set(capabilities).intersection(self.handlers))
 
     def heartbeat(self) -> None:
@@ -117,7 +114,7 @@ class LocalRunnerWorker:
         try:
             try:
                 result = handler(job)
-            except ResearchJobError as error:
+            except (ResearchJobError, AiExtractionError) as error:
                 lease_keeper.stop()
                 lease_keeper.ensure_current()
                 self.client.fail(job.id, error.code, error.safe_message)
