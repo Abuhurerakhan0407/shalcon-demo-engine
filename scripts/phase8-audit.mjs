@@ -112,7 +112,15 @@ for (const contract of [
 }
 
 const worker = await readFile('apps/local-runner/src/shalcon_runner/worker.py', 'utf8');
-for (const contract of ['PHASE8_ECHO', 'UNSUPPORTED_JOB_TYPE', 'LOCAL_EXECUTION_FAILED', 'run_forever', 'if capabilities is None else list(capabilities)']) {
+for (const contract of [
+  'PHASE8_ECHO',
+  'UNSUPPORTED_JOB_TYPE',
+  'LOCAL_EXECUTION_FAILED',
+  'run_forever',
+  'if capabilities is None:',
+  'sorted(self.handlers)',
+  'set(capabilities).intersection(self.handlers)',
+]) {
   if (!worker.includes(contract)) throw new Error(`Missing local execution safety contract: ${contract}`);
 }
 
