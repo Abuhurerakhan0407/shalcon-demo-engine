@@ -2,6 +2,10 @@ name: Phase 9 Self-hosted Gate
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase9-self-hosted.yml'
 
 permissions:
   contents: read
