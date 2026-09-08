@@ -22,8 +22,8 @@ def get_health() -> RunnerHealth:
         service="shalcon-local-runner",
         version=__version__,
         python=platform.python_version(),
-        phase=8,
-        mode="d1-canonical-job-runner",
+        phase=10,
+        mode="d1-canonical-job-runner+local-ai",
     )
 
 
