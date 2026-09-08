@@ -9,6 +9,7 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
 import { logger } from 'hono/logger';
 
+import { aiRunnerRoutes } from './ai-runner-routes';
 import {
   OAUTH_STATE_COOKIE,
   OAUTH_STATE_MAX_AGE_SECONDS,
@@ -272,6 +273,7 @@ app.get('/api/v1/dashboard/summary', (c) => {
 
 app.route('/api/v1/prospects', prospectRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
+app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
 app.route('/api/v1/runner', runnerRoutes);
 app.route('/d', demoRoutes);
