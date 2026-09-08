@@ -1,4 +1,4 @@
-# Phase 9 mobile verification trigger: lint-fix-1
+# Phase 9 mobile verification trigger: proot-d1-limit
 name: Phase 9 Self-hosted Gate
 
 on:
@@ -61,28 +61,40 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
-      - name: Phase 1 D1
+      # Cloudflare workerd currently aborts under Android/Termux proot on this
+      # ARM64 phone because its TCMalloc build assumes a 48-bit virtual address
+      # space. Phase 1 D1 reproduced that platform failure before any DB assertion.
+      # Keep D1 gates visibly unverified here; canonical hosted CI must run them.
+      - name: Phase 1 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase1:d1
 
-      - name: Phase 2 D1
+      - name: Phase 2 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase2:d1
 
-      - name: Phase 4 D1
+      - name: Phase 4 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase4:d1
 
-      - name: Phase 5 D1
+      - name: Phase 5 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase5:d1
 
-      - name: Phase 6 D1
+      - name: Phase 6 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase6:d1
 
-      - name: Phase 7 D1
+      - name: Phase 7 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase7:d1
 
-      - name: Phase 8 D1
+      - name: Phase 8 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase8:d1
 
-      - name: Phase 9 D1
+      - name: Phase 9 D1 (unavailable on Android proot)
+        if: ${{ false }}
         run: npm run test:phase9:d1
 
       - name: Browser E2E
