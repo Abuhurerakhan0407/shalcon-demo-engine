@@ -1,4 +1,5 @@
 import {
+  JobContextRepository,
   JobRepository,
   LocalRunnerRepository,
   RunnerJobRepository,
@@ -13,6 +14,20 @@ import { aiExtractionResultSchema } from './ai-result';
 import type { Bindings } from './context';
 
 const completionSchema = z.object({ result: aiExtractionResultSchema }).strict();
+const sourceSchema = z
+  .object({
+    sourceId: z.string().trim().min(1).max(160),
+    url: z.string().trim().min(1).max(2048),
+  })
+  .strict();
+const jobPayloadSchema = z
+  .object({
+    sourceText: z.string().min(1).max(40_000),
+    sources: z.array(sourceSchema).min(1).max(6),
+    model: z.string().trim().min(1).max(120).optional(),
+    useScrapeGraph: z.boolean().optional(),
+  })
+  .passthrough();
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
   if (!db) throw new Error('D1 binding is not configured.');
@@ -35,6 +50,17 @@ async function authenticatedRunner(
   return new LocalRunnerRepository(db).getActiveByTokenHash(await hashSessionToken(token));
 }
 
+function sameSources(
+  expected: Array<{ sourceId: string; url: string }>,
+  actual: Array<{ sourceId: string; url: string }>,
+): boolean {
+  if (expected.length !== actual.length) return false;
+  return expected.every(
+    (source, index) =>
+      source.sourceId === actual[index]?.sourceId && source.url === actual[index]?.url,
+  );
+}
+
 export const aiRunnerRoutes = new Hono<Bindings>();
 
 aiRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
@@ -55,14 +81,53 @@ aiRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
     );
   }
 
-  const job = await new JobRepository(db).getById(c.req.param('jobId'));
-  if (!job) {
+  const [job, context] = await Promise.all([
+    new JobRepository(db).getById(c.req.param('jobId')),
+    new JobContextRepository(db).getByJobId(c.req.param('jobId')),
+  ]);
+  if (!job || !context) {
     return c.json({ error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } }, 404);
+  }
+  if (context.userId !== runner.userId) {
+    return c.json(
+      { error: { code: 'JOB_NOT_OWNED', message: 'Runner does not own this operator job.' } },
+      409,
+    );
   }
   if (job.jobType !== 'LOCAL_AI_EXTRACT') {
     return c.json(
       { error: { code: 'JOB_TYPE_MISMATCH', message: 'Job does not accept AI extraction results.' } },
       409,
+    );
+  }
+
+  let claimedPayload: unknown;
+  try {
+    claimedPayload = JSON.parse(context.payloadJson) as unknown;
+  } catch {
+    return c.json(
+      { error: { code: 'AI_CONTEXT_INVALID', message: 'Claimed AI extraction context is invalid.' } },
+      409,
+    );
+  }
+  const payload = jobPayloadSchema.safeParse(claimedPayload);
+  if (!payload.success) {
+    return c.json(
+      { error: { code: 'AI_CONTEXT_INVALID', message: 'Claimed AI extraction context is invalid.' } },
+      409,
+    );
+  }
+
+  if (!sameSources(payload.data.sources, parsed.data.result.provenance)) {
+    return c.json(
+      { error: { code: 'AI_PROVENANCE_MISMATCH', message: 'AI result provenance does not match the claimed sources.' } },
+      422,
+    );
+  }
+  if (payload.data.model !== undefined && payload.data.model !== parsed.data.result.model) {
+    return c.json(
+      { error: { code: 'AI_MODEL_MISMATCH', message: 'AI result model does not match the claimed model.' } },
+      422,
     );
   }
 
