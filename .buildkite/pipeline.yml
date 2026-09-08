@@ -1,0 +1,24 @@
+steps:
+  - label: ":shield: Phase 9 hosted regression"
+    key: "phase9-hosted-regression"
+    timeout_in_minutes: 60
+    command: |
+      set -euo pipefail
+
+      # Buildkite hosted Linux images include mise. Pin the same runtime majors as
+      # the canonical GitHub Actions workflow before running the complete Phase 9 gate.
+      mise use --global node@22 python@3.13
+      eval "$(mise activate bash)"
+
+      node --version
+      npm --version
+      python --version
+
+      npm ci
+      python -m ensurepip --upgrade
+      python -m pip install -e "apps/local-runner[dev]"
+
+      npx playwright install --with-deps chromium
+      python -m playwright install --with-deps --only-shell chromium
+
+      npm run test:phase9
