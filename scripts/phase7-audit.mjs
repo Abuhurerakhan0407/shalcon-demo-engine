@@ -6,6 +6,7 @@ const required = [
   'apps/api/src/manual-demo-builder.test.ts',
   'apps/api/src/demo-admin-routes.ts',
   'apps/api/src/phase7.integration.ts',
+  'apps/api/src/phase.ts',
   'packages/db/src/repositories/demo-builder.ts',
   'apps/web/src/demos/DemoBuilderPage.tsx',
   'apps/web/src/demos/demo-builder.css',
@@ -47,8 +48,12 @@ for (const contract of [
 const api = await readFile('apps/api/src/index.ts', 'utf8');
 if (!api.includes("app.use('/api/v1/demo-admin/*', requireAuth)")) throw new Error('Demo admin routes are not protected.');
 if (!api.includes("app.route('/api/v1/demo-admin', demoAdminRoutes)")) throw new Error('Demo admin routes are not mounted.');
-const reportedPhases = [...api.matchAll(/phase:\s*(\d+)/gu)].map((match) => Number(match[1]));
-if (reportedPhases.length === 0 || Math.max(...reportedPhases) < 7) {
+if (!api.includes("import { CURRENT_PHASE } from './phase'")) throw new Error('API phase marker is not centralized.');
+if (!api.includes('phase: CURRENT_PHASE')) throw new Error('API health does not report the centralized phase marker.');
+const phaseSource = await readFile('apps/api/src/phase.ts', 'utf8');
+const phaseMatch = phaseSource.match(/CURRENT_PHASE\s*=\s*(\d+)/u);
+const currentPhase = phaseMatch ? Number(phaseMatch[1]) : Number.NaN;
+if (!Number.isInteger(currentPhase) || currentPhase < 7) {
   throw new Error('API phase has regressed below Phase 7.');
 }
 
