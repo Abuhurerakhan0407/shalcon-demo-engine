@@ -20,29 +20,28 @@ DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 _MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$")
 
+# Keep the schema sent to Ollama structurally strict but grammar-friendly.
+# Runtime validation below remains the authority for exact fields, lengths,
+# item counts, provenance, and verified/source-only invariants.
 BUSINESS_EXTRACTION_SCHEMA: dict[str, Any] = {
     "type": "object",
-    "additionalProperties": False,
     "properties": {
-        "businessName": {"type": "string", "minLength": 1, "maxLength": 200},
-        "description": {"type": ["string", "null"], "maxLength": 2000},
-        "phone": {"type": ["string", "null"], "maxLength": 100},
-        "email": {"type": ["string", "null"], "maxLength": 320},
-        "address": {"type": ["string", "null"], "maxLength": 1000},
+        "businessName": {"type": "string"},
+        "description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "phone": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "email": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "address": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "openingHours": {
             "type": "array",
-            "maxItems": 14,
-            "items": {"type": "string", "maxLength": 200},
+            "items": {"type": "string"},
         },
         "services": {
             "type": "array",
-            "maxItems": 24,
-            "items": {"type": "string", "maxLength": 200},
+            "items": {"type": "string"},
         },
         "socialLinks": {
             "type": "array",
-            "maxItems": 20,
-            "items": {"type": "string", "maxLength": 2048},
+            "items": {"type": "string"},
         },
     },
     "required": [
