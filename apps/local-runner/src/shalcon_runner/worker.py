@@ -129,6 +129,8 @@ class LocalRunnerWorker:
             lease_keeper.ensure_current()
             if job.job_type == "PLAYWRIGHT_RESEARCH":
                 self.client.complete_research(job.id, result)
+            elif job.job_type == "LOCAL_AI_EXTRACT":
+                self.client.complete_ai(job.id, result)
             else:
                 self.client.complete(job.id, result)
             return RunOutcome(status="COMPLETED", job_id=job.id, job_type=job.job_type)
