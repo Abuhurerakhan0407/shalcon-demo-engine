@@ -62,6 +62,7 @@ jobs:
       - run: npm run test:phase7:audit
       - run: npm run test:phase8:audit
       - run: npm run test:phase9:audit
+      - run: npm run test:phase10:audit
 
   playwright:
     runs-on: ubuntu-latest
