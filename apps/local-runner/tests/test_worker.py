@@ -17,6 +17,7 @@ class FakeClient:
         self.renew_event = Event()
         self.completed: list[tuple[str, Any]] = []
         self.research_completed: list[tuple[str, Any]] = []
+        self.ai_completed: list[tuple[str, Any]] = []
         self.failed: list[tuple[str, str, str]] = []
 
     def heartbeat(self, version: str, capabilities: list[str]) -> dict[str, Any]:
@@ -38,6 +39,10 @@ class FakeClient:
 
     def complete_research(self, job_id: str, result: Any) -> dict[str, Any]:
         self.research_completed.append((job_id, result))
+        return {}
+
+    def complete_ai(self, job_id: str, result: Any) -> dict[str, Any]:
+        self.ai_completed.append((job_id, result))
         return {}
 
     def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
@@ -93,6 +98,7 @@ def test_echo_job_renews_before_terminal_completion() -> None:
     assert client.completed[0][0] == "job_test"
     assert client.completed[0][1]["payload"] == {"hello": "world"}
     assert client.research_completed == []
+    assert client.ai_completed == []
 
 
 def test_long_job_renews_lease_while_handler_is_running() -> None:
@@ -129,6 +135,23 @@ def test_research_job_uses_validated_cloud_completion_path() -> None:
     ]
 
 
+def test_ai_job_uses_validated_cloud_completion_path() -> None:
+    client = FakeClient(job("LOCAL_AI_EXTRACT"))
+    fixture = {
+        "schemaVersion": "business-extraction.v1",
+        "sourceOnly": True,
+        "verified": False,
+    }
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"LOCAL_AI_EXTRACT": lambda _: fixture},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "COMPLETED"
+    assert client.completed == []
+    assert client.ai_completed == [("job_test", fixture)]
+
+
 def test_research_policy_failure_preserves_specific_safe_error_code() -> None:
     client = FakeClient(job("PLAYWRIGHT_RESEARCH"))
 
@@ -157,7 +180,7 @@ def test_ai_policy_failure_preserves_specific_safe_error_code() -> None:
         handlers={"LOCAL_AI_EXTRACT": offline},
     ).run_once()  # type: ignore[arg-type]
     assert outcome.status == "FAILED"
-    assert client.completed == []
+    assert client.ai_completed == []
     assert client.failed == [
         ("job_test", "OLLAMA_UNAVAILABLE", "Ollama is unavailable on the local machine.")
     ]
