@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":shield: Phase 9 hosted regression"
-    key: "phase9-hosted-regression"
+  - label: ":brain: Phase 10 hosted regression"
+    key: "phase10-hosted-regression"
     timeout_in_minutes: 60
     command: |
       bash -lc '
@@ -32,7 +32,7 @@ steps:
         npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
 
-        npm run test:phase9
+        npm run test:phase10
       '
     plugins:
       - docker#v5.13.0:
