@@ -1,3 +1,6 @@
+agents:
+  queue: "linux-small"
+
 steps:
   - label: ":shield: Phase 9 hosted regression"
     key: "phase9-hosted-regression"
@@ -5,8 +8,7 @@ steps:
     command: |
       set -euo pipefail
 
-      # Buildkite hosted Linux images include mise. Pin the same runtime majors as
-      # the canonical GitHub Actions workflow before running the complete Phase 9 gate.
+      # Pin the same runtime majors as the canonical GitHub Actions workflow.
       mise use --global node@22 python@3.13
       eval "$(mise activate bash)"
 
