@@ -10,29 +10,29 @@ class CaptureDb implements D1DatabaseLike {
 
   prepare(query: string): D1PreparedStatementLike {
     this.prepareCount += 1;
-    const db = this;
     let bindings: unknown[] = [];
-    return {
+    const statement: D1PreparedStatementLike = {
       bind(...values: unknown[]) {
         bindings = values;
-        return this;
+        return statement;
       },
-      first<T = Record<string, unknown>>(): Promise<T | null> {
-        db.lastQuery = query;
-        db.lastBindings = bindings;
+      first: <T = Record<string, unknown>>(): Promise<T | null> => {
+        this.lastQuery = query;
+        this.lastBindings = bindings;
         return Promise.resolve(null);
       },
-      all<T = Record<string, unknown>>(): Promise<{ results: T[]; success: boolean }> {
-        db.lastQuery = query;
-        db.lastBindings = bindings;
+      all: <T = Record<string, unknown>>(): Promise<{ results: T[]; success: boolean }> => {
+        this.lastQuery = query;
+        this.lastBindings = bindings;
         return Promise.resolve({ results: [], success: true });
       },
-      run(): Promise<D1ResultLike> {
-        db.lastQuery = query;
-        db.lastBindings = bindings;
+      run: (): Promise<D1ResultLike> => {
+        this.lastQuery = query;
+        this.lastBindings = bindings;
         return Promise.resolve({ success: true, meta: { changes: 0 } });
       },
     };
+    return statement;
   }
 
   batch(): Promise<D1ResultLike[]> {
