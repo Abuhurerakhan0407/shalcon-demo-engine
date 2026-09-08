@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 9 — Playwright Research Engine**  
-Launch progress: **~31%**  
-Status: **IMPLEMENTED + SECURITY/RELIABILITY-HARDENED — strict hosted Phase 9 verification still pending**
+Current phase: **Phase 10 — ScrapeGraphAI + Ollama**  
+Launch progress: **~34%**  
+Status: **PHASE 9 CLOSED — PHASE 10 IMPLEMENTATION IN PROGRESS**
 
 ## Completed phases
 
@@ -22,7 +22,7 @@ User-provided ÉLANE v8 preserved by fingerprint, deterministic adapter/runtime,
 Prospect CRUD/manual entry, immutable source records, evidence candidates, canonical facts, DB-enforced verification provenance, conflict/provenance operator UI.
 
 ### Phase 5 — Identity Resolution + Deduplication ✅
-Strong-key dedupe, weak-match review, conflict handling, canonical observations/decisions, terminal duplicate aliases, operator review UI, live-D1 identity acceptance.
+Strong-key dedupe, weak-match review, conflict handling, canonical observations/decisions, terminal duplicate aliases, operator review UI.
 
 ### Phase 6 — Universal Demo Renderer ✅
 One `/d/:token` renderer, hashed tokens, exact template-version resolution, D1 config load, expiry/disable, non-enumerating unavailable path, config fail-closed behavior, one deployment serving many businesses.
@@ -33,70 +33,55 @@ Verified-fact manual builder, controlled ÉLANE DNA, private preview, safe edits
 ### Phase 8 — Local Runner + Job System ✅
 Runner registration/token auth, heartbeat, job claim/leases, retries, completion/failure, D1 canonical ledger, queue signalling/reconciliation, dead-letter visibility, offline/crash/restart recovery, cross-operator isolation and token revocation.
 
-## Last fully verified hosted baseline
+### Phase 9 — Playwright Research Engine ✅
+Public-only URL validation and DNS/IP safety, standard web-port restriction, Playwright JS-rendered research, same-site discovery, bounded capture/diagnostics/screenshots, service-worker/WebSocket containment, public-only SOCKS5 egress with pinned validated IPs, redirect gating, source-only cloud validation/persistence, job/prospect/requested-URL binding, immutable replay protection, active-lease source writes, long-job renewal, expired-lease rejection, and no automatic promotion to verified facts.
 
-- Commit: `d7ee30a65e8afa223d29bff370817012089ccca4`
-- GitHub Actions run: `33767184933`
-- JavaScript/typecheck/lint/unit/D1/build/Worker/Playwright/Python gates: ✅ through Phase 8
+Hosted closure evidence:
 
-## Phase 9 implementation
+- Buildkite Build **#15**
+- Commit: `e88318dbb17d662218e77bdff61920f874448342`
+- Hosted queue: `linux-small`
+- Pipeline upload: ✅
+- Full Phase 9 hosted regression: ✅
+- Build result: **Passed in 3m 8s**
+- Includes typecheck, lint, unit, D1/workerd Phase 1/2/4/5/6/7/8/9 gates, Chromium E2E, Python local-runner tests, production build, and Phase 0–9 audits.
 
-- Public HTTP(S) URL validator with DNS/IP safety checks: ✅
-- Standard web-port restriction (80/443): ✅
-- Local Playwright browser research service: ✅
-- JavaScript-rendered page capture and same-site discovery: ✅
-- Bounded HTML/text, screenshots, console/network diagnostics: ✅
-- Per-request browser route safety guard: ✅
-- Service Workers blocked and WebSockets disconnected: ✅
-- Public-only SOCKS5 egress gate: ✅
-- DNS connection pinned to exact validated public IP: ✅
-- Chromium loopback/link-local proxy bypass explicitly removed: ✅
-- Redirect traffic forced through the public-only egress gate: ✅
-- Cloud-side bounded source-only result validation/persistence: ✅
-- Cloud result bound to the claimed job/prospect and original requested URL: ✅
-- Malformed research completion rejected before persistence: ✅
-- Job-context ownership checked before source writes: ✅
-- Retry-safe immutable source replay and identity-collision rejection: ✅
-- Source writes atomically require the runner's still-active lease: ✅
-- Long-running job lease renewal while Playwright executes: ✅
-- Terminal runner writes reject expired leases: ✅
-- No Phase 9 promotion to evidence or verified facts: ✅
-- Real-D1 Phase 9 acceptance fixture and permanent audit/CI wiring: ✅
+The earlier Android → Termux → Ubuntu/proot ARM64 self-hosted run remains useful supplemental evidence, but Phase 9 closure is based on the clean hosted Buildkite regression above.
 
-## Phase 9 mobile self-hosted verification
+## Phase 10 target
 
-GitHub Actions run `34259171162` executed on the Android → Termux → Ubuntu/proot ARM64 self-hosted runner at commit `b064578e21f3bce1a12df8707f0e7fa878338b3b`.
+Implement the local structured-extraction layer without weakening Phase 9 provenance or the manual path:
 
-Substantive gates completed green:
+- ScrapeGraphAI adapter
+- Ollama local provider
+- model health check
+- structured business extraction schema
+- bounded retry/timeout behavior
+- safe prompt construction
+- agent-run telemetry/log metadata
+- malformed model output rejected before persistence
+- Ollama-offline behavior fails safely
+- source provenance preserved
+- optional integration can be disabled without breaking manual prospect/demo workflows
 
-- Node/Python dependency setup + Playwright browser installation: ✅
-- Typecheck: ✅
-- Lint: ✅
-- Unit tests: ✅
-- Chromium browser E2E: ✅
-- Python local-runner tests: ✅
-- Production web + Worker dry-run build: ✅
-- Phase 0–9 static audits: ✅
+## Phase 10 acceptance gates
 
-D1/workerd gates are intentionally **not counted as passed** on this Android/proot runner. `workerd` is not viable in this environment, so the D1 Phase 1/2/4/5/6/7/8/9 steps remain visibly skipped here. At the time this status was recorded, GitHub's post-job Node cache cleanup was still in progress after all substantive steps had completed successfully.
-
-## Phase 9 acceptance state
-
-- Implementation/security/reliability work: ✅
-- Strong self-hosted non-D1 regression: ✅
-- Full clean hosted regression including D1/workerd: ⏳ pending
+- Local model can extract the sample business schema from bounded source content: ⏳
+- Structured result is schema validated before completion/persistence: ⏳
+- Malformed model output is rejected and never promoted to verified facts: ⏳
+- Runner handles Ollama offline/timeout safely with a non-secret error: ⏳
+- Provider/model/source provenance is retained in the result: ⏳
+- ScrapeGraphAI/Ollama integration can be disabled without breaking the existing manual path: ⏳
+- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green: ⏳
 
 ## Current CI condition
 
-GitHub-hosted private-repository jobs continue to terminate before checkout because no hosted runner is allocated. Public-repository control runs receive GitHub-hosted runners normally, so product code must not be changed to work around this account/platform allocation issue.
-
-A zero-cost hosted fallback is prepared in `.buildkite/pipeline.yml`. It targets Buildkite's hosted `linux-small` queue and runs the permanent `npm run test:phase9` gate, including the D1/workerd checks that the Android/proot runner cannot execute. Connecting the private GitHub repository to Buildkite requires operator authorization in the Buildkite/GitHub UI.
+GitHub-hosted private-repository allocation remains unavailable on this account, but Buildkite hosted Linux is now the clean zero-cost fallback regression environment for private-repository phase gates. `.buildkite/pipeline.yml` is connected and operational.
 
 ## Blocked
 
-- Final Phase 9 closure requires one clean hosted complete regression including D1/workerd.
-- Do not start Phase 10 until that gate is green.
+No Phase 10 implementation blocker is currently known. A real local Ollama model acceptance run will require an environment with Ollama and an installed model after the code path is implemented and regression-clean.
 
 ## Next action
 
-Authorize the private repository in Buildkite and run the prepared hosted Phase 9 pipeline. If it exposes a real code failure, fix the root cause and rerun. If the complete hosted gate is green, mark Phase 9 complete and proceed to Phase 10 — ScrapeGraphAI + Ollama.
+Implement the Phase 10 local AI extraction adapter/provider, add strict tests and audit coverage, run the hosted regression, then perform one real Ollama sample extraction before closing Phase 10.
