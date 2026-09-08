@@ -8,19 +8,35 @@ steps:
     command: |
       set -euo pipefail
 
-      # Pin the same runtime majors as the canonical GitHub Actions workflow.
-      mise use --global node@22 python@3.13
-      eval "$(mise activate bash)"
+      # Run the canonical Phase 9 gate in a clean Linux container so the hosted
+      # check does not depend on optional tools in Buildkite's base image.
+      docker run --rm \
+        -v "$PWD:/workspace" \
+        -w /workspace \
+        python:3.13-bookworm \
+        bash -lc '
+          set -euo pipefail
 
-      node --version
-      npm --version
-      python --version
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl gnupg
 
-      npm ci
-      python -m ensurepip --upgrade
-      python -m pip install -e "apps/local-runner[dev]"
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+            | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+            > /etc/apt/sources.list.d/nodesource.list
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
 
-      npx playwright install --with-deps chromium
-      python -m playwright install --with-deps --only-shell chromium
+          node --version
+          npm --version
+          python --version
 
-      npm run test:phase9
+          npm ci
+          python -m pip install -e "apps/local-runner[dev]"
+
+          npx playwright install --with-deps chromium
+          python -m playwright install --with-deps --only-shell chromium
+
+          npm run test:phase9
+        '
