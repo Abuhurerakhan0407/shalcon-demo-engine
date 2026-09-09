@@ -58,7 +58,7 @@ export function isPhase11JobPayload(value: unknown): value is Phase11JobPayload 
     typeof item.sourceRecordId === 'string' &&
     item.sourceRecordId.length > 0 &&
     typeof item.sourceRole === 'string' &&
-    RESEARCH_PAGE_ROLES.has(item.sourceRole as ResearchPageRole) &&
+    RESEARCH_PAGE_ROLES.has(item.sourceRole) &&
     typeof item.sourceRank === 'number' &&
     Number.isInteger(item.sourceRank) &&
     item.sourceRank >= 1 &&
