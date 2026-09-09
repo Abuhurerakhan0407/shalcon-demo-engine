@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":hammer: Phase 11 production build"
-    key: "phase11-production-build"
+  - label: ":mag: Phase 0-5 audits"
+    key: "phase0-5-audits"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,12 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run build
+        npm run test:phase0:audit
+        npm run test:phase1:audit
+        npm run test:phase2:audit
+        npm run test:phase3:audit
+        npm run test:phase4:audit
+        npm run test:phase5:audit
       '
     plugins:
       - docker#v5.13.0:
