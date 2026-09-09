@@ -27,17 +27,22 @@ jobs:
           set -euo pipefail
           python -m pip install -e 'apps/local-runner[dev]'
 
-      - name: Install Ollama ARM64
+      - name: Ensure Ollama ARM64
         shell: bash
         run: |
           set -euo pipefail
+          if command -v ollama >/dev/null 2>&1; then
+            echo "Reusing existing Ollama installation."
+            ollama --version
+            exit 0
+          fi
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl zstd
           curl -fsSL https://ollama.com/download/ollama-linux-arm64.tar.zst \
             | tar --zstd -x -C /usr
           ollama --version
 
-      - name: Start Ollama and pull acceptance model
+      - name: Start Ollama and ensure acceptance model
         shell: bash
         run: |
           set -euo pipefail
@@ -55,7 +60,11 @@ jobs:
             cat /tmp/phase10-ollama.log
             exit 1
           fi
-          ollama pull qwen3:0.6b
+          if ollama list | tail -n +2 | awk '{print $1}' | grep -Fxq 'qwen3:0.6b'; then
+            echo "Reusing cached qwen3:0.6b model."
+          else
+            ollama pull qwen3:0.6b
+          fi
           ollama list
 
       - name: Probe exact Ollama structured request
