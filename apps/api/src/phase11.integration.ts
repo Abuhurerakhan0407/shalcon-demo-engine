@@ -20,6 +20,11 @@ interface Env {
   DB: D1DatabaseLike;
 }
 
+interface ConflictPayloadItem {
+  field?: string;
+  critical?: boolean;
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
 function iso(offsetSeconds: number): string {
@@ -54,6 +59,26 @@ function sourceRaw(title: string, text: string): string {
     schemaVersion: 'playwright-research.v1',
     sourceOnly: true,
     page: { title, text },
+  });
+}
+
+function parseJsonArray(raw: string | null | undefined): unknown[] {
+  try {
+    const parsed: unknown = JSON.parse(raw ?? '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseConflictPayload(raw: string | null | undefined): ConflictPayloadItem[] {
+  return parseJsonArray(raw).filter((item): item is ConflictPayloadItem => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    const record = item as Record<string, unknown>;
+    return (
+      (record.field === undefined || typeof record.field === 'string') &&
+      (record.critical === undefined || typeof record.critical === 'boolean')
+    );
   });
 }
 
@@ -105,7 +130,12 @@ app.get('/phase11', async (c) => {
   const db = c.env.DB;
   const now = iso(0);
   const userId = 'usr_phase11';
-  await new UserRepository(db).create({ id: userId, email: 'phase11@example.com', name: 'Phase 11', createdAt: now });
+  await new UserRepository(db).create({
+    id: userId,
+    email: 'phase11@example.com',
+    name: 'Phase 11',
+    createdAt: now,
+  });
   const campaign = await new CampaignRepository(db).ensureManualSalonCampaign(userId, now);
 
   await createProspect(db, 'p11_a', campaign.id, now);
@@ -143,23 +173,47 @@ app.get('/phase11', async (c) => {
   );
 
   const [runRow, prospectA, evidenceA, factsA, researchA, linksA] = await Promise.all([
-    db.prepare('SELECT status, conflicts_json FROM research_runs WHERE id = ?').bind(run.id).first<{ status: string; conflicts_json: string }>(),
+    db
+      .prepare('SELECT status, conflicts_json FROM research_runs WHERE id = ?')
+      .bind(run.id)
+      .first<{ status: string; conflicts_json: string }>(),
     new ProspectRepository(db).getById('p11_a'),
-    db.prepare('SELECT field, value, verification_status, source_record_id FROM evidence WHERE prospect_id = ?').bind('p11_a').all<{ field: string; value: string; verification_status: string; source_record_id: string }>(),
+    db
+      .prepare(
+        'SELECT field, value, verification_status, source_record_id FROM evidence WHERE prospect_id = ?',
+      )
+      .bind('p11_a')
+      .all<{
+        field: string;
+        value: string;
+        verification_status: string;
+        source_record_id: string;
+      }>(),
     db.prepare('SELECT id FROM prospect_facts WHERE prospect_id = ?').bind('p11_a').all<{ id: string }>(),
-    db.prepare('SELECT id, evidence_ids_json FROM research WHERE prospect_id = ?').bind('p11_a').all<{ id: string; evidence_ids_json: string }>(),
-    db.prepare('SELECT evidence_id, source_record_id FROM research_run_evidence WHERE run_id = ?').bind(run.id).all<{ evidence_id: string; source_record_id: string }>(),
+    db
+      .prepare('SELECT id, evidence_ids_json FROM research WHERE prospect_id = ?')
+      .bind('p11_a')
+      .all<{ id: string; evidence_ids_json: string }>(),
+    db
+      .prepare('SELECT evidence_id, source_record_id FROM research_run_evidence WHERE run_id = ?')
+      .bind(run.id)
+      .all<{ evidence_id: string; source_record_id: string }>(),
   ]);
 
   const evidenceOnly = evidenceA.results.length > 0 && factsA.results.length === 0;
-  const everyCandidateHasSource = evidenceA.results.every((item) => item.source_record_id === 'src_p11_contact');
-  const noAutoVerified = evidenceA.results.every((item) => item.verification_status !== 'VERIFIED');
+  const everyCandidateHasSource = evidenceA.results.every(
+    (item) => item.source_record_id === 'src_p11_contact',
+  );
+  const noAutoVerified = evidenceA.results.every(
+    (item) => item.verification_status !== 'VERIFIED',
+  );
   const lowConfidenceStaysUnverified = evidenceA.results.some(
     (item) => item.field === 'businessName' && item.verification_status === 'UNVERIFIED',
   );
+  const visibleEvidenceIds = parseJsonArray(researchA.results[0]?.evidence_ids_json);
   const visibleCandidatesHaveEvidence =
     linksA.results.length === evidenceA.results.length &&
-    JSON.parse(researchA.results[0]?.evidence_ids_json ?? '[]').length === evidenceA.results.length;
+    visibleEvidenceIds.length === evidenceA.results.length;
 
   await createProspect(db, 'p11_b', campaign.id, now);
   const sourceRepository = new SourceRecordRepository(db);
@@ -181,12 +235,19 @@ app.get('/phase11', async (c) => {
     rawJson: sourceRaw('Contact', 'Conflict Salon phone +91 2222222222.'),
     capturedAt: now,
   });
-  const conflictRun = await startPhase11Research(db, userId, 'p11_b', { model: 'qwen3:0.6b' }, iso(10));
+  const conflictRun = await startPhase11Research(
+    db,
+    userId,
+    'p11_b',
+    { model: 'qwen3:0.6b' },
+    iso(10),
+  );
   for (const jobId of conflictRun.jobIds) {
     const context = await new JobContextRepository(db).getByJobId(jobId);
     const payload: unknown = context ? JSON.parse(context.payloadJson) : null;
     if (!isPhase11JobPayload(payload)) throw new Error('Conflict job payload invalid.');
-    const phone = payload.sourceRecordId === 'src_p11_home' ? '+91 1111111111' : '+91 2222222222';
+    const phone =
+      payload.sourceRecordId === 'src_p11_home' ? '+91 1111111111' : '+91 2222222222';
     await completeRunJob(
       db,
       userId,
@@ -205,10 +266,13 @@ app.get('/phase11', async (c) => {
     );
   }
   const [blockedRun, prospectB] = await Promise.all([
-    db.prepare('SELECT status, conflicts_json FROM research_runs WHERE id = ?').bind(conflictRun.id).first<{ status: string; conflicts_json: string }>(),
+    db
+      .prepare('SELECT status, conflicts_json FROM research_runs WHERE id = ?')
+      .bind(conflictRun.id)
+      .first<{ status: string; conflicts_json: string }>(),
     new ProspectRepository(db).getById('p11_b'),
   ]);
-  const conflictPayload = JSON.parse(blockedRun?.conflicts_json ?? '[]') as Array<{ field?: string; critical?: boolean }>;
+  const conflictPayload = parseConflictPayload(blockedRun?.conflicts_json);
   const criticalConflictStopsPipeline =
     blockedRun?.status === 'BLOCKED' &&
     prospectB?.currentState === 'RESEARCH_PENDING' &&
@@ -222,7 +286,9 @@ app.get('/phase11', async (c) => {
   const rerunPreservesAuditHistory = history.results.length === 2 && rerun.id !== run.id;
 
   const foreignKeys = await db.prepare('PRAGMA foreign_key_check').all<Record<string, unknown>>();
-  const migrationRows = await db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').first<{ count: number }>();
+  const migrationRows = await db
+    .prepare('SELECT COUNT(*) AS count FROM d1_migrations')
+    .first<{ count: number }>();
 
   const checks = {
     migrationApplied: Number(migrationRows?.count ?? 0) >= 8,
@@ -240,7 +306,10 @@ app.get('/phase11', async (c) => {
     aiDidNotOverwriteCanonicalFacts: factsA.results.length === 0,
     foreignKeyViolations: foreignKeys.results.length,
   };
-  return c.json({ ok: Object.values(checks).every((value) => value === true || value === 0), checks });
+  return c.json({
+    ok: Object.values(checks).every((value) => value === true || value === 0),
+    checks,
+  });
 });
 
 export default app;
