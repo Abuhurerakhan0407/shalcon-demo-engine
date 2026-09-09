@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 12 lint"
-    key: "phase12-lint"
+  - label: ":database: Phase 12 D1 acceptance"
+    key: "phase12-d1"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run lint
+        npm run test:phase12:d1
       '
     plugins:
       - docker#v5.13.0:
