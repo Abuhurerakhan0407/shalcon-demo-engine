@@ -28,6 +28,7 @@ import { demoAdminRoutes } from './demo-admin-routes';
 import { demoRoutes } from './demo-routes';
 import { CURRENT_PHASE } from './phase';
 import { prospectRoutes } from './prospect-routes';
+import { researchAgentRoutes } from './research-agent-routes';
 import { researchRunnerRoutes } from './research-runner-routes';
 import { runnerRoutes } from './runner-routes';
 
@@ -130,6 +131,7 @@ app.use('/api/*', async (c, next) => {
 app.use('/api/v1/dashboard/*', requireAuth);
 app.use('/api/v1/prospects', requireAuth);
 app.use('/api/v1/prospects/*', requireAuth);
+app.use('/api/v1/research/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
 app.use('/api/v1/runner/operator/*', requireAuth);
 
@@ -272,6 +274,7 @@ app.get('/api/v1/dashboard/summary', (c) => {
 });
 
 app.route('/api/v1/prospects', prospectRoutes);
+app.route('/api/v1/research', researchAgentRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
