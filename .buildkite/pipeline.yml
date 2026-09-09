@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 12 D1 acceptance"
-    key: "phase12-d1"
+  - label: ":database: Phase 12 migration"
+    key: "phase12-migration"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,8 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run test:phase12:d1
+        rm -rf .wrangler/phase12-d1-test
+        npm --workspace @shalcon/api run db:migrate:phase12:local
       '
     plugins:
       - docker#v5.13.0:
