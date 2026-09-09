@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Classify Phase 11 orchestration lint error"
-    key: "phase11-classify-orchestration-lint-error"
+  - label: ":mag: Phase 11 research orchestration lint after fix"
+    key: "phase11-research-orchestration-lint-after-fix"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,13 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        set +e
-        output="$(npx eslint apps/api/src/research-agent.ts 2>&1)"
-        code=$?
-        set -e
-        printf "%s\n" "$output"
-        test "$code" -ne 0
-        grep -q "@typescript-eslint/no-unsafe-" <<<"$output"
+        npx eslint apps/api/src/research-agent.ts
       '
     plugins:
       - docker#v5.13.0:
