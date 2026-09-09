@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 12 migration"
-    key: "phase12-migration"
+  - label: ":test_tube: Phase 12 worker execution"
+    key: "phase12-worker-execution"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -24,6 +24,25 @@ steps:
         npm ci
         rm -rf .wrangler/phase12-d1-test
         npm --workspace @shalcon/api run db:migrate:phase12:local
+        npm --workspace @shalcon/api run test:d1:phase12-worker >/tmp/phase12-worker.log 2>&1 &
+        worker_pid=$!
+        trap "kill $worker_pid 2>/dev/null || true" EXIT
+
+        for attempt in $(seq 1 100); do
+          if ! kill -0 $worker_pid 2>/dev/null; then
+            cat /tmp/phase12-worker.log
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/phase12-result.json -w "%{http_code}" http://127.0.0.1:8799/phase12 || true)
+          if [ "$code" = "200" ]; then
+            cat /tmp/phase12-result.json
+            exit 0
+          fi
+          sleep 0.4
+        done
+
+        cat /tmp/phase12-worker.log
+        exit 1
       '
     plugins:
       - docker#v5.13.0:
