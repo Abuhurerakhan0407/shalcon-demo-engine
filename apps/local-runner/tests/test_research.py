@@ -87,6 +87,12 @@ def test_js_rendered_site_discovery_screenshots_and_diagnostics(tmp_path: Path) 
     for page in pages:
         assert page["screenshotPath"] is not None
         assert Path(page["screenshotPath"]).is_file()
+        assert page["mobileScreenshotPath"] is not None
+        assert Path(page["mobileScreenshotPath"]).is_file()
+        assert page["viewportAudit"]["desktop"]["viewportWidth"] == 1440
+        assert page["viewportAudit"]["mobile"]["viewportWidth"] == 390
+        assert isinstance(page["viewportAudit"]["desktop"]["hasHorizontalOverflow"], bool)
+        assert isinstance(page["viewportAudit"]["mobile"]["hasHorizontalOverflow"], bool)
         assert page["requestedUrl"].startswith(base)
         assert len(page["html"]) <= 120_000
         assert len(page["text"]) <= 60_000
