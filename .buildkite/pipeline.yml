@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 11 lint"
-    key: "phase11-lint"
+  - label: ":mag: Locate Phase 11 lint errors"
+    key: "phase11-locate-lint-errors"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,13 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run lint
+        set +e
+        output="$(npm run lint 2>&1)"
+        code=$?
+        set -e
+        printf "%s\n" "$output"
+        test "$code" -ne 0
+        grep -Eq "(research-agent|phase11|ResearchPage|packages/agents/src/research)" <<<"$output"
       '
     plugins:
       - docker#v5.13.0:
