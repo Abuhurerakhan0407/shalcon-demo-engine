@@ -56,6 +56,17 @@ const httpErrorSchema = z.object({
   status: z.number().int().min(400).max(599),
 });
 
+const viewportMetricsSchema = z.object({
+  viewportWidth: z.number().int().min(1).max(10_000),
+  documentWidth: z.number().int().min(0).max(100_000),
+  hasHorizontalOverflow: z.boolean(),
+});
+
+const viewportAuditSchema = z.object({
+  desktop: viewportMetricsSchema.nullable(),
+  mobile: viewportMetricsSchema.nullable(),
+});
+
 export const researchPageResultSchema = z.object({
   requestedUrl: httpUrlSchema,
   finalUrl: httpUrlSchema,
@@ -65,6 +76,8 @@ export const researchPageResultSchema = z.object({
   text: z.string().max(60_000),
   html: z.string().max(120_000),
   screenshotPath: z.string().max(4096).nullable(),
+  mobileScreenshotPath: z.string().max(4096).nullable().optional(),
+  viewportAudit: viewportAuditSchema.nullable().optional(),
   navigationError: z.string().max(500).nullable(),
   console: z.array(consoleSchema).max(100),
   requestFailures: z.array(requestFailureSchema).max(100),
