@@ -146,6 +146,27 @@ class BrowserResearchEngine:
 
         return sorted(candidates, key=lambda url: _link_score(url, candidates[url]))
 
+    def _viewport_metrics(self, page: Page) -> dict[str, Any] | None:
+        try:
+            raw = page.evaluate(
+                "() => ({viewportWidth: window.innerWidth, documentWidth: document.documentElement.scrollWidth})"
+            )
+        except Exception:
+            return None
+        if not isinstance(raw, dict):
+            return None
+        viewport_width = raw.get("viewportWidth")
+        document_width = raw.get("documentWidth")
+        if not isinstance(viewport_width, (int, float)) or not isinstance(document_width, (int, float)):
+            return None
+        safe_viewport = max(1, int(viewport_width))
+        safe_document = max(0, int(document_width))
+        return {
+            "viewportWidth": safe_viewport,
+            "documentWidth": safe_document,
+            "hasHorizontalOverflow": safe_document > safe_viewport + 2,
+        }
+
     def _capture_page(self, context: BrowserContext, requested_url: str, job_dir: Path) -> dict[str, Any]:
         page = context.new_page()
         console_messages: list[dict[str, str]] = []
@@ -188,6 +209,8 @@ class BrowserResearchEngine:
         html = ""
         discovered_links: list[str] = []
         screenshot_path: str | None = None
+        mobile_screenshot_path: str | None = None
+        viewport_audit: dict[str, Any] = {"desktop": None, "mobile": None}
 
         try:
             response = page.goto(
@@ -213,12 +236,23 @@ class BrowserResearchEngine:
             discovered_links = self._discover_links(page, final_url)
 
             digest = hashlib.sha256(final_url.encode("utf-8")).hexdigest()[:16]
-            screenshot_file = job_dir / f"{digest}.png"
+            screenshot_file = job_dir / f"{digest}.desktop.png"
             try:
+                viewport_audit["desktop"] = self._viewport_metrics(page)
                 page.screenshot(path=str(screenshot_file), full_page=True, animations="disabled")
                 screenshot_path = str(screenshot_file)
             except Exception:
                 screenshot_path = None
+
+            mobile_file = job_dir / f"{digest}.mobile.png"
+            try:
+                page.set_viewport_size({"width": 390, "height": 844})
+                page.wait_for_timeout(100)
+                viewport_audit["mobile"] = self._viewport_metrics(page)
+                page.screenshot(path=str(mobile_file), full_page=True, animations="disabled")
+                mobile_screenshot_path = str(mobile_file)
+            except Exception:
+                mobile_screenshot_path = None
         except Exception as exc:
             navigation_error = f"{type(exc).__name__}: navigation failed safely."[:500]
             try:
@@ -239,6 +273,8 @@ class BrowserResearchEngine:
             "text": text,
             "html": html,
             "screenshotPath": screenshot_path,
+            "mobileScreenshotPath": mobile_screenshot_path,
+            "viewportAudit": viewport_audit,
             "navigationError": navigation_error,
             "console": console_messages,
             "requestFailures": request_failures,
