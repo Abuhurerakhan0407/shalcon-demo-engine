@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 11 targeted regressions"
-    key: "phase11-targeted-regressions"
+  - label: ":database: Phase 11 D1 regression chain"
+    key: "phase11-d1-regression-chain"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -22,9 +22,15 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run test:unit
+        npm run test:phase1:d1
+        npm run test:phase2:d1
+        npm run test:phase4:d1
+        npm run test:phase5:d1
+        npm run test:phase6:d1
+        npm run test:phase7:d1
+        npm run test:phase8:d1
+        npm run test:phase9:d1
         npm run test:phase11:d1
-        npm run test:phase11:audit
       '
     plugins:
       - docker#v5.13.0:
