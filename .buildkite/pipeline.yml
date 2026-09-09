@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 11 research orchestration lint"
-    key: "phase11-research-orchestration-lint"
+  - label: ":mag: Confirm Phase 11 orchestration lint rule"
+    key: "phase11-confirm-orchestration-lint-rule"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,13 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npx eslint apps/api/src/research-agent.ts
+        set +e
+        output="$(npx eslint apps/api/src/research-agent.ts 2>&1)"
+        code=$?
+        set -e
+        printf "%s\n" "$output"
+        test "$code" -ne 0
+        grep -q "@typescript-eslint/no-unnecessary-type-assertion" <<<"$output"
       '
     plugins:
       - docker#v5.13.0:
