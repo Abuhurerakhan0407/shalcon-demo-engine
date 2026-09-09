@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":snake: Phase 11 Python runner"
-    key: "phase11-python-runner"
-    timeout_in_minutes: 30
+  - label: ":mag: Phase 11 hosted regression"
+    key: "phase11-hosted-regression"
+    timeout_in_minutes: 60
     command: |
       bash -lc '
         set -euo pipefail
@@ -12,6 +12,7 @@ steps:
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
+
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
           | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
@@ -20,11 +21,18 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
+        node --version
+        npm --version
+        python --version
         test -f package-lock.json
+
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
+
+        npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
-        npm run test:python
+
+        npm run test:phase11
       '
     plugins:
       - docker#v5.13.0:
