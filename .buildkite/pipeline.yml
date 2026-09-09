@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 11 remaining API lint"
-    key: "phase11-remaining-api-lint"
+  - label: ":mag: Phase 11 research orchestration lint"
+    key: "phase11-research-orchestration-lint"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,10 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npx eslint \
-          apps/api/src/research-agent-failures.ts \
-          apps/api/src/research-agent-routes.ts \
-          apps/api/src/research-agent.ts
+        npx eslint apps/api/src/research-agent.ts
       '
     plugins:
       - docker#v5.13.0:
