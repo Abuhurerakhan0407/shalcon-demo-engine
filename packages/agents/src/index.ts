@@ -1,1 +1,3 @@
-export type AgentStatus = 'NOT_CONFIGURED_PHASE_0';
+export type AgentStatus = 'PHASE_11_RESEARCH_ACTIVE';
+
+export * from './research';
