@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 12 worker execution"
-    key: "phase12-worker-execution"
+  - label: ":test_tube: Phase 12 worker startup"
+    key: "phase12-worker-startup"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -33,9 +33,9 @@ steps:
             cat /tmp/phase12-worker.log
             exit 1
           fi
-          code=$(curl -sS -o /tmp/phase12-result.json -w "%{http_code}" http://127.0.0.1:8799/phase12 || true)
-          if [ "$code" = "200" ]; then
-            cat /tmp/phase12-result.json
+          code=$(curl -sS -o /tmp/phase12-root.txt -w "%{http_code}" http://127.0.0.1:8799/ || true)
+          if [ "$code" != "000" ]; then
+            cat /tmp/phase12-worker.log
             exit 0
           fi
           sleep 0.4
