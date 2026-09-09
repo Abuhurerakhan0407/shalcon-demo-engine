@@ -80,7 +80,10 @@ function bestSource(sources: readonly WebsiteAuditSource[]): WebsiteAuditSource 
       (source.httpStatus === null || source.httpStatus < 400) &&
       (source.text.trim().length > 0 || source.html.trim().length > 0),
   );
-  return healthy ?? sources[0]!;
+  if (healthy) return healthy;
+  const fallback = sources[0];
+  if (!fallback) throw new Error('Website audit requires a captured source.');
+  return fallback;
 }
 
 function observation(
