@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 10 — ScrapeGraphAI + Ollama**  
+Current phase: **Phase 10 — ScrapeGraphAI + Ollama (closure)**  
 Launch progress: **~36%**  
-Status: **PHASE 9 CLOSED — PHASE 10 HOSTED REGRESSION GREEN; REAL OLLAMA ACCEPTANCE PENDING**
+Status: **PHASE 9 CLOSED — PHASE 10 REAL OLLAMA ACCEPTANCE PASSED; FINAL LATEST-HEAD HOSTED REGRESSION PENDING**
 
 ## Completed phases
 
@@ -68,8 +68,10 @@ Implemented:
 - no automatic evidence/fact promotion
 - optional integration path that does not break the manual workflow
 - real Ollama smoke CLI command
+- grammar-compatible schema sent to Ollama while runtime/cloud validation remains authoritative
+- canonicalization of model `"null"` sentinels to real JSON `null` / `[]` without inventing facts
 
-Hosted regression evidence:
+Hosted regression evidence before the final Ollama compatibility fixes:
 
 - Buildkite Build **#44**
 - Commit: `463e7327519a27d02176fc636f3d1cea2e10c8b3`
@@ -79,15 +81,39 @@ Hosted regression evidence:
 - Build result: **Passed in 3m 10s**
 - Covers typecheck, lint, unit, D1/workerd gates, Chromium E2E, Python local-runner tests, production build, Phase 0–10 audits, schema/provenance/lease/cloud-completion contracts, and Ollama offline behavior.
 
+Real Ollama acceptance evidence:
+
+- Environment: Android/Termux → Ubuntu/proot ARM64 local runner environment
+- Provider: `ollama`
+- Model: `qwen3:0.6b`
+- Attempts: `1`
+- Schema: `business-extraction.v1`
+- `sourceOnly: true`
+- `verified: false`
+- Extracted business name: `Élane Salon`
+- Extracted email: `hello@example.com`
+- Unsupported phone/address: real JSON `null`
+- Unsupported opening hours/social links: `[]`
+- Services: `Haircut`, `Styling`
+- Real generation completed successfully against the production `ai-smoke` path.
+- The local source used for the successful run was patched to the same canonicalization logic committed in `7f98296d3cf06cebdc39aeb10b22ba5099716caf`; repository head `277985030934e8ec0f02e899b63c37e123c21c22` adds the corresponding regression coverage.
+
+Post-#44 Phase 10 compatibility commits now on `main`:
+
+- `b9b8fa5b439bce16111ec59a5a4a6fc1566074a5` — grammar-compatible Ollama extraction schema
+- `7f98296d3cf06cebdc39aeb10b22ba5099716caf` — canonicalize Ollama null sentinels
+- `277985030934e8ec0f02e899b63c37e123c21c22` — regression coverage for null-sentinel canonicalization
+
 ## Phase 10 acceptance gates
 
-- Local model can extract the sample business schema from bounded source content: ⏳ **real Ollama run still required**
+- Local model can extract the sample business schema from bounded source content: ✅ real `qwen3:0.6b` Ollama run passed
 - Structured result is schema validated before completion/persistence: ✅
 - Malformed model output is rejected and never promoted to verified facts: ✅
 - Runner handles Ollama offline/timeout safely with a non-secret error: ✅
 - Provider/model/source provenance is retained in the result: ✅
 - ScrapeGraphAI/Ollama integration can be disabled without breaking the existing manual path: ✅
-- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green: ✅ Buildkite #44
+- Real model absence handling returns canonical JSON `null` / `[]` rather than string sentinels: ✅
+- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green on the **latest Phase 10 head**: ⏳ final hosted rerun required because compatibility fixes landed after Buildkite #44
 
 ## Current CI condition
 
@@ -95,8 +121,8 @@ GitHub-hosted private-repository allocation remains unavailable on this account,
 
 ## Blocked
 
-Phase 10 code/regression is not blocked. Final Phase 10 closure requires exactly one real local Ollama model acceptance run so the production adapter is proven against an actual model rather than mocks/offline behavior only.
+The real-model blocker is cleared. Phase 10 now has one remaining closure gate: run the full Buildkite Phase 10 regression on current `main` (`277985030934e8ec0f02e899b63c37e123c21c22` or a descendant containing the same fixes). Phase 11 must not begin until that latest-head regression is green.
 
 ## Next action
 
-Run the real Ollama smoke extraction on a local machine, capture the structured result/model health evidence, update this status, close Phase 10 only if that run is valid, then proceed to Phase 11.
+Run one fresh Buildkite build from current `main`. If the full Phase 10 regression is green, record the Buildkite build number/result/commit here, mark Phase 10 closed, and immediately proceed to **Phase 11 — Automated Research + Evidence**.
