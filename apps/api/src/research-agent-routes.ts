@@ -34,11 +34,17 @@ researchAgentRoutes.post('/prospects/:id/runs', async (c) => {
     );
   }
   try {
+    const options = {
+      ...(parsed.data.model !== undefined ? { model: parsed.data.model } : {}),
+      ...(parsed.data.useScrapeGraph !== undefined
+        ? { useScrapeGraph: parsed.data.useScrapeGraph }
+        : {}),
+    };
     const run = await startPhase11Research(
       requireDb(c.env.DB),
       c.get('authUser').id,
       c.req.param('id'),
-      parsed.data,
+      options,
     );
     return c.json({ run, verifiedFactPromotion: false }, 202);
   } catch (error) {
