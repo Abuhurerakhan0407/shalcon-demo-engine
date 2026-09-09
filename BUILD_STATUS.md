@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 11 — Automated Research + Evidence**  
-Launch progress: **~36%**  
-Status: **PHASE 10 CLOSED — PHASE 11 ACTIVE**
+Current phase: **Phase 12 — Website Opportunity Audit**  
+Launch progress: **~39%**  
+Status: **PHASE 11 CLOSED — PHASE 12 ACTIVE**
 
 ## Completed phases
 
@@ -117,29 +117,66 @@ Final latest-head closure regression:
 - Real model absence handling returns canonical JSON `null` / `[]` rather than string sentinels: ✅
 - Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green on latest Phase 10 head: ✅ Buildkite #53
 
-## Phase 11 — Automated Research + Evidence
+### Phase 11 — Automated Research + Evidence ✅
+
+Implemented:
+
+- deterministic research page prioritization with bounded source selection
+- per-source local Ollama extraction jobs
+- service, contact, location, opening-hours, and official-social candidate extraction
+- confidence scoring with `PROBABLE` / `UNVERIFIED` only for unreviewed AI output
+- exact-source-text evidence grounding before candidate persistence
+- immutable source provenance links and research-run evidence links
+- cross-source comparison and conflict detection
+- critical-conflict blocking before the prospect advances
+- rerunnable research runs with preserved audit history
+- lease-bound persistence and job/run ownership checks
+- terminal job failure reconciliation and dead-letter-safe run failure handling
+- authenticated operator research routes
+- Phase 11 research workspace UI with source provenance, candidate confidence, and conflict visibility
+- no direct writes to canonical `prospect_facts`
+
+Acceptance gates:
+
+- every visible candidate fact has evidence: ✅
+- critical conflicts stop pipeline: ✅
+- low-confidence facts stay unverified: ✅
+- rerun preserves audit history: ✅
+- AI does not overwrite official/canonical facts silently: ✅
+- Phase 11 D1 integration acceptance: ✅
+- Chromium E2E regression after Research UI integration: ✅ Buildkite #121
+- Python local-runner regression: ✅ Buildkite #122
+- full typecheck/lint/unit/D1/Chromium/Python/build/audit chain: ✅ Buildkite #123
+
+Final closure evidence:
+
+- Buildkite Build **#123**
+- Commit: `83abf86b67920c04031759722d6b8bb2533da37f`
+- Hosted queue: `linux-small`
+- Full Phase 11 hosted regression: ✅
+- Build result: **Passed in 3m 36s**
+- The earlier full-regression failure was traced to a stale navigation E2E expectation after the Phase 11 Research workspace replaced the placeholder page. The test was aligned to the actual Phase 11 heading and the complete regression then passed.
+
+## Phase 12 — Website Opportunity Audit
 
 Target scope:
 
-- research agent
-- page prioritization
-- service extraction
-- contact extraction
-- location extraction
-- opening-hours extraction
-- official social extraction
-- confidence engine
-- cross-source comparison
-- conflict detection
-- research UI
+- no-website detection
+- mobile/desktop screenshot audit
+- CTA detection
+- contact-path inspection
+- booking detection
+- service-presentation audit
+- obvious layout/error detection
+- evidence-backed issue records
+- current-site quality rating
 
 Acceptance targets:
 
-- every visible candidate fact has evidence
-- critical conflicts stop pipeline
-- low-confidence facts stay unverified
-- rerun preserves audit history
-- AI does not overwrite official evidence silently
+- good website can be downgraded/skipped
+- no unsupported criticism
+- audit observations link to evidence/screenshot
+- repeat runs traceable
 
 ## Current CI condition
 
@@ -147,8 +184,8 @@ GitHub-hosted private-repository allocation remains unavailable on this account,
 
 ## Blocked
 
-No Phase 10 blocker remains. Phase 11 implementation can proceed.
+No Phase 11 blocker remains.
 
 ## Next action
 
-Implement Phase 11 against the existing Phase 4 evidence core, Phase 8 job system, Phase 9 research capture, and Phase 10 structured local extraction. Preserve evidence provenance, audit history, ownership/lease rules, and `verified: false` for unreviewed AI output.
+Implement Phase 12 against the existing Phase 9 browser capture/evidence boundary and Phase 11 research provenance. Audit only captured, evidence-backed website conditions; preserve repeat-run history and never manufacture negative findings when the page evidence does not support them.
