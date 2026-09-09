@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Confirm Phase 11 orchestration lint rule"
-    key: "phase11-confirm-orchestration-lint-rule"
+  - label: ":mag: Classify Phase 11 orchestration lint error"
+    key: "phase11-classify-orchestration-lint-error"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -28,7 +28,7 @@ steps:
         set -e
         printf "%s\n" "$output"
         test "$code" -ne 0
-        grep -q "@typescript-eslint/no-unnecessary-type-assertion" <<<"$output"
+        grep -q "@typescript-eslint/no-unsafe-" <<<"$output"
       '
     plugins:
       - docker#v5.13.0:
