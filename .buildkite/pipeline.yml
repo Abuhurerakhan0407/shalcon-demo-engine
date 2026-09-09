@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":typescript: Phase 12 typecheck"
-    key: "phase12-typecheck"
+  - label: ":mag: Phase 12 lint"
+    key: "phase12-lint"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run typecheck
+        npm run lint
       '
     plugins:
       - docker#v5.13.0:
