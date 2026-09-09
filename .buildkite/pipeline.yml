@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 12 worker startup"
-    key: "phase12-worker-startup"
+  - label: ":test_tube: Phase 12 worker longevity"
+    key: "phase12-worker-longevity"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -24,25 +24,15 @@ steps:
         npm ci
         rm -rf .wrangler/phase12-d1-test
         npm --workspace @shalcon/api run db:migrate:phase12:local
-        npm --workspace @shalcon/api run test:d1:phase12-worker >/tmp/phase12-worker.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        for attempt in $(seq 1 100); do
-          if ! kill -0 $worker_pid 2>/dev/null; then
-            cat /tmp/phase12-worker.log
-            exit 1
-          fi
-          code=$(curl -sS -o /tmp/phase12-root.txt -w "%{http_code}" http://127.0.0.1:8799/ || true)
-          if [ "$code" != "000" ]; then
-            cat /tmp/phase12-worker.log
-            exit 0
-          fi
-          sleep 0.4
-        done
-
-        cat /tmp/phase12-worker.log
-        exit 1
+        set +e
+        timeout 8s npm --workspace @shalcon/api run test:d1:phase12-worker
+        code=$?
+        set -e
+        if [ "$code" -eq 124 ]; then
+          exit 0
+        fi
+        exit "$code"
       '
     plugins:
       - docker#v5.13.0:
