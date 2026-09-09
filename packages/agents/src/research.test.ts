@@ -10,10 +10,38 @@ import {
 describe('Phase 11 research decision engine', () => {
   it('prioritizes contact/services/home research pages deterministically', () => {
     const pages = prioritizeResearchSources([
-      { sourceId: '1', url: 'https://example.com/blog', title: 'Blog', text: 'x'.repeat(5000), provider: 'PLAYWRIGHT', sourceType: 'WEBSITE_PAGE' },
-      { sourceId: '2', url: 'https://example.com/services', title: 'Services', text: 'Haircut and styling', provider: 'PLAYWRIGHT', sourceType: 'WEBSITE_PAGE' },
-      { sourceId: '3', url: 'https://example.com/contact', title: 'Contact', text: 'hello@example.com', provider: 'PLAYWRIGHT', sourceType: 'WEBSITE_PAGE' },
-      { sourceId: '4', url: 'https://example.com/', title: 'Home', text: 'Élane Salon', provider: 'PLAYWRIGHT', sourceType: 'WEBSITE_PAGE' },
+      {
+        sourceId: '1',
+        url: 'https://example.com/blog',
+        title: 'Blog',
+        text: 'x'.repeat(5000),
+        provider: 'PLAYWRIGHT',
+        sourceType: 'WEBSITE_PAGE',
+      },
+      {
+        sourceId: '2',
+        url: 'https://example.com/services',
+        title: 'Services',
+        text: 'Haircut and styling',
+        provider: 'PLAYWRIGHT',
+        sourceType: 'WEBSITE_PAGE',
+      },
+      {
+        sourceId: '3',
+        url: 'https://example.com/contact',
+        title: 'Contact',
+        text: 'hello@example.com',
+        provider: 'PLAYWRIGHT',
+        sourceType: 'WEBSITE_PAGE',
+      },
+      {
+        sourceId: '4',
+        url: 'https://example.com/',
+        title: 'Home',
+        text: 'Élane Salon',
+        provider: 'PLAYWRIGHT',
+        sourceType: 'WEBSITE_PAGE',
+      },
     ]);
     expect(pages.map((page) => page.sourceId)).toEqual(['3', '2', '4', '1']);
     expect(pages.map((page) => page.rank)).toEqual([1, 2, 3, 4]);
@@ -34,7 +62,7 @@ describe('Phase 11 research decision engine', () => {
       'CONTACT',
     );
     expect(candidates.some((item) => item.verificationStatus === 'PROBABLE')).toBe(true);
-    expect(candidates.every((item) => item.verificationStatus !== ('VERIFIED' as never))).toBe(true);
+    expect(candidates.map((item) => item.verificationStatus)).not.toContain('VERIFIED');
   });
 
   it('blocks on critical scalar conflicts but not additive service evidence', () => {
