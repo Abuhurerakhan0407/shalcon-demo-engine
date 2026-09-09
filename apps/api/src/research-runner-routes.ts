@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import { hashSessionToken } from './auth';
 import type { Bindings } from './context';
+import { startPhase11Research } from './research-agent';
 import {
   ResearchLeaseLostError,
   completeResearchWithSources,
@@ -112,10 +113,21 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
       input.data.result,
       expectedRequestedUrl,
     );
+
+    let phase11Run: Awaited<ReturnType<typeof startPhase11Research>> | null = null;
+    try {
+      phase11Run = await startPhase11Research(db, runner.userId, job.entityId);
+    } catch {
+      phase11Run = null;
+    }
+
     return c.json({
       job: { id: completed.job.id, status: completed.job.status },
       sourcePersistence: completed.sourcePersistence,
       resultAccepted: true,
+      phase11Research: phase11Run
+        ? { queued: true, runId: phase11Run.id, jobIds: phase11Run.jobIds }
+        : { queued: false },
     });
   } catch (error) {
     if (error instanceof ResearchLeaseLostError) {
