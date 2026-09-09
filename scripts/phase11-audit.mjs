@@ -91,7 +91,10 @@ for (const [needle, label] of [
 
 requireText(verifier, 'checks.foreignKeyViolations === 0', 'foreign key verification');
 requireText(verifier, 'checks.criticalConflictStopsPipeline === true', 'D1 conflict gate');
-requireText(phase, 'CURRENT_PHASE = 11', 'runtime Phase 11 marker');
+const currentPhaseMatch = /CURRENT_PHASE\s*=\s*(\d+)/u.exec(phase);
+if (!currentPhaseMatch || Number(currentPhaseMatch[1]) < 11) {
+  throw new Error('Phase 11 audit requires runtime phase 11 or later.');
+}
 
 for (const [needle, label] of [
   ['AUTOMATED RESEARCH + EVIDENCE', 'research UI'],
