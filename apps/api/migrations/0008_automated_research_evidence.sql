@@ -73,3 +73,28 @@ BEGIN
       AND source.prospect_id = run.prospect_id
   ) THEN RAISE(ABORT, 'RESEARCH_RUN_EVIDENCE_PROSPECT_MISMATCH') END;
 END;
+
+CREATE TRIGGER IF NOT EXISTS research_run_job_terminal_failure
+AFTER UPDATE OF status ON jobs
+WHEN NEW.status IN ('DEAD_LETTER', 'CANCELLED')
+BEGIN
+  UPDATE research_run_jobs
+  SET status = 'FAILED', updated_at = NEW.updated_at
+  WHERE job_id = NEW.id AND status = 'PENDING';
+
+  UPDATE research_runs
+  SET status = 'FAILED', completed_at = COALESCE(completed_at, NEW.updated_at), updated_at = NEW.updated_at
+  WHERE id IN (SELECT run_id FROM research_run_jobs WHERE job_id = NEW.id)
+    AND status IN ('QUEUED', 'RUNNING');
+END;
+
+CREATE TRIGGER IF NOT EXISTS research_run_job_block_completion_after_failure
+BEFORE UPDATE OF status ON research_run_jobs
+WHEN NEW.status = 'COMPLETED'
+  AND EXISTS (
+    SELECT 1 FROM research_runs run
+    WHERE run.id = NEW.run_id AND run.status = 'FAILED'
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'RESEARCH_RUN_ALREADY_FAILED');
+END;
