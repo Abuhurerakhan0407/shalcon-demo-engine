@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 11 diagnostic agents typecheck"
-    key: "phase11-diagnostic-agents-typecheck"
+  - label: ":mag: Confirm Phase 11 API error source"
+    key: "phase11-confirm-api-error-source"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,13 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm --workspace @shalcon/agents run typecheck
+        set +e
+        output="$(npm --workspace @shalcon/api run typecheck 2>&1)"
+        code=$?
+        set -e
+        printf "%s\n" "$output"
+        test "$code" -ne 0
+        grep -q "research-agent.ts" <<<"$output"
       '
     plugins:
       - docker#v5.13.0:
