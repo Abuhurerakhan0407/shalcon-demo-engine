@@ -8,8 +8,6 @@ import {
   type ResearchSourceInput,
 } from '@shalcon/agents';
 import {
-  JobContextRepository,
-  JobRepository,
   ProspectRepository,
   SourceRecordRepository,
   type D1DatabaseLike,
@@ -18,6 +16,17 @@ import {
 } from '@shalcon/db';
 
 import type { AiExtractionResult } from './ai-result';
+
+const RESEARCH_PAGE_ROLES = new Set<ResearchPageRole>([
+  'HOME',
+  'SERVICES',
+  'CONTACT',
+  'ABOUT',
+  'BOOKING',
+  'LOCATION',
+  'HOURS',
+  'OTHER',
+]);
 
 export interface Phase11ResearchRun {
   id: string;
@@ -49,11 +58,14 @@ export function isPhase11JobPayload(value: unknown): value is Phase11JobPayload 
     typeof item.sourceRecordId === 'string' &&
     item.sourceRecordId.length > 0 &&
     typeof item.sourceRole === 'string' &&
+    RESEARCH_PAGE_ROLES.has(item.sourceRole as ResearchPageRole) &&
     typeof item.sourceRank === 'number' &&
+    Number.isInteger(item.sourceRank) &&
     item.sourceRank >= 1 &&
     item.sourceRank <= 6 &&
     typeof item.sourceText === 'string' &&
     item.sourceText.length > 0 &&
+    item.sourceText.length <= 40_000 &&
     Array.isArray(item.sources) &&
     item.sources.length === 1 &&
     item.sources[0]?.sourceId === item.sourceRecordId
@@ -122,7 +134,9 @@ export async function startPhase11Research(
 ): Promise<Phase11ResearchRun> {
   const prospect = await new ProspectRepository(db).getByIdForUser(prospectId, userId);
   if (!prospect) throw new Error('Prospect not found.');
-  if (prospect.currentState === 'DUPLICATE') throw new Error('Research belongs on the canonical prospect.');
+  if (prospect.currentState === 'DUPLICATE') {
+    throw new Error('Research belongs on the canonical prospect.');
+  }
 
   const sources = await new SourceRecordRepository(db).listForProspect(prospect.id);
   const prioritized = prioritizeResearchSources(
@@ -146,7 +160,16 @@ export async function startPhase11Research(
           model, started_at, completed_at, created_at, updated_at
         ) VALUES (?, ?, ?, 'QUEUED', ?, '[]', ?, ?, NULL, ?, ?)
       `)
-      .bind(runId, prospect.id, userId, JSON.stringify(selectedSources), options.model ?? null, now, now, now),
+      .bind(
+        runId,
+        prospect.id,
+        userId,
+        JSON.stringify(selectedSources),
+        options.model ?? null,
+        now,
+        now,
+        now,
+      ),
   ];
 
   for (const source of prioritized) {
@@ -195,7 +218,10 @@ export async function startPhase11Research(
     throw new Error('Automated research queueing did not persist atomically.');
   }
 
-  await db.prepare("UPDATE research_runs SET status = 'RUNNING', updated_at = ? WHERE id = ?").bind(now, runId).run();
+  await db
+    .prepare("UPDATE research_runs SET status = 'RUNNING', updated_at = ? WHERE id = ?")
+    .bind(now, runId)
+    .run();
   return { id: runId, prospectId: prospect.id, status: 'RUNNING', jobIds, selectedSources };
 }
 
@@ -212,7 +238,9 @@ function exactExcerpt(sourceText: string, value: string): string | null {
 async function deterministicEvidenceId(jobId: string, field: string, value: string): Promise<string> {
   const bytes = new TextEncoder().encode(`phase11:${jobId}:${field}:${value}`);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
-  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const hex = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
   return `ev_ai_${hex.slice(0, 32)}`;
 }
 
@@ -263,7 +291,14 @@ async function finalizeRunIfReady(
         SET status = ?, conflicts_json = ?, completed_at = ?, updated_at = ?
         WHERE id = ? AND prospect_id = ?
       `)
-      .bind(blocked ? 'BLOCKED' : 'COMPLETED', JSON.stringify(conflicts), now, now, runId, prospectId),
+      .bind(
+        blocked ? 'BLOCKED' : 'COMPLETED',
+        JSON.stringify(conflicts),
+        now,
+        now,
+        runId,
+        prospectId,
+      ),
     db
       .prepare(`
         INSERT OR IGNORE INTO research(
@@ -278,7 +313,12 @@ async function finalizeRunIfReady(
         `research_${runId}`,
         values('description')[0] ?? 'Evidence-backed automated website research.',
         JSON.stringify(values('service')),
-        JSON.stringify([...values('phone'), ...values('email'), ...values('address'), ...values('openingHours')]),
+        JSON.stringify([
+          ...values('phone'),
+          ...values('email'),
+          ...values('address'),
+          ...values('openingHours'),
+        ]),
         JSON.stringify(values('socialLink')),
         JSON.stringify(evidenceIds),
         JSON.stringify({ runId, conflicts, blocked, evidenceOnly: true, verifiedFactPromotion: false }),
@@ -317,18 +357,20 @@ export async function completePhase11ResearchExtraction(
   }
 
   const source = await new SourceRecordRepository(db).getById(payload.sourceRecordId);
-  if (!source || source.prospectId !== job.entityId) throw new Error('Phase 11 source does not match the job prospect.');
+  if (!source || source.prospectId !== job.entityId) {
+    throw new Error('Phase 11 source does not match the job prospect.');
+  }
 
   const mapping = await db
     .prepare(`
-      SELECT run.user_id, mapping.status
+      SELECT run.user_id, run.status AS run_status, mapping.status
       FROM research_run_jobs mapping
       JOIN research_runs run ON run.id = mapping.run_id
       WHERE mapping.run_id = ? AND mapping.job_id = ? AND mapping.source_record_id = ?
-        AND run.prospect_id = ?
+        AND run.prospect_id = ? AND run.status IN ('QUEUED', 'RUNNING')
     `)
     .bind(payload.researchRunId, job.id, payload.sourceRecordId, job.entityId)
-    .first<{ user_id: string; status: string }>();
+    .first<{ user_id: string; run_status: string; status: string }>();
   if (!mapping || mapping.user_id !== userId || mapping.status !== 'PENDING') {
     throw new Error('Phase 11 research mapping is unavailable to this runner.');
   }
@@ -343,6 +385,8 @@ export async function completePhase11ResearchExtraction(
   `;
   const statements = [];
   for (const item of unique.values()) {
+    const excerpt = exactExcerpt(payload.sourceText, item.value);
+    if (!excerpt) continue;
     const evidenceId = await deterministicEvidenceId(job.id, item.field, item.value);
     statements.push(
       db
@@ -363,7 +407,7 @@ export async function completePhase11ResearchExtraction(
           source.sourceUrl,
           item.confidence,
           item.verificationStatus,
-          exactExcerpt(payload.sourceText, item.value),
+          excerpt,
           now,
           job.id,
           userId,
