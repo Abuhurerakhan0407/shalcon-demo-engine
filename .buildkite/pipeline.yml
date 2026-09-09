@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Locate Phase 11 API type error"
-    key: "phase11-locate-api-type-error"
+  - label: ":mag: Phase 11 API typecheck"
+    key: "phase11-api-typecheck"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,13 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        set +e
-        output="$(npm --workspace @shalcon/api run typecheck 2>&1)"
-        code=$?
-        set -e
-        printf "%s\n" "$output"
-        test "$code" -ne 0
-        grep -Eq "(research-agent-routes|research-agent-failures|ai-runner-routes|phase11\.integration|index\.ts)" <<<"$output"
+        npm --workspace @shalcon/api run typecheck
       '
     plugins:
       - docker#v5.13.0:
