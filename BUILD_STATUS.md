@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 10 — ScrapeGraphAI + Ollama (closure)**  
+Current phase: **Phase 11 — Automated Research + Evidence**  
 Launch progress: **~36%**  
-Status: **PHASE 9 CLOSED — PHASE 10 REAL OLLAMA ACCEPTANCE PASSED; FINAL LATEST-HEAD HOSTED REGRESSION PENDING**
+Status: **PHASE 10 CLOSED — PHASE 11 ACTIVE**
 
 ## Completed phases
 
@@ -48,7 +48,7 @@ Hosted closure evidence:
 
 The earlier Android → Termux → Ubuntu/proot ARM64 self-hosted run remains useful supplemental evidence, but Phase 9 closure is based on the clean hosted Buildkite regression above.
 
-## Phase 10 — ScrapeGraphAI + Ollama
+### Phase 10 — ScrapeGraphAI + Ollama ✅
 
 Implemented:
 
@@ -71,15 +71,13 @@ Implemented:
 - grammar-compatible schema sent to Ollama while runtime/cloud validation remains authoritative
 - canonicalization of model `"null"` sentinels to real JSON `null` / `[]` without inventing facts
 
-Hosted regression evidence before the final Ollama compatibility fixes:
+Hosted regression evidence:
 
 - Buildkite Build **#44**
 - Commit: `463e7327519a27d02176fc636f3d1cea2e10c8b3`
 - Hosted queue: `linux-small`
-- Pipeline upload: ✅
-- Full Phase 10 hosted regression: ✅
+- Full Phase 10 regression: ✅
 - Build result: **Passed in 3m 10s**
-- Covers typecheck, lint, unit, D1/workerd gates, Chromium E2E, Python local-runner tests, production build, Phase 0–10 audits, schema/provenance/lease/cloud-completion contracts, and Ollama offline behavior.
 
 Real Ollama acceptance evidence:
 
@@ -96,33 +94,61 @@ Real Ollama acceptance evidence:
 - Unsupported opening hours/social links: `[]`
 - Services: `Haircut`, `Styling`
 - Real generation completed successfully against the production `ai-smoke` path.
-- The local source used for the successful run was patched to the same canonicalization logic committed in `7f98296d3cf06cebdc39aeb10b22ba5099716caf`; repository head `277985030934e8ec0f02e899b63c37e123c21c22` adds the corresponding regression coverage.
+- Canonicalization fix: `7f98296d3cf06cebdc39aeb10b22ba5099716caf`
+- Regression coverage: `277985030934e8ec0f02e899b63c37e123c21c22`
 
-Post-#44 Phase 10 compatibility commits now on `main`:
+Final latest-head closure regression:
 
-- `b9b8fa5b439bce16111ec59a5a4a6fc1566074a5` — grammar-compatible Ollama extraction schema
-- `7f98296d3cf06cebdc39aeb10b22ba5099716caf` — canonicalize Ollama null sentinels
-- `277985030934e8ec0f02e899b63c37e123c21c22` — regression coverage for null-sentinel canonicalization
+- Buildkite Build **#53**
+- Commit: `289f644e9dcbb4c94fc7f1f77e17c649a83759a9`
+- Pipeline upload: ✅
+- Phase 10 hosted regression: ✅
+- Build result: **Passed in 2m 15s**
+- This build contains the post-#44 Ollama grammar compatibility and null-sentinel fixes and is the authoritative final hosted Phase 10 closure gate.
 
 ## Phase 10 acceptance gates
 
-- Local model can extract the sample business schema from bounded source content: ✅ real `qwen3:0.6b` Ollama run passed
+- Local model can extract the sample business schema from bounded source content: ✅
 - Structured result is schema validated before completion/persistence: ✅
 - Malformed model output is rejected and never promoted to verified facts: ✅
 - Runner handles Ollama offline/timeout safely with a non-secret error: ✅
 - Provider/model/source provenance is retained in the result: ✅
 - ScrapeGraphAI/Ollama integration can be disabled without breaking the existing manual path: ✅
 - Real model absence handling returns canonical JSON `null` / `[]` rather than string sentinels: ✅
-- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green on the **latest Phase 10 head**: ⏳ final hosted rerun required because compatibility fixes landed after Buildkite #44
+- Typecheck/lint/unit/D1/Playwright/Python/build/audits remain green on latest Phase 10 head: ✅ Buildkite #53
+
+## Phase 11 — Automated Research + Evidence
+
+Target scope:
+
+- research agent
+- page prioritization
+- service extraction
+- contact extraction
+- location extraction
+- opening-hours extraction
+- official social extraction
+- confidence engine
+- cross-source comparison
+- conflict detection
+- research UI
+
+Acceptance targets:
+
+- every visible candidate fact has evidence
+- critical conflicts stop pipeline
+- low-confidence facts stay unverified
+- rerun preserves audit history
+- AI does not overwrite official evidence silently
 
 ## Current CI condition
 
-GitHub-hosted private-repository allocation remains unavailable on this account, but Buildkite hosted Linux is the clean zero-cost fallback regression environment for private-repository phase gates. `.buildkite/pipeline.yml` is connected and operational.
+GitHub-hosted private-repository allocation remains unavailable on this account, but Buildkite hosted Linux remains the clean zero-cost fallback regression environment for private-repository phase gates.
 
 ## Blocked
 
-The real-model blocker is cleared. Phase 10 now has one remaining closure gate: run the full Buildkite Phase 10 regression on current `main` (`277985030934e8ec0f02e899b63c37e123c21c22` or a descendant containing the same fixes). Phase 11 must not begin until that latest-head regression is green.
+No Phase 10 blocker remains. Phase 11 implementation can proceed.
 
 ## Next action
 
-Run one fresh Buildkite build from current `main`. If the full Phase 10 regression is green, record the Buildkite build number/result/commit here, mark Phase 10 closed, and immediately proceed to **Phase 11 — Automated Research + Evidence**.
+Implement Phase 11 against the existing Phase 4 evidence core, Phase 8 job system, Phase 9 research capture, and Phase 10 structured local extraction. Preserve evidence provenance, audit history, ownership/lease rules, and `verified: false` for unreviewed AI output.
