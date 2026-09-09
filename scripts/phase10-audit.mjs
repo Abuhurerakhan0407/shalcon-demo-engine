@@ -60,7 +60,8 @@ assert(apiRoutes.includes('completeWithResult'), 'validated AI result is not sto
 assert(apiRoutes.includes('verifiedFactPromotion: false'), 'cloud completion must declare no verified-fact promotion');
 assert(!apiRoutes.includes('EvidenceRepository') && !apiRoutes.includes('ProspectFact'), 'Phase 10 AI route must not promote evidence/facts');
 assert(apiIndex.includes("app.route('/api/v1/runner/ai', aiRunnerRoutes)"), 'AI runner route is not mounted');
-assert(phase.includes('CURRENT_PHASE = 10'), 'API current phase is not 10');
+const phaseMatch = phase.match(/CURRENT_PHASE\s*=\s*(\d+)/u);
+assert(phaseMatch && Number(phaseMatch[1]) >= 10, 'API current phase regressed below 10');
 
 assert(pythonTests.includes('test_ollama_offline_error_is_safe'), 'Ollama offline test missing');
 assert(pythonTests.includes('test_business_schema_rejects_extra_missing_and_oversized_fields'), 'malformed schema test missing');
