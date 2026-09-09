@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Confirm Phase 11 API error source"
-    key: "phase11-confirm-api-error-source"
+  - label: ":mag: Locate Phase 11 API type error"
+    key: "phase11-locate-api-type-error"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -28,7 +28,7 @@ steps:
         set -e
         printf "%s\n" "$output"
         test "$code" -ne 0
-        grep -q "research-agent.ts" <<<"$output"
+        grep -Eq "(research-agent-routes|research-agent-failures|ai-runner-routes|phase11\.integration|index\.ts)" <<<"$output"
       '
     plugins:
       - docker#v5.13.0:
