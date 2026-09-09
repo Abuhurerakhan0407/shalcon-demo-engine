@@ -38,6 +38,8 @@ for (const [needle, label] of [
   ['CREATE TABLE IF NOT EXISTS research_run_evidence', 'research run evidence provenance table'],
   ['RESEARCH_RUN_JOB_PROSPECT_MISMATCH', 'run/job prospect guard'],
   ['RESEARCH_RUN_EVIDENCE_PROSPECT_MISMATCH', 'run/evidence prospect guard'],
+  ['research_run_job_terminal_failure', 'terminal extraction failure propagation'],
+  ['research_run_job_block_completion_after_failure', 'failed-run completion guard'],
 ]) requireText(migration, needle, label);
 
 for (const [needle, label] of [
@@ -57,7 +59,7 @@ requireText(agentTests, 'critical scalar conflicts', 'conflict regression');
 for (const [needle, label] of [
   ["source.provider !== 'PLAYWRIGHT'", 'Playwright-source boundary'],
   ['prioritizeResearchSources', 'orchestrated page prioritization'],
-  ["job_type, entity_id", 'job creation'],
+  ['job_type, entity_id', 'job creation'],
   ["'LOCAL_AI_EXTRACT'", 'local AI extraction jobs'],
   ['sourceRecordId', 'single-source extraction binding'],
   ['activeLeaseSql', 'active lease persistence guard'],
