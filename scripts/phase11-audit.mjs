@@ -19,6 +19,7 @@ const [
   verifier,
   phase,
   researchUi,
+  apiIndex,
 ] = await Promise.all([
   text('apps/api/migrations/0008_automated_research_evidence.sql'),
   text('packages/agents/src/research.ts'),
@@ -30,6 +31,7 @@ const [
   text('scripts/verify-phase11-d1.mjs'),
   text('apps/api/src/phase.ts'),
   text('apps/web/src/research/ResearchPage.tsx'),
+  text('apps/api/src/index.ts'),
 ]);
 
 for (const [needle, label] of [
@@ -97,5 +99,11 @@ for (const [needle, label] of [
   ['Probability is not verification.', 'verification warning UI'],
   ['Conflicting candidate evidence', 'conflict UI'],
 ]) requireText(researchUi, needle, label);
+
+for (const [needle, label] of [
+  ["import { researchAgentRoutes } from './research-agent-routes';", 'research operator route import'],
+  ["app.use('/api/v1/research/*', requireAuth);", 'research operator auth boundary'],
+  ["app.route('/api/v1/research', researchAgentRoutes);", 'research operator route mount'],
+]) requireText(apiIndex, needle, label);
 
 console.log('Phase 11 audit passed.');
