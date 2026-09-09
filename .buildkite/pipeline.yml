@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 11 Playwright E2E"
-    key: "phase11-playwright-e2e"
+  - label: ":snake: Phase 11 Python runner"
+    key: "phase11-python-runner"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -22,8 +22,9 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npx playwright install --with-deps chromium
-        npm run test:e2e
+        python -m pip install -e "apps/local-runner[dev]"
+        python -m playwright install --with-deps --only-shell chromium
+        npm run test:python
       '
     plugins:
       - docker#v5.13.0:
