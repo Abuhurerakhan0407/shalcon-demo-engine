@@ -88,8 +88,9 @@ describe('assessWebsiteOpportunity', () => {
       ]),
     );
     expect(result.evidenceSourceIds).toEqual(['src_home']);
-    expect(result.qualityRating).toBe('FAIR');
-    expect(result.recommendation).toBe('LOW_PRIORITY');
+    expect(result.qualityScore).toBe(60);
+    expect(result.qualityRating).toBe('POOR');
+    expect(result.recommendation).toBe('DEMO_WORTHY');
   });
 
   it('rates captured site failure as a supported opportunity without inventing content defects', () => {
