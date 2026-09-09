@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { hashSessionToken } from './auth';
 import { aiExtractionResultSchema } from './ai-result';
 import type { Bindings } from './context';
+import { completePhase11ResearchExtraction, isPhase11JobPayload } from './research-agent';
 
 const completionSchema = z.object({ result: aiExtractionResultSchema }).strict();
 const sourceSchema = z
@@ -120,24 +121,63 @@ aiRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
 
   if (!sameSources(payload.data.sources, parsed.data.result.provenance)) {
     return c.json(
-      { error: { code: 'AI_PROVENANCE_MISMATCH', message: 'AI result provenance does not match the claimed sources.' } },
+      {
+        error: {
+          code: 'AI_PROVENANCE_MISMATCH',
+          message: 'AI result provenance does not match the claimed sources.',
+        },
+      },
       422,
     );
   }
   if (payload.data.model !== undefined && payload.data.model !== parsed.data.result.model) {
     return c.json(
-      { error: { code: 'AI_MODEL_MISMATCH', message: 'AI result model does not match the claimed model.' } },
+      {
+        error: {
+          code: 'AI_MODEL_MISMATCH',
+          message: 'AI result model does not match the claimed model.',
+        },
+      },
       422,
     );
   }
 
+  const now = new Date().toISOString();
   try {
+    if (isPhase11JobPayload(claimedPayload)) {
+      await completePhase11ResearchExtraction(
+        db,
+        runner.userId,
+        runner.id,
+        job,
+        claimedPayload,
+        parsed.data.result,
+        now,
+      );
+      const completedJob = await new JobRepository(db).getById(job.id);
+      if (!completedJob || completedJob.status !== 'COMPLETED') {
+        throw new Error('Phase 11 completion did not persist.');
+      }
+      return c.json({
+        job: {
+          id: completedJob.id,
+          jobType: completedJob.jobType,
+          entityId: completedJob.entityId,
+          status: completedJob.status,
+          completedAt: completedJob.completedAt,
+        },
+        result: parsed.data.result,
+        verifiedFactPromotion: false,
+        phase11EvidencePersistence: true,
+      });
+    }
+
     const completed = await new RunnerJobRepository(db).completeWithResult(
       job.id,
       runner.userId,
       runner.id,
       JSON.stringify(parsed.data.result),
-      new Date().toISOString(),
+      now,
     );
     return c.json({
       job: {
@@ -149,6 +189,7 @@ aiRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
       },
       result: JSON.parse(completed.context.resultJson ?? '{}') as unknown,
       verifiedFactPromotion: false,
+      phase11EvidencePersistence: false,
     });
   } catch {
     return c.json(
