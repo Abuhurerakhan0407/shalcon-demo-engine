@@ -2,27 +2,22 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 12 audit unit tests"
-    key: "phase12-audit-unit"
+  - label: ":test_tube: Phase 12 strong-site unit"
+    key: "phase12-strong-site-unit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-          > /etc/apt/sources.list.d/nodesource.list
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
-
-        test -f package-lock.json
         npm ci
-        npx vitest run packages/agents/src/website-audit.test.ts --reporter=verbose
+        npx vitest run packages/agents/src/website-audit.test.ts -t "strong captured website" --reporter=verbose
       '
     plugins:
       - docker#v5.13.0:
