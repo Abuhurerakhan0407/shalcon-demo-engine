@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 12 — Website Opportunity Audit**  
-Launch progress: **~39%**  
-Status: **PHASE 11 CLOSED — PHASE 12 ACTIVE**
+Current phase: **Phase 13 — Demo Worthiness Scoring**  
+Launch progress: **~42%**  
+Status: **PHASE 12 CLOSED — PHASE 13 ACTIVE**
 
 ## Completed phases
 
@@ -157,26 +157,87 @@ Final closure evidence:
 - Build result: **Passed in 3m 36s**
 - The earlier full-regression failure was traced to a stale navigation E2E expectation after the Phase 11 Research workspace replaced the placeholder page. The test was aligned to the actual Phase 11 heading and the complete regression then passed.
 
-## Phase 12 — Website Opportunity Audit
+### Phase 12 — Website Opportunity Audit ✅
+
+Implemented:
+
+- website-not-found evidence handling without converting absence of capture into proof that no website exists
+- deterministic mobile/desktop website opportunity assessment
+- desktop and mobile screenshot provenance
+- CTA detection
+- contact-path inspection
+- booking-path detection
+- Salon & Spa service-presentation inspection
+- desktop/mobile horizontal-overflow detection
+- browser-error diagnostic signals
+- evidence-backed observation records with source and screenshot linkage
+- deterministic current-site quality score/rating and recommendation
+- strong-site skip behavior rather than manufactured criticism
+- repeat audit-run history
+- authenticated audit routes
+- D1 persistence and foreign-key/evidence integrity checks
+- pipeline-state isolation: audit does not silently advance prospect state
+
+Hardening found during hosted regression:
+
+- generic `spa` wording was removed from service-presentation detection so a business category/name cannot falsely prove that services are actually presented
+- captured `/contact` links are recognized correctly across concatenated source boundaries instead of being missed because of regex boundary assumptions
+
+Acceptance gates:
+
+- good website can be downgraded/skipped: ✅
+- no unsupported criticism: ✅
+- audit observations link to evidence/screenshot: ✅
+- repeat runs traceable: ✅
+- missing website evidence is not overclaimed as factual nonexistence: ✅
+- audit does not silently advance prospect state: ✅
+- foreign-key/evidence integrity: ✅
+
+Hosted closure evidence:
+
+- Phase 12 audit unit suite: **Buildkite #164 ✅**
+- Full unit regression after audit fixes: **Buildkite #165 ✅**
+- Real D1/Workerd Phase 12 acceptance: **Buildkite #166 ✅**
+- Final full Phase 12 hosted regression: **Buildkite #167 ✅**
+- Code commit under final regression: `1532e3cfd716eacdce03e2d450d7826a22d7ddd2`
+- Hosted queue: `linux-small`
+- Final full regression status: **SUCCESS**
+
+## Phase 13 — Demo Worthiness Scoring
 
 Target scope:
 
-- no-website detection
-- mobile/desktop screenshot audit
-- CTA detection
-- contact-path inspection
-- booking detection
-- service-presentation audit
-- obvious layout/error detection
-- evidence-backed issue records
-- current-site quality rating
+- deterministic 100-point component calculator
+- evidence link per scoring component
+- thresholds
+- score UI
+- human-readable reasons
+- reject / research-more / demo-qualified transitions
+
+Canonical score model from the master contract:
+
+- Business/niche fit: 20
+- Website need: 25
+- Available verified data: 15
+- Usable brand/identity signals: 10
+- Ability-to-pay signal: 15
+- Contactability: 10
+- Recent activity: 5
+
+Thresholds:
+
+- 85–100: priority
+- 70–84: generate demo
+- 50–69: research/manual review
+- below 50: skip
 
 Acceptance targets:
 
-- good website can be downgraded/skipped
-- no unsupported criticism
-- audit observations link to evidence/screenshot
-- repeat runs traceable
+- code calculates score
+- AI cannot override total
+- thresholds enforce states
+- rejected lead cannot generate/send automatically
+- missing evidence reduces score rather than fabricating evidence
 
 ## Current CI condition
 
@@ -184,8 +245,12 @@ GitHub-hosted private-repository allocation remains unavailable on this account,
 
 ## Blocked
 
-No Phase 11 blocker remains.
+No Phase 12 blocker remains. Phase 13 can proceed.
+
+## Last verified code commit
+
+`1532e3cfd716eacdce03e2d450d7826a22d7ddd2` — final full Phase 12 hosted regression, Buildkite #167 SUCCESS.
 
 ## Next action
 
-Implement Phase 12 against the existing Phase 9 browser capture/evidence boundary and Phase 11 research provenance. Audit only captured, evidence-backed website conditions; preserve repeat-run history and never manufacture negative findings when the page evidence does not support them.
+Implement Phase 13 against the existing Phase 11 evidence/conflict layer and Phase 12 website audit output. Keep scoring deterministic and evidence-linked; AI may explain a score but must never set or override the numeric total. Enforce state transitions so low-score/rejected prospects cannot progress into automatic demo generation or outreach.
