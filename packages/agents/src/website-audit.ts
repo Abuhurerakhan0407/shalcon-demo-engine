@@ -67,7 +67,7 @@ export interface WebsiteAuditAssessment {
 const CTA_PATTERN = /\b(book|call|contact|schedule|reserve|appointment|get started|enquire|inquire)\b/iu;
 const CONTACT_PATTERN = /(mailto:|tel:|\/contact(?:[/?#]|$)|get-in-touch|reach-us)/iu;
 const BOOKING_PATTERN = /(book(?:ing)?|appointment|reserve|fresha|calendly|mindbody|treatwell)/iu;
-const SERVICES_PATTERN = /(services?|treatments?|price list|pricing|menu|haircut|styling|facial|massage|spa)/iu;
+const SERVICES_PATTERN = /(services?|treatments?|price list|pricing|menu|haircut|styling|facial|massage)/iu;
 
 function sourceHaystack(source: WebsiteAuditSource): string {
   return [source.sourceUrl, source.title, source.text, source.html, ...source.discoveredLinks].join('\n');
