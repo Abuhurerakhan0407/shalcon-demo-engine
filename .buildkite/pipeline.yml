@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Known-good agent unit baseline"
-    key: "agents-baseline-unit"
+  - label: ":test_tube: Phase 12 audit unit suite"
+    key: "phase12-audit-unit-suite"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,7 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npx vitest run packages/agents/src/research.test.ts --reporter=verbose
+        npx vitest run packages/agents/src/website-audit.test.ts --reporter=verbose
       '
     plugins:
       - docker#v5.13.0:
