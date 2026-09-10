@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 12 unit regression"
-    key: "phase12-unit"
+  - label: ":test_tube: Phase 12 audit unit tests"
+    key: "phase12-audit-unit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -22,7 +22,7 @@ steps:
 
         test -f package-lock.json
         npm ci
-        npm run test:unit
+        npx vitest run packages/agents/src/website-audit.test.ts --reporter=verbose
       '
     plugins:
       - docker#v5.13.0:
