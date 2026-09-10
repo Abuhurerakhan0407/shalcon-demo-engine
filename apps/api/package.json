@@ -28,7 +28,7 @@
     "test:d1:phase8-worker": "wrangler dev src/phase8.integration.ts --local --port 8796 --persist-to ../../.wrangler/phase8-d1-test",
     "test:d1:phase9-worker": "wrangler dev src/phase9.test-worker.ts --local --port 8797 --persist-to ../../.wrangler/phase9-d1-test",
     "test:d1:phase11-worker": "wrangler dev src/phase11.integration.ts --local --port 8798 --persist-to ../../.wrangler/phase11-d1-test",
-    "test:d1:phase12-worker": "wrangler dev src/phase12.startup.integration.ts --local --port 8799 --persist-to ../../.wrangler/phase12-d1-test"
+    "test:d1:phase12-worker": "wrangler dev src/phase12.integration.ts --local --port 8799 --persist-to ../../.wrangler/phase12-d1-test"
   },
   "dependencies": {
     "hono": "^4.13.5",
