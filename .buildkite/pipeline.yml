@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 14 policy tests"
-    key: "phase14-policy-tests"
+  - label: ":test_tube: Phase 14 unit + architecture audit"
+    key: "phase14-unit-audit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,7 +17,8 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npx vitest run apps/api/src/brand-template-policy.test.ts
+        npm run test:unit
+        npm run test:phase14:audit
       '
     plugins:
       - docker#v5.13.0:
