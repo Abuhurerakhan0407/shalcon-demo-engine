@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":cloudflare: Phase 14 worker startup"
-    key: "phase14-worker-startup"
-    timeout_in_minutes: 20
+  - label: ":database: Phase 14 D1 acceptance"
+    key: "phase14-d1"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
@@ -17,17 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        rm -rf .wrangler/phase14-startup-test
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase14-startup-test
-        npx wrangler dev src/phase14.integration.ts --local --port 8801 --persist-to ../../.wrangler/phase14-startup-test > /tmp/phase14-worker.log 2>&1 &
-        worker=$!
-        trap "kill $worker 2>/dev/null || true" EXIT
-        sleep 6
-        if ! kill -0 $worker 2>/dev/null; then
-          cat /tmp/phase14-worker.log
-          exit 1
-        fi
+        npm run test:phase14:d1
       '
     plugins:
       - docker#v5.13.0:
