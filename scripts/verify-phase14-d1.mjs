@@ -4,10 +4,10 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 const persistDir = '.wrangler/phase14-d1-test';
 
-function run(command, args, options = {}) {
+function run(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      cwd: options.cwd ?? process.cwd(),
+      cwd: process.cwd(),
       env: process.env,
       stdio: 'inherit',
       shell: false,
@@ -62,41 +62,17 @@ async function terminate(child) {
 }
 
 await rm(persistDir, { recursive: true, force: true });
-const wrangler = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const apiCwd = 'apps/api';
-const migrationArgs = [
-  'wrangler',
-  'd1',
-  'migrations',
-  'apply',
-  'DB',
-  '--local',
-  '--persist-to',
-  '../../.wrangler/phase14-d1-test',
-];
-await run(wrangler, migrationArgs, { cwd: apiCwd });
-await run(wrangler, migrationArgs, { cwd: apiCwd });
+const migrationArgs = ['--workspace', '@shalcon/api', 'run', 'db:migrate:phase14:local'];
+await run('npm', migrationArgs);
+await run('npm', migrationArgs);
 
-const worker = spawn(
-  wrangler,
-  [
-    'wrangler',
-    'dev',
-    'src/phase14.integration.ts',
-    '--local',
-    '--port',
-    '8801',
-    '--persist-to',
-    '../../.wrangler/phase14-d1-test',
-  ],
-  {
-    cwd: apiCwd,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    shell: false,
-    detached: process.platform !== 'win32',
-  },
-);
+const worker = spawn('npm', ['--workspace', '@shalcon/api', 'run', 'test:d1:phase14-worker'], {
+  cwd: process.cwd(),
+  env: process.env,
+  stdio: ['ignore', 'pipe', 'pipe'],
+  shell: false,
+  detached: process.platform !== 'win32',
+});
 let logs = '';
 worker.stdout?.on('data', (chunk) => (logs += String(chunk)));
 worker.stderr?.on('data', (chunk) => (logs += String(chunk)));
