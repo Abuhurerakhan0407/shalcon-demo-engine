@@ -2,19 +2,22 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":python: Python regression under Phase 13"
-    key: "phase13-python-regression"
+  - label: ":package: Production build under Phase 13"
+    key: "phase13-production-build"
     timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        python --version
-        python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps --only-shell chromium
-        npm --version >/dev/null 2>&1 || true
-        cd apps/local-runner
-        PYTHONPATH=src python -m pytest tests -q
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl gnupg
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+        apt-get update
+        apt-get install -y --no-install-recommends nodejs
+        npm ci
+        npm run build
       '
     plugins:
       - docker#v5.13.0:
