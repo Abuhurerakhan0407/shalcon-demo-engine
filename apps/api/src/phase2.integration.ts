@@ -18,7 +18,9 @@ type Bindings = { Bindings: Env };
 const integration = new Hono<Bindings>();
 
 const NOW = '2026-09-03T08:00:00.000Z';
-const EXPIRES = '2026-09-10T08:00:00.000Z';
+// Keep this fixture safely in the future so the auth acceptance test does not
+// become time-bombed by the real wall clock while still exercising expiry logic.
+const EXPIRES = '2099-12-31T23:59:59.000Z';
 const RAW_TOKEN = 'phase2-fixture-session-token';
 
 async function cleanup(db: D1DatabaseLike): Promise<void> {
