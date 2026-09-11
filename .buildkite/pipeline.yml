@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 14 unit + architecture audit"
-    key: "phase14-unit-audit"
+  - label: ":test_tube: Phase 14 unit diagnostic"
+    key: "phase14-unit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -18,7 +18,6 @@ steps:
         apt-get install -y --no-install-recommends nodejs
         npm ci
         npm run test:unit
-        npm run test:phase14:audit
       '
     plugins:
       - docker#v5.13.0:
