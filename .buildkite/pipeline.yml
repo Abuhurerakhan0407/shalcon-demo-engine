@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Inherited D1 gates under Phase 13"
-    key: "phase13-inherited-d1"
-    timeout_in_minutes: 45
+  - label: ":database: Phase 1-6 D1 compatibility"
+    key: "phase13-d1-early-half"
+    timeout_in_minutes: 35
     command: |
       bash -lc '
         set -euo pipefail
@@ -22,11 +22,6 @@ steps:
         npm run test:phase4:d1
         npm run test:phase5:d1
         npm run test:phase6:d1
-        npm run test:phase7:d1
-        npm run test:phase8:d1
-        npm run test:phase9:d1
-        npm run test:phase11:d1
-        npm run test:phase12:d1
       '
     plugins:
       - docker#v5.13.0:
