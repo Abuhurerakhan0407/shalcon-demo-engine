@@ -19,6 +19,7 @@
     "db:migrate:phase9:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase9-d1-test",
     "db:migrate:phase11:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase11-d1-test",
     "db:migrate:phase12:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase12-d1-test",
+    "db:migrate:phase14:local": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase14-d1-test",
     "test:d1:worker": "wrangler dev src/phase1.integration.ts --local --port 8790 --persist-to ../../.wrangler/phase1-d1-test",
     "test:d1:phase2-worker": "wrangler dev src/phase2.integration.ts --local --port 8791 --persist-to ../../.wrangler/phase2-d1-test",
     "test:d1:phase4-worker": "wrangler dev src/phase4.integration.ts --local --port 8792 --persist-to ../../.wrangler/phase4-d1-test",
@@ -28,7 +29,8 @@
     "test:d1:phase8-worker": "wrangler dev src/phase8.integration.ts --local --port 8796 --persist-to ../../.wrangler/phase8-d1-test",
     "test:d1:phase9-worker": "wrangler dev src/phase9.test-worker.ts --local --port 8797 --persist-to ../../.wrangler/phase9-d1-test",
     "test:d1:phase11-worker": "wrangler dev src/phase11.integration.ts --local --port 8798 --persist-to ../../.wrangler/phase11-d1-test",
-    "test:d1:phase12-worker": "wrangler dev src/phase12.integration.ts --local --port 8799 --persist-to ../../.wrangler/phase12-d1-test"
+    "test:d1:phase12-worker": "wrangler dev src/phase12.integration.ts --local --port 8799 --persist-to ../../.wrangler/phase12-d1-test",
+    "test:d1:phase14-worker": "wrangler dev src/phase14.integration.ts --local --port 8801 --persist-to ../../.wrangler/phase14-d1-test"
   },
   "dependencies": {
     "hono": "^4.13.5",
