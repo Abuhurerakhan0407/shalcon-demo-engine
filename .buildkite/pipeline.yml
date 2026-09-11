@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 12 hosted regression"
-    key: "phase12-hosted-regression"
+  - label: ":dart: Phase 13 hosted regression"
+    key: "phase13-hosted-regression"
     timeout_in_minutes: 60
     command: |
       bash -lc '
@@ -33,6 +33,8 @@ steps:
         python -m playwright install --with-deps --only-shell chromium
 
         npm run test:phase12
+        node scripts/verify-phase13-d1.mjs
+        node scripts/phase13-audit.mjs
       '
     plugins:
       - docker#v5.13.0:

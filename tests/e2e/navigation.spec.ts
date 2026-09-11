@@ -43,6 +43,7 @@ test('authenticated operator can navigate every dashboard route and logout', asy
     ['Campaigns', '/campaigns'],
     ['Prospects', '/prospects'],
     ['Research', '/research'],
+    ['Scoring', '/scoring'],
     ['Templates', '/templates'],
     ['Demos', '/demos'],
     ['QA Queue', '/qa'],
@@ -59,6 +60,8 @@ test('authenticated operator can navigate every dashboard route and logout', asy
       await expect(page.getByRole('heading', { name: 'One business. One identity.' })).toBeVisible();
     } else if (label === 'Research') {
       await expect(page.getByRole('heading', { name: 'Evidence before claims.' })).toBeVisible();
+    } else if (label === 'Scoring') {
+      await expect(page.getByRole('heading', { name: 'Evidence becomes a decision.' })).toBeVisible();
     } else if (label === 'Demos') {
       await expect(page.getByRole('heading', { name: 'Verified facts in. Private demo out.' })).toBeVisible();
     } else {
