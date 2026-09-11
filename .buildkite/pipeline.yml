@@ -2,31 +2,37 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Inherited D1 gates after fixture fix"
-    key: "phase13-inherited-d1-rerun"
-    timeout_in_minutes: 45
+  - label: ":dart: Phase 13 full hosted regression"
+    key: "phase13-full-regression"
+    timeout_in_minutes: 60
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
+
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
+
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+          > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
+
+        node --version
+        npm --version
+        python --version
+        test -f package-lock.json
+
         npm ci
-        npm run test:phase1:d1
-        npm run test:phase2:d1
-        npm run test:phase4:d1
-        npm run test:phase5:d1
-        npm run test:phase6:d1
-        npm run test:phase7:d1
-        npm run test:phase8:d1
-        npm run test:phase9:d1
-        npm run test:phase11:d1
-        npm run test:phase12:d1
+        python -m pip install -e "apps/local-runner[dev]"
+
+        npx playwright install --with-deps chromium
+        python -m playwright install --with-deps --only-shell chromium
+
+        npm run test:phase13
       '
     plugins:
       - docker#v5.13.0:
