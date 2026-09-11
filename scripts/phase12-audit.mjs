@@ -108,6 +108,9 @@ for (const [needle, label] of [
 
 requireText(verifier, 'checks.noUnsupportedCriticism === true', 'D1 unsupported-criticism gate');
 requireText(verifier, 'checks.foreignKeyViolations === 0', 'D1 foreign-key gate');
-requireText(phase, 'CURRENT_PHASE = 12', 'runtime Phase 12 marker');
+const phaseMatch = phase.match(/CURRENT_PHASE\s*=\s*(\d+)/u);
+if (!phaseMatch || Number(phaseMatch[1]) < 12) {
+  throw new Error('Phase 12 audit requires runtime phase 12 or later.');
+}
 
 console.log('Phase 12 audit passed.');
