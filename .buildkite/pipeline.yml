@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":typescript: Phase 14 typecheck diagnostic"
-    key: "phase14-typecheck"
+  - label: ":eslint: Phase 14 lint diagnostic"
+    key: "phase14-lint"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,7 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run typecheck
+        npm run lint
       '
     plugins:
       - docker#v5.13.0:
