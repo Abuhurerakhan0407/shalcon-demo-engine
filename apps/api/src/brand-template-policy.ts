@@ -100,6 +100,12 @@ function normalized(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
 }
 
+function canonicalNiche(value: string): string {
+  const compact = normalized(value);
+  if (compact === 'salonandspa' || compact === 'salonspa') return 'salonspa';
+  return compact;
+}
+
 function usableEvidence(item: EvidenceRecord): boolean {
   return item.verificationStatus !== 'REJECTED' && item.verificationStatus !== 'CONFLICTED';
 }
@@ -121,8 +127,8 @@ function explicitColors(value: string): string[] {
 }
 
 function eligibleRegistry(niche: string): TemplateDefinition[] {
-  const normalizedNiche = normalized(niche);
-  return TEMPLATE_REGISTRY.filter((template) => normalized(template.niche) === normalizedNiche);
+  const normalizedNiche = canonicalNiche(niche);
+  return TEMPLATE_REGISTRY.filter((template) => canonicalNiche(template.niche) === normalizedNiche);
 }
 
 export function inferBrandProfile(
@@ -205,7 +211,7 @@ function compatibleTheme(
 }
 
 function candidateScore(template: TemplateDefinition, signals: TemplateMatchSignals): number {
-  if (normalized(template.niche) !== normalized(signals.niche)) return 0;
+  if (canonicalNiche(template.niche) !== canonicalNiche(signals.niche)) return 0;
   let score = 50;
   score += Math.min(20, Math.max(0, signals.verifiedServiceCount) * 5);
   if (signals.brandProfile.evidenceIds.length > 0) score += 10;
@@ -219,7 +225,7 @@ export function evaluateTemplateCandidate(
   template: TemplateDefinition,
   signals: TemplateMatchSignals,
 ): TemplateCandidateEvaluation {
-  if (normalized(template.niche) !== normalized(signals.niche)) {
+  if (canonicalNiche(template.niche) !== canonicalNiche(signals.niche)) {
     throw new Error('Template is not eligible for this prospect niche.');
   }
   const sparseContentMode = signals.verifiedServiceCount < 3 || signals.officialAssetCount === 0;
@@ -284,7 +290,7 @@ export function validateManualTemplateSelection(
 ): { template: TemplateDefinition; themeDNA: ThemeDNA } {
   const template = findTemplateDefinition(templateId, templateVersion);
   if (!template) throw new Error('Manual selection must use an allowed template registry entry.');
-  if (normalized(template.niche) !== normalized(niche)) {
+  if (canonicalNiche(template.niche) !== canonicalNiche(niche)) {
     throw new Error('Manual selection template is not eligible for this prospect niche.');
   }
   return { template, themeDNA: parseThemeDNA(themeDNA) };
