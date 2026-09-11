@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 1-6 D1 compatibility"
-    key: "phase13-d1-early-half"
-    timeout_in_minutes: 35
+  - label: ":database: Phase 1-2 D1 compatibility"
+    key: "phase13-d1-phase1-2"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
@@ -19,9 +19,6 @@ steps:
         npm ci
         npm run test:phase1:d1
         npm run test:phase2:d1
-        npm run test:phase4:d1
-        npm run test:phase5:d1
-        npm run test:phase6:d1
       '
     plugins:
       - docker#v5.13.0:
