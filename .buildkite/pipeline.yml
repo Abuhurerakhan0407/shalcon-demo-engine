@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":dart: Phase 13 full hosted regression"
-    key: "phase13-full-regression"
+  - label: ":art: Phase 14 full hosted regression"
+    key: "phase14-hosted-regression"
     timeout_in_minutes: 60
     command: |
       bash -lc '
@@ -32,7 +32,7 @@ steps:
         npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
 
-        npm run test:phase13
+        npm run test:phase14
       '
     plugins:
       - docker#v5.13.0:

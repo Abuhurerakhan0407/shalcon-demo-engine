@@ -28,6 +28,28 @@ async function authenticate(page: Page) {
     }
     await route.fallback();
   });
+  await page.route('**/mock-api/api/v1/brand-template/registry', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        templates: [{
+          id: 'elane-v8', version: '8.0.0', niche: 'salon-and-spa',
+          archetype: 'premium-cinematic-salon-spa', requiredFields: ['identity.businessName'],
+          defaultTheme: {
+            paletteId: 'elane-paper', typographyId: 'instrument-editorial', radius: 'soft',
+            density: 'airy', heroVariant: 'editorial', imageTreatment: 'collage', motionPreset: 'luxury',
+          },
+        }],
+        themeOptions: {
+          paletteId: ['elane-paper', 'warm-stone'], typographyId: ['instrument-editorial', 'modern-contrast'],
+          radius: ['sharp', 'soft', 'rounded'], density: ['airy', 'balanced', 'dense'],
+          heroVariant: ['editorial', 'split', 'immersive'], imageTreatment: ['full-bleed', 'framed', 'collage'],
+          motionPreset: ['subtle', 'editorial', 'luxury'],
+        },
+      }),
+    });
+  });
 }
 
 test('authenticated operator can navigate every dashboard route and logout', async ({ page }) => {
@@ -62,6 +84,8 @@ test('authenticated operator can navigate every dashboard route and logout', asy
       await expect(page.getByRole('heading', { name: 'Evidence before claims.' })).toBeVisible();
     } else if (label === 'Scoring') {
       await expect(page.getByRole('heading', { name: 'Evidence becomes a decision.' })).toBeVisible();
+    } else if (label === 'Templates') {
+      await expect(page.getByRole('heading', { name: 'Brand evidence becomes controlled design.' })).toBeVisible();
     } else if (label === 'Demos') {
       await expect(page.getByRole('heading', { name: 'Verified facts in. Private demo out.' })).toBeVisible();
     } else {
