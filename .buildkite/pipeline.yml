@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Unit regression under Phase 13"
-    key: "phase13-unit-regression"
-    timeout_in_minutes: 20
+  - label: ":database: Phase 12 D1 regression"
+    key: "phase12-d1-under-phase13"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
@@ -17,7 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run test:unit
+        npm run test:phase12:d1
       '
     plugins:
       - docker#v5.13.0:
