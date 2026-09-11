@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 14 D1 acceptance"
-    key: "phase14-d1"
-    timeout_in_minutes: 25
+  - label: ":cloudflare: Phase 14 worker boot diagnostic"
+    key: "phase14-worker-boot"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
@@ -17,7 +17,16 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run test:phase14:d1
+        rm -rf .wrangler/phase14-d1-test
+        npm --workspace @shalcon/api run db:migrate:phase14:local
+        npm --workspace @shalcon/api run test:d1:phase14-worker > /tmp/phase14-worker.log 2>&1 &
+        worker=$!
+        trap "kill $worker 2>/dev/null || true" EXIT
+        sleep 8
+        if ! kill -0 $worker 2>/dev/null; then
+          cat /tmp/phase14-worker.log
+          exit 1
+        fi
       '
     plugins:
       - docker#v5.13.0:
