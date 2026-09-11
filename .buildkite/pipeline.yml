@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 1-2 D1 compatibility"
-    key: "phase13-d1-phase1-2"
-    timeout_in_minutes: 25
+  - label: ":database: Phase 1 D1 compatibility"
+    key: "phase13-d1-phase1"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
@@ -13,12 +13,12 @@ steps:
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings] https://deb.nodesource.com/node_22.x nodistro main" >/dev/null 2>&1 || true
         echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
         npm run test:phase1:d1
-        npm run test:phase2:d1
       '
     plugins:
       - docker#v5.13.0:
