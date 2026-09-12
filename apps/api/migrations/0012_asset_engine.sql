@@ -1,0 +1,77 @@
+PRAGMA foreign_keys = ON;
+
+ALTER TABLE assets ADD COLUMN source_captured_at TEXT;
+ALTER TABLE assets ADD COLUMN association_assumption TEXT;
+ALTER TABLE assets ADD COLUMN watermark_status TEXT NOT NULL DEFAULT 'UNKNOWN'
+  CHECK (watermark_status IN ('CLEAR', 'WATERMARKED', 'UNKNOWN'));
+ALTER TABLE assets ADD COLUMN asset_status TEXT NOT NULL DEFAULT 'ACTIVE'
+  CHECK (asset_status IN ('ACTIVE', 'BROKEN', 'DISABLED'));
+ALTER TABLE assets ADD COLUMN optimization_json TEXT NOT NULL DEFAULT '{}';
+
+CREATE TRIGGER IF NOT EXISTS prospect_official_asset_metadata_insert
+BEFORE INSERT ON assets
+WHEN NEW.usage_classification = 'PROSPECT_OFFICIAL'
+BEGIN
+  SELECT CASE WHEN NEW.prospect_id IS NULL
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_PROSPECT') END;
+  SELECT CASE WHEN NEW.source_type NOT IN ('OFFICIAL_WEBSITE', 'OFFICIAL_PROFILE', 'OFFICIAL_BRAND_UPLOAD')
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_OFFICIAL_SOURCE') END;
+  SELECT CASE WHEN NEW.source_url IS NULL OR NEW.source_url = ''
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_SOURCE_URL') END;
+  SELECT CASE WHEN NEW.source_captured_at IS NULL OR NEW.source_captured_at = ''
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_CAPTURE_TIME') END;
+  SELECT CASE WHEN NEW.association_assumption != 'OFFICIAL_PROSPECT_SOURCE'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_ASSOCIATION') END;
+  SELECT CASE WHEN NEW.watermark_status != 'CLEAR'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_MUST_BE_CLEAR') END;
+  SELECT CASE WHEN NEW.asset_status != 'ACTIVE'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_MUST_BE_ACTIVE') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS prospect_official_asset_metadata_update
+BEFORE UPDATE OF usage_classification, prospect_id, source_type, source_url, source_captured_at,
+  association_assumption, watermark_status, asset_status ON assets
+WHEN NEW.usage_classification = 'PROSPECT_OFFICIAL'
+BEGIN
+  SELECT CASE WHEN NEW.prospect_id IS NULL
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_PROSPECT') END;
+  SELECT CASE WHEN NEW.source_type NOT IN ('OFFICIAL_WEBSITE', 'OFFICIAL_PROFILE', 'OFFICIAL_BRAND_UPLOAD')
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_OFFICIAL_SOURCE') END;
+  SELECT CASE WHEN NEW.source_url IS NULL OR NEW.source_url = ''
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_SOURCE_URL') END;
+  SELECT CASE WHEN NEW.source_captured_at IS NULL OR NEW.source_captured_at = ''
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_CAPTURE_TIME') END;
+  SELECT CASE WHEN NEW.association_assumption != 'OFFICIAL_PROSPECT_SOURCE'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_REQUIRES_ASSOCIATION') END;
+  SELECT CASE WHEN NEW.watermark_status != 'CLEAR'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_MUST_BE_CLEAR') END;
+  SELECT CASE WHEN NEW.asset_status != 'ACTIVE'
+    THEN RAISE(ABORT, 'PROSPECT_OFFICIAL_ASSET_MUST_BE_ACTIVE') END;
+END;
+
+CREATE TABLE IF NOT EXISTS asset_selection_runs (
+  id TEXT PRIMARY KEY,
+  prospect_id TEXT NOT NULL REFERENCES prospects(id) ON DELETE CASCADE,
+  template_match_id TEXT NOT NULL REFERENCES template_match_runs(id) ON DELETE RESTRICT,
+  content_run_id TEXT NOT NULL REFERENCES content_generation_runs(id) ON DELETE RESTRICT,
+  engine_version TEXT NOT NULL,
+  assignments_json TEXT NOT NULL,
+  asset_ids_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_asset_selection_runs_prospect
+  ON asset_selection_runs(prospect_id, created_at DESC, id DESC);
+
+CREATE TRIGGER IF NOT EXISTS asset_selection_validate_insert
+BEFORE INSERT ON asset_selection_runs
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (
+    SELECT 1 FROM template_match_runs match
+    WHERE match.id = NEW.template_match_id AND match.prospect_id = NEW.prospect_id
+  ) THEN RAISE(ABORT, 'ASSET_TEMPLATE_MATCH_PROSPECT_MISMATCH') END;
+  SELECT CASE WHEN NOT EXISTS (
+    SELECT 1 FROM content_generation_runs content
+    WHERE content.id = NEW.content_run_id AND content.prospect_id = NEW.prospect_id
+  ) THEN RAISE(ABORT, 'ASSET_CONTENT_RUN_PROSPECT_MISMATCH') END;
+END;
