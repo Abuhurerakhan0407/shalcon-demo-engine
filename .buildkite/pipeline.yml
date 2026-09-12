@@ -2,23 +2,33 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":package: Phase 14 worker bundle"
-    key: "phase14-worker-bundle"
+  - label: ":cloudflare: Phase 14 worker lifetime"
+    key: "phase14-worker-lifetime"
     timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
         apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl gnupg
+        apt-get install -y --no-install-recommends ca-certificates curl gnupg coreutils
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
         echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
+        rm -rf .wrangler/phase14-d1-test
+        npm --workspace @shalcon/api run db:migrate:phase14:local
         cd apps/api
-        npx wrangler deploy src/phase14.integration.ts --dry-run --outdir=/tmp/phase14-dist
+        set +e
+        timeout 15s npx wrangler dev src/phase14.integration.ts --local --port 8801 --persist-to ../../.wrangler/phase14-d1-test > /tmp/phase14-worker.log 2>&1
+        code=$?
+        set -e
+        if [ "$code" -eq 124 ]; then
+          exit 0
+        fi
+        cat /tmp/phase14-worker.log
+        exit "$code"
       '
     plugins:
       - docker#v5.13.0:
