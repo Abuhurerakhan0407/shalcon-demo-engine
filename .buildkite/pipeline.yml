@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 15 D1 stage probe"
-    key: "phase15-d1-stage-probe"
+  - label: ":mag: Phase 15 architecture audit"
+    key: "phase15-audit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -19,7 +19,7 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        npm run test:phase15:d1
+        npm run test:phase15:audit
       '
     plugins:
       - docker#v5.13.0:
