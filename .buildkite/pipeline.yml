@@ -2,15 +2,15 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":cloudflare: Phase 14 worker lifetime"
-    key: "phase14-worker-lifetime"
+  - label: ":satellite: Phase 14 acceptance HTTP probe"
+    key: "phase14-acceptance-http"
     timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
         apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl gnupg coreutils
+        apt-get install -y --no-install-recommends ca-certificates curl gnupg
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
         echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
@@ -19,16 +19,19 @@ steps:
         npm ci
         rm -rf .wrangler/phase14-d1-test
         npm --workspace @shalcon/api run db:migrate:phase14:local
-        cd apps/api
-        set +e
-        timeout 15s npx wrangler dev src/phase14.integration.ts --local --port 8801 --persist-to ../../.wrangler/phase14-d1-test > /tmp/phase14-worker.log 2>&1
-        code=$?
-        set -e
-        if [ "$code" -eq 124 ]; then
-          exit 0
+        npm --workspace @shalcon/api run test:d1:phase14-worker > /tmp/phase14-worker.log 2>&1 &
+        worker=$!
+        trap "kill $worker 2>/dev/null || true" EXIT
+        for attempt in $(seq 1 40); do
+          if curl -fsS http://127.0.0.1:8801/healthz >/dev/null; then
+            break
+          fi
+          sleep 1
+        done
+        if ! curl -fsS http://127.0.0.1:8801/phase14 >/tmp/phase14-response.json; then
+          cat /tmp/phase14-worker.log
+          exit 1
         fi
-        cat /tmp/phase14-worker.log
-        exit "$code"
       '
     plugins:
       - docker#v5.13.0:
