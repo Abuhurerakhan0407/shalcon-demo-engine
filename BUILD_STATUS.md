@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 14 — Brand Analyzer + Template Matcher**  
-Launch progress: **~45%**  
-Status: **PHASE 13 CLOSED — PHASE 14 ACTIVE**
+Current phase: **Phase 15 — Content Engine**  
+Launch progress: **~48%**  
+Status: **PHASE 14 CLOSED — PHASE 15 ACTIVE**
 
 ## Completed phases
 
@@ -46,58 +46,65 @@ Page prioritization, per-source extraction, candidate grounding, confidence/conf
 Evidence-backed mobile/desktop audit, screenshots, CTA/contact/booking/service checks, deterministic site-quality recommendation and repeatable history. Final hosted closure: **Buildkite #167 ✅**, commit `1532e3cfd716eacdce03e2d450d7826a22d7ddd2`.
 
 ### Phase 13 — Demo Worthiness Scoring ✅
+Deterministic 100-point score, evidence-linked components, threshold-enforced transitions, score history and operator workspace. Final hosted closure: **Buildkite #191 ✅**, commit `906c4d638acad1452e09b08cab4831c52786d169`.
+
+### Phase 14 — Brand Analyzer + Template Matcher ✅
 
 Implemented:
 
-- deterministic 100-point calculator
-- business/niche 20, website need 25, verified data 15, brand signals 10, business-capacity signals 15, contactability 10, recent activity 5
-- evidence references required before a component can receive points
-- deterministic thresholds: 85+ priority, 70+ generate, 50+ research-more, below 50 reject
-- `AUDITED -> SCORED -> DEMO_QUALIFIED | RESEARCH_MORE | REJECTED` enforcement
-- immutable D1 score history
-- authenticated scoring API and operator scoring workspace
-- human-readable component reasons
-- AI cannot set or override the numeric total
-- rejected prospects cannot advance automatically into demo generation
-- real D1/Workerd acceptance and architecture audit
-
-Acceptance gates:
-
-- code calculates score: ✅
-- AI cannot override total: ✅
-- thresholds enforce states: ✅
-- rejected lead cannot generate/send automatically: ✅
-- missing evidence reduces score rather than fabricating evidence: ✅
-- full hosted regression on latest Phase 13 head: ✅
-
-Final closure evidence:
-
-- Buildkite Build **#191 ✅**
-- Commit: `906c4d638acad1452e09b08cab4831c52786d169`
-- Hosted queue: `linux-small`
-- Full Phase 0–13 regression status: **SUCCESS**
-
-## In progress — Phase 14: Brand Analyzer + Template Matcher
-
-Build:
-
-- evidence-bound brand profile
-- controlled theme selection
+- evidence-bound brand profiles
+- controlled ThemeDNA selection
 - registry-only archetype/template selection
 - deterministic template eligibility and fit score
 - safe default path for unknown brands
 - sparse-content compatible layout selection
 - selection explanation
 - immutable/versioned selection history
-- logged human override for a mismatched selection
+- logged human override with supersession lineage
+- authenticated brand/template API
+- D1 acceptance and architecture audit
+
+Acceptance gates:
+
+- selection uses allowed registry only: ✅
+- unknown brand does not invent palette story: ✅
+- insufficient content selects compatible layout: ✅
+- template mismatch can be manually changed: ✅
+- selection is logged/versioned: ✅
+- full hosted Phase 0–14 regression: ✅
+
+Final closure evidence:
+
+- Buildkite Build **#235 ✅**
+- Commit: `fed7c83852af630a1cc4398aa59cef4b4d5ce107`
+- Hosted queue: `linux-small`
+- Full Phase 0–14 regression status: **SUCCESS**
+
+## In progress — Phase 15: Content Engine
+
+Build:
+
+- verified-only input selector
+- safe headline generator
+- service-description generator
+- about-copy generator
+- CTA generator with safe placeholder fallback
+- strict generated-copy schema
+- block-level and run-level evidence mapping
+- prompt/model/version provenance
+- immutable D1 content-generation history
+- authenticated content API
+- safe missing-data hiding
+- long business/service-name handling
 
 Acceptance targets:
 
-- selection uses allowed registry only
-- unknown brand does not invent palette story
-- insufficient content selects compatible layout
-- template mismatch can be manually changed
-- selection is logged/versioned
+- no unsupported claims
+- no invented service
+- no invented social proof
+- missing data hides safely
+- generated copy stores source evidence IDs
+- long business/service names are handled safely
 
 ## Current CI condition
 
@@ -109,8 +116,8 @@ None.
 
 ## Last verified commit
 
-`906c4d638acad1452e09b08cab4831c52786d169` — final full Phase 13 hosted regression, Buildkite #191 SUCCESS.
+`fed7c83852af630a1cc4398aa59cef4b4d5ce107` — final full Phase 14 hosted regression, Buildkite #235 SUCCESS.
 
 ## Next action
 
-Implement and validate Phase 14 against the existing evidence layer, deterministic scoring decision, versioned ÉLANE registry and controlled ThemeDNA. Do not infer a brand palette/positioning without source evidence; unknown or sparse prospects must take the safe compatible path.
+Validate the Phase 15 content engine with strict TypeScript/lint/unit tests, D1/Workerd acceptance, architecture audit, then run the full Phase 0–15 hosted regression. Do not let unverified evidence or generated marketing claims enter prospect copy.

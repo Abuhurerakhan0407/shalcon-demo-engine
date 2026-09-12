@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":art: Phase 14 full hosted regression"
-    key: "phase14-hosted-regression"
-    timeout_in_minutes: 60
+  - label: ":memo: Phase 15 targeted validation"
+    key: "phase15-targeted-validation"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
@@ -23,16 +23,15 @@ steps:
 
         node --version
         npm --version
-        python --version
         test -f package-lock.json
 
         npm ci
-        python -m pip install -e "apps/local-runner[dev]"
-
-        npx playwright install --with-deps chromium
-        python -m playwright install --with-deps --only-shell chromium
-
-        npm run test:phase14
+        npm run typecheck
+        npm run lint
+        npm run test:unit
+        npm run test:phase15:d1
+        npm run test:phase15:audit
+        npm run build
       '
     plugins:
       - docker#v5.13.0:

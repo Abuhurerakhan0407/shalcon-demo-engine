@@ -25,6 +25,7 @@ import {
   verifyOAuthState,
 } from './auth';
 import { brandTemplateRoutes } from './brand-template-routes';
+import { contentRoutes } from './content-routes';
 import { demoAdminRoutes } from './demo-admin-routes';
 import { demoRoutes } from './demo-routes';
 import { CURRENT_PHASE } from './phase';
@@ -138,6 +139,7 @@ app.use('/api/v1/research/*', requireAuth);
 app.use('/api/v1/audits/*', requireAuth);
 app.use('/api/v1/scoring/*', requireAuth);
 app.use('/api/v1/brand-template/*', requireAuth);
+app.use('/api/v1/content/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
 app.use('/api/v1/runner/operator/*', requireAuth);
 
@@ -284,6 +286,7 @@ app.route('/api/v1/research', researchAgentRoutes);
 app.route('/api/v1/audits/website', websiteAuditRoutes);
 app.route('/api/v1/scoring', scoringRoutes);
 app.route('/api/v1/brand-template', brandTemplateRoutes);
+app.route('/api/v1/content', contentRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
