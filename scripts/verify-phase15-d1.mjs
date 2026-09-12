@@ -80,7 +80,7 @@ worker.stderr?.on('data', (chunk) => (logs += String(chunk)));
 try {
   const response = await waitFor('http://127.0.0.1:8802/phase15');
   const result = await response.json();
-  if (result.ok !== true || result.stage !== 'brand-template') {
+  if (result.ok !== true || result.stage !== 'first-content-run') {
     throw new Error(`Phase 15 diagnostic failed: ${JSON.stringify(result, null, 2)}`);
   }
   console.log(JSON.stringify(result, null, 2));
