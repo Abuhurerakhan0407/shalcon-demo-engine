@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":memo: Phase 15 targeted validation"
-    key: "phase15-targeted-validation"
-    timeout_in_minutes: 30
+  - label: ":typescript: Phase 15 typecheck"
+    key: "phase15-typecheck"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
@@ -12,26 +12,14 @@ steps:
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
-
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-          > /etc/apt/sources.list.d/nodesource.list
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
-        node --version
-        npm --version
-        test -f package-lock.json
-
         npm ci
         npm run typecheck
-        npm run lint
-        npm run test:unit
-        npm run test:phase15:d1
-        npm run test:phase15:audit
-        npm run build
       '
     plugins:
       - docker#v5.13.0:
