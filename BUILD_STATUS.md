@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 15 — Content Engine**  
-Launch progress: **~48%**  
-Status: **PHASE 14 CLOSED — PHASE 15 ACTIVE**
+Current phase: **Phase 16 — Asset Engine**  
+Launch progress: **~52%**  
+Status: **PHASE 15 CLOSED — PHASE 16 ACTIVE**
 
 ## Completed phases
 
@@ -49,62 +49,60 @@ Evidence-backed mobile/desktop audit, screenshots, CTA/contact/booking/service c
 Deterministic 100-point score, evidence-linked components, threshold-enforced transitions, score history and operator workspace. Final hosted closure: **Buildkite #191 ✅**, commit `906c4d638acad1452e09b08cab4831c52786d169`.
 
 ### Phase 14 — Brand Analyzer + Template Matcher ✅
+Evidence-bound brand profiles, controlled ThemeDNA, registry-only template selection, deterministic fit scoring, safe defaults, sparse-content handling and versioned/manual override history. Final hosted closure: **Buildkite #235 ✅**, commit `fed7c83852af630a1cc4398aa59cef4b4d5ce107`.
+
+### Phase 15 — Content Engine ✅
 
 Implemented:
 
-- evidence-bound brand profiles
-- controlled ThemeDNA selection
-- registry-only archetype/template selection
-- deterministic template eligibility and fit score
-- safe default path for unknown brands
-- sparse-content compatible layout selection
-- selection explanation
-- immutable/versioned selection history
-- logged human override with supersession lineage
-- authenticated brand/template API
-- D1 acceptance and architecture audit
+- verified-only input selector
+- safe headline, service-description, about and CTA generation
+- safe placeholder CTA and missing-section hiding
+- strict generated-copy schema
+- block-level and run-level evidence mapping
+- prompt/model/schema version provenance
+- immutable D1 content-generation history
+- authenticated content API
+- repeat generation without losing history
+- long business/service-name handling
 
 Acceptance gates:
 
-- selection uses allowed registry only: ✅
-- unknown brand does not invent palette story: ✅
-- insufficient content selects compatible layout: ✅
-- template mismatch can be manually changed: ✅
-- selection is logged/versioned: ✅
-- full hosted Phase 0–14 regression: ✅
+- no unsupported claims: ✅
+- no invented service: ✅
+- no invented social proof: ✅
+- missing data hides safely: ✅
+- generated copy stores source evidence IDs: ✅
+- long business/service names handled: ✅
+- full hosted Phase 0–15 regression: ✅
 
 Final closure evidence:
 
-- Buildkite Build **#235 ✅**
-- Commit: `fed7c83852af630a1cc4398aa59cef4b4d5ce107`
+- Buildkite Build **#251 ✅**
+- Commit: `be9f91660d7356518ebdea75adc9d82654d6ef59`
 - Hosted queue: `linux-small`
-- Full Phase 0–14 regression status: **SUCCESS**
+- Full Phase 0–15 regression status: **SUCCESS**
 
-## In progress — Phase 15: Content Engine
+## In progress — Phase 16: Asset Engine
 
 Build:
 
-- verified-only input selector
-- safe headline generator
-- service-description generator
-- about-copy generator
-- CTA generator with safe placeholder fallback
-- strict generated-copy schema
-- block-level and run-level evidence mapping
-- prompt/model/version provenance
-- immutable D1 content-generation history
-- authenticated content API
-- safe missing-data hiding
-- long business/service-name handling
+- Shalcon-owned/licensed template asset registry
+- asset metadata and provenance
+- official prospect logo option
+- text-wordmark fallback
+- deterministic image-slot assignment
+- explicit asset usage classification
+- broken/unusable asset fallback
+- bounded image-dimension/optimization metadata
 
 Acceptance targets:
 
-- no unsupported claims
-- no invented service
-- no invented social proof
-- missing data hides safely
-- generated copy stores source evidence IDs
-- long business/service names are handled safely
+- no random third-party image reuse
+- no watermarked assets
+- missing logo does not break demo
+- stock/template imagery is never described as real business imagery
+- source metadata is available for external business assets
 
 ## Current CI condition
 
@@ -116,8 +114,8 @@ None.
 
 ## Last verified commit
 
-`fed7c83852af630a1cc4398aa59cef4b4d5ce107` — final full Phase 14 hosted regression, Buildkite #235 SUCCESS.
+`be9f91660d7356518ebdea75adc9d82654d6ef59` — final full Phase 15 hosted regression, Buildkite #251 SUCCESS.
 
 ## Next action
 
-Validate the Phase 15 content engine with strict TypeScript/lint/unit tests, D1/Workerd acceptance, architecture audit, then run the full Phase 0–15 hosted regression. Do not let unverified evidence or generated marketing claims enter prospect copy.
+Implement Phase 16 against the existing asset table, ÉLANE template registry and renderer contracts. Default to Shalcon-owned/licensed template imagery, permit prospect assets only when provenance and official association are explicit, and fail safely to a text wordmark or template asset when usage is uncertain or an asset is broken.
