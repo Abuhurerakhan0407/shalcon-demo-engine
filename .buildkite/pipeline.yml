@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 15 architecture audit"
-    key: "phase15-audit"
-    timeout_in_minutes: 20
+  - label: ":memo: Phase 15 full hosted regression"
+    key: "phase15-hosted-regression"
+    timeout_in_minutes: 60
     command: |
       bash -lc '
         set -euo pipefail
@@ -12,14 +12,27 @@ steps:
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
+
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+          > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
+        node --version
+        npm --version
+        python --version
+        test -f package-lock.json
+
         npm ci
-        npm run test:phase15:audit
+        python -m pip install -e "apps/local-runner[dev]"
+
+        npx playwright install --with-deps chromium
+        python -m playwright install --with-deps --only-shell chromium
+
+        npm run test:phase15
       '
     plugins:
       - docker#v5.13.0:
