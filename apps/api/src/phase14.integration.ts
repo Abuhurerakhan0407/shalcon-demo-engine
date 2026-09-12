@@ -22,6 +22,8 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.get('/healthz', (c) => c.json({ ok: true }));
+
 function iso(offsetSeconds: number): string {
   return new Date(Date.parse('2026-09-12T00:00:00.000Z') + offsetSeconds * 1000).toISOString();
 }
