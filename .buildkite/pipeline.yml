@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":cloudflare: Phase 12 worker boot baseline"
-    key: "phase12-worker-boot-baseline"
+  - label: ":satellite: Phase 14 HTTP health probe"
+    key: "phase14-http-health"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,16 +17,19 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        rm -rf .wrangler/phase12-d1-test
-        npm --workspace @shalcon/api run db:migrate:phase12:local
-        npm --workspace @shalcon/api run test:d1:phase12-worker > /tmp/phase12-worker.log 2>&1 &
+        rm -rf .wrangler/phase14-d1-test
+        npm --workspace @shalcon/api run db:migrate:phase14:local
+        npm --workspace @shalcon/api run test:d1:phase14-worker > /tmp/phase14-worker.log 2>&1 &
         worker=$!
         trap "kill $worker 2>/dev/null || true" EXIT
-        sleep 8
-        if ! kill -0 $worker 2>/dev/null; then
-          cat /tmp/phase12-worker.log
-          exit 1
-        fi
+        for attempt in $(seq 1 40); do
+          if curl -fsS http://127.0.0.1:8801/healthz | grep -q '"'"'ok'"'"':true'; then
+            exit 0
+          fi
+          sleep 1
+        done
+        cat /tmp/phase14-worker.log
+        exit 1
       '
     plugins:
       - docker#v5.13.0:
