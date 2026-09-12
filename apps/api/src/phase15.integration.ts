@@ -1,12 +1,15 @@
 import {
   CampaignRepository,
+  EvidenceRepository,
   ProspectRepository,
+  SourceRecordRepository,
   UserRepository,
   type D1DatabaseLike,
 } from '@shalcon/db';
 import { Hono } from 'hono';
 
 import { runAutomaticBrandTemplateMatch } from './brand-template';
+import { runContentGeneration } from './content-engine';
 
 interface Env { DB: D1DatabaseLike }
 const app = new Hono<{ Bindings: Env }>();
@@ -39,14 +42,41 @@ app.get('/phase15', async (c) => {
     createdAt: now,
     updatedAt: now,
   });
-  const match = await runAutomaticBrandTemplateMatch(db, userId, 'p15_diag', now);
+  await new SourceRecordRepository(db).create({
+    id: 'src_p15_diag',
+    prospectId: 'p15_diag',
+    provider: 'PHASE15_DIAGNOSTIC',
+    sourceType: 'WEBSITE_PAGE',
+    sourceUrl: 'https://p15-diag.example.com/',
+    rawJson: '{}',
+    capturedAt: now,
+  });
+  await new EvidenceRepository(db).create({
+    id: 'ev_p15_diag_service',
+    prospectId: 'p15_diag',
+    field: 'service',
+    value: 'Haircut',
+    sourceRecordId: 'src_p15_diag',
+    sourceUrl: 'https://p15-diag.example.com/',
+    sourceQuality: 1,
+    confidence: 0.96,
+    verificationStatus: 'VERIFIED',
+    excerpt: 'Haircut',
+    capturedAt: now,
+  });
+  await runAutomaticBrandTemplateMatch(db, userId, 'p15_diag', now);
+  const run = await runContentGeneration(db, userId, 'p15_diag', now);
   const state = await db
     .prepare('SELECT current_state FROM prospects WHERE id = ?')
     .bind('p15_diag')
     .first<{ current_state: string }>();
   return c.json({
-    ok: match.match.templateId.length > 0 && state?.current_state === 'TEMPLATE_MATCHED',
-    stage: 'brand-template',
+    ok:
+      state?.current_state === 'CONTENT_PENDING' &&
+      run.content.services.length === 1 &&
+      run.content.services[0]?.serviceName === 'Haircut' &&
+      run.evidenceIds.includes('ev_p15_diag_service'),
+    stage: 'first-content-run',
   });
 });
 
