@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":rewind: Phase 13 regression under Phase 14 head"
-    key: "phase13-baseline-under-phase14"
+  - label: ":art: Phase 14 full hosted regression"
+    key: "phase14-hosted-regression"
     timeout_in_minutes: 60
     command: |
       bash -lc '
@@ -12,18 +12,27 @@ steps:
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
+
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+          > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
+        node --version
+        npm --version
+        python --version
+        test -f package-lock.json
+
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
+
         npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
 
-        npm run test:phase13
+        npm run test:phase14
       '
     plugins:
       - docker#v5.13.0:
