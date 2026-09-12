@@ -8,6 +8,14 @@ function requireText(source, needle, label) {
   if (!source.includes(needle)) throw new Error(`Phase 13 audit missing ${label}.`);
 }
 
+function requirePhaseAtLeast(source, pattern, minimum, label) {
+  const match = source.match(pattern);
+  const value = match?.[1] ? Number(match[1]) : Number.NaN;
+  if (!Number.isInteger(value) || value < minimum) {
+    throw new Error(`Phase 13 audit missing ${label}.`);
+  }
+}
+
 const [
   schema,
   scoring,
@@ -107,11 +115,21 @@ requireText(verifier, 'checks.foreignKeyViolations === 0', 'D1 foreign-key gate'
 for (const [needle, label] of [
   ["{ to: '/scoring', label: 'Scoring'", 'scoring navigation'],
   ['<ScoringPage/>', 'scoring route UI'],
-  ['<strong>13</strong>', 'dashboard Phase 13 marker'],
 ]) requireText(app, needle, label);
+requirePhaseAtLeast(
+  app,
+  /<span>Current phase<\/span><strong>(\d+)<\/strong>/u,
+  13,
+  'dashboard phase marker at or beyond Phase 13',
+);
 requireText(navigation, "['Scoring', '/scoring']", 'Playwright scoring navigation coverage');
 requireText(navigation, "name: 'Evidence becomes a decision.'", 'Playwright scoring heading coverage');
-requireText(phase, 'CURRENT_PHASE = 13', 'runtime Phase 13 marker');
+requirePhaseAtLeast(
+  phase,
+  /CURRENT_PHASE\s*=\s*(\d+)/u,
+  13,
+  'runtime phase marker at or beyond Phase 13',
+);
 
 for (const [needle, label] of [
   ["AUDITED: ['SCORED'", 'AUDITED to SCORED state transition'],
