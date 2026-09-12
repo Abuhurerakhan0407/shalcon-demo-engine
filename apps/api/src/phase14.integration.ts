@@ -119,9 +119,25 @@ app.get('/phase14', async (c) => {
       selected.confidence, JSON.stringify(selected.reasons), JSON.stringify(selected.evidenceIds),
       selected.auditRunId, selected.safeDefault ? 1 : 0, selected.sparseContentMode ? 1 : 0, iso(8),
     ),
+    db.prepare(`
+      UPDATE prospects SET current_state = 'TEMPLATE_PENDING', archetype = ?, updated_at = ?
+      WHERE id = ? AND current_state = 'DEMO_QUALIFIED'
+        AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = ?)
+    `).bind(selected.archetype, iso(8), prospect.id, userId),
+    db.prepare(`
+      UPDATE prospects SET current_state = 'TEMPLATE_MATCHED', updated_at = ?
+      WHERE id = ? AND current_state = 'TEMPLATE_PENDING'
+        AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = ?)
+    `).bind(iso(8), prospect.id, userId),
   ]);
 
-  return c.json({ ok: writes.length === 2, stage: 'profile-match-batch' });
+  const state = await db.prepare('SELECT current_state FROM prospects WHERE id = ?').bind(prospect.id).first<{ current_state: string }>();
+  return c.json({
+    ok: writes.length === 4 && state?.current_state === 'TEMPLATE_MATCHED',
+    stage: 'full-persistence-batch',
+    firstChange: writes[2]?.meta?.changes ?? null,
+    secondChange: writes[3]?.meta?.changes ?? null,
+  });
 });
 
 export default app;
