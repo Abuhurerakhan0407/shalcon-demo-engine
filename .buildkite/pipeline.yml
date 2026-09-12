@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 14 transition outcome"
-    key: "phase14-transition-outcome"
+  - label: ":database: Phase 14 D1 metadata diagnostic"
+    key: "phase14-d1-metadata"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -27,7 +27,7 @@ steps:
           sleep 1
         done
         curl -fsS http://127.0.0.1:8801/phase14 >/tmp/phase14-response.json || { cat /tmp/phase14-worker.log; exit 1; }
-        node -e "const fs=require(\"fs\");const x=JSON.parse(fs.readFileSync(\"/tmp/phase14-response.json\",\"utf8\"));if(x.ok!==true)process.exit(1)"
+        node -e "const fs=require(\"fs\");const x=JSON.parse(fs.readFileSync(\"/tmp/phase14-response.json\",\"utf8\"));if(!(x.ok===true&&x.firstChange===null&&x.secondChange===null))process.exit(1)"
       '
     plugins:
       - docker#v5.13.0:
