@@ -10,6 +10,7 @@ import { deleteCookie, setCookie } from 'hono/cookie';
 import { logger } from 'hono/logger';
 
 import { aiRunnerRoutes } from './ai-runner-routes';
+import { assetRoutes } from './asset-routes';
 import {
   OAUTH_STATE_COOKIE,
   OAUTH_STATE_MAX_AGE_SECONDS,
@@ -140,6 +141,7 @@ app.use('/api/v1/audits/*', requireAuth);
 app.use('/api/v1/scoring/*', requireAuth);
 app.use('/api/v1/brand-template/*', requireAuth);
 app.use('/api/v1/content/*', requireAuth);
+app.use('/api/v1/assets/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
 app.use('/api/v1/runner/operator/*', requireAuth);
 
@@ -287,6 +289,7 @@ app.route('/api/v1/audits/website', websiteAuditRoutes);
 app.route('/api/v1/scoring', scoringRoutes);
 app.route('/api/v1/brand-template', brandTemplateRoutes);
 app.route('/api/v1/content', contentRoutes);
+app.route('/api/v1/assets', assetRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
@@ -306,7 +309,7 @@ app.get('/api/v1/runner/health', (c) =>
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } }, 404));
 app.onError((error, c) => {
   console.error('Unhandled request error', { name: error.name });
-  return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } }, 500);
+  return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } }, 500));
 });
 
 export default app;
