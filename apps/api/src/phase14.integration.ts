@@ -9,6 +9,8 @@ import {
 } from '@shalcon/db';
 import { Hono } from 'hono';
 
+import { runAutomaticBrandTemplateMatch } from './brand-template';
+
 interface Env {
   DB: D1DatabaseLike;
 }
@@ -158,7 +160,14 @@ app.get('/phase14', async (c) => {
     .run();
   await addAudit(db, userId, 'p14_rich', 'DEMO_WORTHY', iso(7));
 
-  return c.json({ ok: true, stage: 'fixture-setup' });
+  const richAuto = await runAutomaticBrandTemplateMatch(db, userId, 'p14_rich', iso(8));
+
+  return c.json({
+    ok: true,
+    stage: 'rich-auto',
+    templateId: richAuto.match.templateId,
+    stateSource: richAuto.match.selectionSource,
+  });
 });
 
 export default app;
