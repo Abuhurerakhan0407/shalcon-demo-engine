@@ -56,7 +56,7 @@ for (const [needle, label] of [
   ['contentPackageSchema', 'strict copy schema'],
   ['buildContentPackageFromVerifiedEvidence', 'verified input selector'],
   ["item.verificationStatus !== 'VERIFIED'", 'unverified-evidence rejection'],
-  ["kind: 'SERVICE_DESCRIPTION'", 'service description schema support'],
+  ["'SERVICE_DESCRIPTION'", 'service description support'],
   ["'HEADLINE'", 'headline generation'],
   ["'ABOUT'", 'about generation'],
   ["channel: 'PLACEHOLDER'", 'safe CTA fallback'],

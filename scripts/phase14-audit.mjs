@@ -8,6 +8,22 @@ function requireText(source, needle, label) {
   if (!source.includes(needle)) throw new Error(`Phase 14 audit missing ${label}.`);
 }
 
+function requirePhaseAtLeast(source, minimum) {
+  const match = source.match(/CURRENT_PHASE\s*=\s*(\d+)/u);
+  const phase = Number(match?.[1] ?? 0);
+  if (!Number.isInteger(phase) || phase < minimum) {
+    throw new Error(`Phase 14 audit requires runtime phase >= ${minimum}; found ${phase || 'unknown'}.`);
+  }
+}
+
+function requireUiPhaseAtLeast(source, minimum) {
+  const match = source.match(/Current phase<\/span><strong>(\d+)<\/strong>/u);
+  const phase = Number(match?.[1] ?? 0);
+  if (!Number.isInteger(phase) || phase < minimum) {
+    throw new Error(`Phase 14 audit requires dashboard phase >= ${minimum}; found ${phase || 'unknown'}.`);
+  }
+}
+
 const [
   migration,
   policy,
@@ -75,7 +91,7 @@ for (const [needle, label] of [
   ["assertProspectTransition('TEMPLATE_PENDING', 'TEMPLATE_MATCHED')", 'template-matched transition'],
   ['INSERT INTO brand_profiles', 'brand profile persistence'],
   ['INSERT INTO template_match_runs', 'template match persistence'],
-  ["selection_source", 'selection source persistence'],
+  ['selection_source', 'selection source persistence'],
   ['getBrandTemplateHistory', 'match history service'],
   ['overrideBrandTemplateMatch', 'manual override service'],
 ]) requireText(service, needle, label);
@@ -110,10 +126,10 @@ requireText(verifier, 'checks.foreignKeyViolations === 0', 'D1 foreign-key gate'
 for (const [needle, label] of [
   ["{ to: '/templates', label: 'Templates'", 'templates navigation'],
   ['<BrandTemplatePage/>', 'brand/template route UI'],
-  ['<strong>14</strong>', 'dashboard Phase 14 marker'],
 ]) requireText(app, needle, label);
+requireUiPhaseAtLeast(app, 14);
 requireText(navigation, "name: 'Brand evidence becomes controlled design.'", 'Playwright Brand/Templates heading');
-requireText(phase, 'CURRENT_PHASE = 14', 'runtime Phase 14 marker');
+requirePhaseAtLeast(phase, 14);
 
 for (const [needle, label] of [
   ['export const TEMPLATE_REGISTRY', 'template registry'],
