@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":satellite: Phase 14 acceptance HTTP probe"
-    key: "phase14-acceptance-http"
+  - label: ":database: Phase 14 transition batch diagnostic"
+    key: "phase14-transition-batch"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -28,10 +28,8 @@ steps:
           fi
           sleep 1
         done
-        if ! curl -fsS http://127.0.0.1:8801/phase14 >/tmp/phase14-response.json; then
-          cat /tmp/phase14-worker.log
-          exit 1
-        fi
+        curl -fsS http://127.0.0.1:8801/phase14 >/tmp/phase14-response.json || { cat /tmp/phase14-worker.log; exit 1; }
+        node -e "const fs=require(\"fs\");const x=JSON.parse(fs.readFileSync(\"/tmp/phase14-response.json\",\"utf8\"));if(!(x.ok===true&&x.firstChange===1&&x.secondChange===1))process.exit(1)"
       '
     plugins:
       - docker#v5.13.0:
