@@ -381,7 +381,9 @@ export async function runAutomaticBrandTemplateMatch(
       `)
       .bind(now, prospect.id, userId),
   ]);
-  if (writes[2]?.meta?.changes !== 1 || writes[3]?.meta?.changes !== 1) {
+  const pendingApplied = writes[2]?.success === true && (writes[2].meta?.changes ?? 0) >= 1;
+  const matchedApplied = writes[3]?.success === true && (writes[3].meta?.changes ?? 0) >= 1;
+  if (!pendingApplied || !matchedApplied) {
     throw new Error('Prospect changed concurrently; template match was not applied.');
   }
   const history = await getBrandTemplateHistory(db, userId, prospect.id);
