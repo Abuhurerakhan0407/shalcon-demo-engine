@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":playwright: E2E isolation"
-    key: "e2e-isolation"
+  - label: ":python: Local runner test isolation"
+    key: "python-isolation"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -17,8 +17,9 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npx playwright install --with-deps chromium
-        npm run test:e2e
+        python -m pip install -e "apps/local-runner[dev]"
+        python -m playwright install --with-deps --only-shell chromium
+        npm run test:python
       '
     plugins:
       - docker#v5.13.0:
