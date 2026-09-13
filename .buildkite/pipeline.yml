@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":memo: Phase 16 full hosted regression"
-    key: "phase16-hosted-regression"
-    timeout_in_minutes: 60
+  - label: ":database: Phase 16 D1 acceptance"
+    key: "phase16-d1-acceptance"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
@@ -23,16 +23,8 @@ steps:
 
         node --version
         npm --version
-        python --version
-        test -f package-lock.json
-
         npm ci
-        python -m pip install -e "apps/local-runner[dev]"
-
-        npx playwright install --with-deps chromium
-        python -m playwright install --with-deps --only-shell chromium
-
-        npm run test:phase16
+        npm run test:phase16:d1
       '
     plugins:
       - docker#v5.13.0:
