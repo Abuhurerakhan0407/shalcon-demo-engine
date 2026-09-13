@@ -9,6 +9,7 @@ from . import __version__
 from .ai_extract import AiExtractionError, ai_extract_job
 from .client import ClaimedJob, RunnerApiClient, RunnerApiError
 from .research import ResearchJobError, research_job
+from .visual_qa import VisualQaJobError, visual_qa_job
 
 JobHandler = Callable[[ClaimedJob], Any]
 
@@ -85,7 +86,11 @@ class LocalRunnerWorker:
         capabilities: list[str] | None = None,
     ) -> None:
         self.client = client
-        self.handlers = dict(DEFAULT_HANDLERS if handlers is None else handlers)
+        if handlers is None:
+            self.handlers = dict(DEFAULT_HANDLERS)
+            self.handlers["PLAYWRIGHT_VISUAL_QA"] = lambda job: visual_qa_job(job, self.client)
+        else:
+            self.handlers = dict(handlers)
         if capabilities is None:
             self.capabilities = sorted(self.handlers)
         else:
@@ -114,7 +119,7 @@ class LocalRunnerWorker:
         try:
             try:
                 result = handler(job)
-            except (ResearchJobError, AiExtractionError) as error:
+            except (ResearchJobError, AiExtractionError, VisualQaJobError) as error:
                 lease_keeper.stop()
                 lease_keeper.ensure_current()
                 self.client.fail(job.id, error.code, error.safe_message)
@@ -131,6 +136,8 @@ class LocalRunnerWorker:
                 self.client.complete_research(job.id, result)
             elif job.job_type == "LOCAL_AI_EXTRACT":
                 self.client.complete_ai(job.id, result)
+            elif job.job_type == "PLAYWRIGHT_VISUAL_QA":
+                self.client.complete_visual_qa(job.id, result)
             else:
                 self.client.complete(job.id, result)
             return RunOutcome(status="COMPLETED", job_id=job.id, job_type=job.job_type)
