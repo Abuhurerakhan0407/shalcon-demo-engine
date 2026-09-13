@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 18 — Visual QA + Screenshot Package**  
-Launch progress: **~58%**  
-Status: **PHASE 17 CLOSED — PHASE 18 ACTIVE**
+Current phase: **Phase 19 — Fact QA + Sales QA**  
+Launch progress: **~61%**  
+Status: **PHASE 18 CLOSED — PHASE 19 ACTIVE**
 
 ## Completed phases
 
@@ -62,82 +62,112 @@ Final closure evidence:
 - Buildkite **#283 ✅**
 - Commit: `006a55ec61aff04ce9015362e70de877bee32d0e`
 - Full Phase 0–16 hosted regression: **SUCCESS**
-- Phase-14 legacy fixture updated for Phase-16 provenance invariants without weakening production rules.
 
 ### Phase 17 — Automated Demo Builder ✅
+Deterministic orchestration over Phase 14–16 outputs; stale-input rejection; universal-renderer reuse; exact ÉLANE version preservation; private preview; immutable provenance; tenant checks; idempotency; guarded `CONTENT_PENDING → DEMO_CONFIGURED → RENDER_PENDING → RENDERED`; Phase-18/19 QA holds preserved.
 
-Implemented:
-
-- deterministic orchestration over Phase 14–16 outputs
-- latest compatible template/content/asset dependency validation
-- strict stale-input rejection
-- existing universal renderer/config path reuse
-- exact ÉLANE v8 template/version preservation
-- private operator preview generation
-- immutable automated-build provenance/history
-- tenant ownership checks
-- fingerprint-based idempotent reuse
-- fail-closed handling for missing dependencies
-- guarded `CONTENT_PENDING → DEMO_CONFIGURED → RENDER_PENDING → RENDERED` progression
-- Phase-18/19 QA holds preserved; no public-release bypass
-
-Phase-17 repair/verification evidence:
+Closure evidence:
 
 - Config/render isolation: **Buildkite #308 ✅**
 - D1 batch state truth: **Buildkite #310 ✅**
 - Fixed automated build transaction: **Buildkite #311 ✅**
 - Typecheck/lint/unit: **Buildkite #312 ✅**
-- Full Phase-17 D1 acceptance: **Buildkite #313 ✅**
-- Phase-17 architecture audit: **Buildkite #314 ✅**
-- First full regression attempt #315 failed because its CI harness omitted the known-good Python runner + Playwright browser setup; no product rule was weakened to address it.
-- Corrected authoritative full Phase 0–17 regression: **Buildkite #316 ✅**
-- Final fully verified commit: `006902486d73afa0ef5f0c7e1f204e1099d8db4b`
+- D1 acceptance: **Buildkite #313 ✅**
+- Architecture audit: **Buildkite #314 ✅**
+- Corrected full Phase 0–17 regression: **Buildkite #316 ✅**
+- Verified commit: `006902486d73afa0ef5f0c7e1f204e1099d8db4b`
 
-Root cause fixed during closure:
+### Phase 18 — Visual QA + Screenshot Package ✅
 
-- D1 batch statements and state transitions were committing correctly, but the builder treated per-statement `meta.changes === 1` as authoritative.
-- D1 metadata can differ in batched statements with triggers, causing a false failure even when persisted database state is correct.
-- The builder now keeps the guarded transactional batch, requires statement success, then verifies authoritative persisted demo, build provenance and final prospect state before accepting the transaction.
+Implemented:
 
-## In progress — Phase 18: Visual QA + Screenshot Package
+- local-runner Playwright visual-QA job capability
+- authenticated, lease-bound QA input and completion APIs
+- desktop and mobile browser checks
+- desktop full-page screenshot
+- desktop hero screenshot
+- mobile full-page screenshot
+- mobile hero screenshot
+- local-runner artifact references with SHA-256 provenance
+- D1 screenshot metadata and QA-run provenance
+- horizontal-overflow detection
+- broken-image detection
+- console-error detection
+- page-error detection
+- CTA detection
+- placeholder detection
+- concept-disclosure validation
+- noindex/nofollow validation
+- idempotent QA enqueue
+- tenant isolation and runner ownership guards
+- PASS progression: `RENDERED → VISUAL_QA_PENDING → FACT_QA_PENDING`
+- FAIL progression: `RENDERED → VISUAL_QA_PENDING → QA_FAILED`
+- visual failure blocks later fact/sales/send readiness
+- public release remains unavailable after visual PASS
+- existing universal renderer reused; no parallel renderer and no per-prospect deployment
+
+Acceptance evidence:
+
+- Phase-18 initial TypeScript/control-plane compile: **Buildkite #325 ✅**
+- Runner worker contract: **Buildkite #331 ✅**
+- Browser healthy + deliberately broken fixtures: **Buildkite #332 ✅**
+- Phase-18 acceptance typecheck after D1 worker integration: **Buildkite #337 ✅**
+- Full Phase-18 D1/Workerd acceptance: **Buildkite #339 ✅**
+- Phase-18 architecture audit: **Buildkite #341 ✅**
+- Strict regression — typecheck/lint/unit/E2E/Python/build + golden ÉLANE coverage: **Buildkite #342 ✅**
+- Authoritative full Phase 0–18 hosted regression: **Buildkite #343 ✅**
+- Final fully verified implementation commit: `5acc14ac7a9d1cb7a5f0a5e75efeb35ddcc8175b`
+
+Important Phase-18 safety properties:
+
+- one healthy demo produces exactly four screenshot records and advances only to `FACT_QA_PENDING`;
+- a deliberately broken visual result fails closed to terminal `QA_FAILED`;
+- QA artifacts remain local-runner files with D1 metadata references for the free-first MVP; PNG blobs are not stuffed into D1 and no paid storage dependency was introduced;
+- screenshot metadata is bound to the QA run/demo through FK and trigger guards;
+- runner completion is accepted only from the active lease owner;
+- another tenant cannot read the QA history;
+- no visual PASS can skip Phase 19 or become send-ready.
+
+## In progress — Phase 19: Fact QA + Sales QA
 
 Build:
 
-- Playwright desktop QA
-- Playwright mobile QA
-- full-page screenshot
-- hero screenshot
-- broken-image detection
-- horizontal-overflow detection
-- console/page-error detection
-- CTA validation
-- placeholder detection
-- disclosure/noindex validation
-- stored QA results and screenshot references
-- golden ÉLANE regression coverage
-- fail-closed QA state progression
+- fact-to-evidence validation for every visible critical field
+- conflict enforcement
+- evidence freshness/review policy
+- quality checklist
+- human approval queue
+- issue/remediation records
+- operator inspection of supporting sources
+- CTA correctness validation
+- sales-readiness checklist
+- deterministic PASS/FAIL outcome
+- guarded `FACT_QA_PENDING → SALES_QA_PENDING → DEMO_READY` progression only after required approvals
+- fail-closed path to `QA_FAILED` for unsupported/wrong critical facts or sales QA failure
 
 Acceptance targets:
 
-- deliberately broken fixtures fail
-- correct fixture passes
-- screenshot assets are stored/referenced
-- QA failure blocks later send readiness
-- desktop and mobile checks both pass for a healthy demo
-- golden template regression remains green
+- one unsupported visible critical fact fails the demo
+- wrong CTA fails
+- expired/stale evidence can force review
+- human can inspect sources supporting visible claims
+- visual QA PASS alone is insufficient for readiness
+- only fully passing fact + sales QA can become `DEMO_READY`
+- tenant ownership and audit history remain intact
+- no autonomous send or negotiation is introduced in Phase 19
 
 ## Current CI condition
 
-Buildkite hosted Linux remains the authoritative private-repository phase gate. Phase 18 must not close until its targeted Playwright/QA acceptance, D1/storage acceptance as applicable, architecture audit, strict typecheck/lint/unit/build checks and full Phase 0–18 hosted regression are green.
+Buildkite hosted Linux remains the authoritative private-repository phase gate. Phase 19 must not close until targeted fact/sales QA acceptance, D1/state-machine acceptance, architecture audit, strict typecheck/lint/unit/build checks and full Phase 0–19 hosted regression are green.
 
 ## Blocked
 
 None.
 
-## Last fully verified commit
+## Last fully verified implementation commit
 
-`006902486d73afa0ef5f0c7e1f204e1099d8db4b` — final full Phase 0–17 hosted regression, Buildkite #316 SUCCESS.
+`5acc14ac7a9d1cb7a5f0a5e75efeb35ddcc8175b` — final full Phase 0–18 hosted regression, Buildkite #343 SUCCESS.
 
 ## Next action
 
-Implement Phase 18 by extending the existing Playwright/template/demo QA foundations. Reuse the existing universal renderer and `demo_qa_runs` model. Do not create a parallel renderer, bypass authentication/ownership, weaken noindex/disclosure rules, or allow a failed visual QA result to advance toward send readiness.
+Implement Phase 19 on top of the verified Phase-18 visual PASS state. Reuse canonical facts/evidence and existing demo QA/history models. Do not allow unsupported visible critical facts, stale/conflicted evidence, a wrong CTA, or a failed human/sales checklist to advance to `DEMO_READY`. Do not introduce outreach sending in this phase.
