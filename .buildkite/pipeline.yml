@@ -2,16 +2,17 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":snake: Phase 18 worker contract"
-    key: "phase18-worker-contract"
-    timeout_in_minutes: 20
+  - label: ":camera_flash: Phase 18 browser fixtures"
+    key: "phase18-browser-fixtures"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
         python -m pip install -e "apps/local-runner[dev]"
+        python -m playwright install --with-deps --only-shell chromium
         cd apps/local-runner
-        PYTHONPATH=src python -m pytest tests/test_worker.py -q
+        PYTHONPATH=src python -m pytest tests/test_visual_qa.py -q
       '
     plugins:
       - docker#v5.13.0:
