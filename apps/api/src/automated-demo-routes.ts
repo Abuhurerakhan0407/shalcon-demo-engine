@@ -8,6 +8,7 @@ import {
   runAutomatedDemoBuild,
 } from './automated-demo-builder';
 import { renderDemoRecordForOperator } from './demo-renderer';
+import { factSalesQaRoutes } from './fact-sales-qa-routes';
 import { visualQaRoutes } from './visual-qa-routes';
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
@@ -82,3 +83,4 @@ automatedDemoRoutes.get('/demos/:demoId/preview', async (c) => {
 });
 
 automatedDemoRoutes.route('/visual-qa', visualQaRoutes);
+automatedDemoRoutes.route('/phase19', factSalesQaRoutes);
