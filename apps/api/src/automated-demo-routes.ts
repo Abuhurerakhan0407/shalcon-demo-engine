@@ -1,12 +1,14 @@
 import { DemoRepository, type D1DatabaseLike } from '@shalcon/db';
 import { Hono } from 'hono';
 
+import './visual-qa-runner-extension';
 import type { Bindings } from './context';
 import {
   getAutomatedDemoBuildHistory,
   runAutomatedDemoBuild,
 } from './automated-demo-builder';
 import { renderDemoRecordForOperator } from './demo-renderer';
+import { visualQaRoutes } from './visual-qa-routes';
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
   if (!db) throw new Error('D1 binding is not configured.');
@@ -78,3 +80,5 @@ automatedDemoRoutes.get('/demos/:demoId/preview', async (c) => {
   c.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
   return c.html(rendered.html);
 });
+
+automatedDemoRoutes.route('/visual-qa', visualQaRoutes);
