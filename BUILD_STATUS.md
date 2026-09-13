@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 17 — Automated Demo Builder**  
-Launch progress: **~55%**  
-Status: **PHASE 16 CLOSED — PHASE 17 ACTIVE**
+Current phase: **Phase 18 — Visual QA + Screenshot Package**  
+Launch progress: **~58%**  
+Status: **PHASE 17 CLOSED — PHASE 18 ACTIVE**
 
 ## Completed phases
 
@@ -55,72 +55,80 @@ Evidence-bound brand profiles, controlled ThemeDNA, registry-only template selec
 Verified-only content selection, safe headline/service/about/CTA generation, safe fallbacks, strict copy schema, evidence mapping, prompt/model/schema provenance and immutable generation history. Final hosted closure: **Buildkite #251 ✅**, commit `be9f91660d7356518ebdea75adc9d82654d6ef59`.
 
 ### Phase 16 — Asset Engine ✅
-
-Implemented:
-
-- Shalcon-owned/licensed template asset registry
-- asset metadata and provenance
-- official prospect logo eligibility rules
-- text-wordmark fallback
-- deterministic HERO/SERVICE/GALLERY assignment
-- explicit asset usage classification
-- broken/unusable asset rejection
-- bounded image-dimension optimization metadata
-- immutable asset-selection history
-- authenticated asset registry/history/run API
-- database guards for official-source association, capture metadata, watermark state and asset health
-
-Acceptance gates:
-
-- no random third-party image reuse: ✅
-- no watermarked official assets: ✅
-- missing logo falls back safely: ✅
-- template imagery is never represented as prospect reality: ✅
-- source metadata available for external official assets: ✅
-- typecheck/lint/unit: ✅
-- D1/Workerd Phase-16 acceptance: ✅ — Buildkite #260
-- Phase-16 architecture audit: ✅ — Buildkite #261
-- E2E/Python/build regression checks: ✅ — Buildkite #273/#274/#275
-- full hosted Phase 0–16 regression: ✅ — Buildkite #283
+Shalcon-owned/licensed template asset registry, official prospect-logo eligibility, text-wordmark fallback, deterministic image-slot assignment, provenance/usage classification, broken/watermarked asset rejection, optimization metadata and immutable asset-selection history.
 
 Final closure evidence:
 
-- Buildkite Build **#283 ✅**
+- Buildkite **#283 ✅**
 - Commit: `006a55ec61aff04ce9015362e70de877bee32d0e`
-- Hosted queue: `linux-small`
-- Full Phase 0–16 regression status: **SUCCESS**
-- Phase-14 legacy fixture was updated to comply with Phase-16 `PROSPECT_OFFICIAL` provenance invariants; production provenance rules were not weakened.
+- Full Phase 0–16 hosted regression: **SUCCESS**
+- Phase-14 legacy fixture updated for Phase-16 provenance invariants without weakening production rules.
 
-## In progress — Phase 17: Automated Demo Builder
+### Phase 17 — Automated Demo Builder ✅
+
+Implemented:
+
+- deterministic orchestration over Phase 14–16 outputs
+- latest compatible template/content/asset dependency validation
+- strict stale-input rejection
+- existing universal renderer/config path reuse
+- exact ÉLANE v8 template/version preservation
+- private operator preview generation
+- immutable automated-build provenance/history
+- tenant ownership checks
+- fingerprint-based idempotent reuse
+- fail-closed handling for missing dependencies
+- guarded `CONTENT_PENDING → DEMO_CONFIGURED → RENDER_PENDING → RENDERED` progression
+- Phase-18/19 QA holds preserved; no public-release bypass
+
+Phase-17 repair/verification evidence:
+
+- Config/render isolation: **Buildkite #308 ✅**
+- D1 batch state truth: **Buildkite #310 ✅**
+- Fixed automated build transaction: **Buildkite #311 ✅**
+- Typecheck/lint/unit: **Buildkite #312 ✅**
+- Full Phase-17 D1 acceptance: **Buildkite #313 ✅**
+- Phase-17 architecture audit: **Buildkite #314 ✅**
+- First full regression attempt #315 failed because its CI harness omitted the known-good Python runner + Playwright browser setup; no product rule was weakened to address it.
+- Corrected authoritative full Phase 0–17 regression: **Buildkite #316 ✅**
+- Final fully verified commit: `006902486d73afa0ef5f0c7e1f204e1099d8db4b`
+
+Root cause fixed during closure:
+
+- D1 batch statements and state transitions were committing correctly, but the builder treated per-statement `meta.changes === 1` as authoritative.
+- D1 metadata can differ in batched statements with triggers, causing a false failure even when persisted database state is correct.
+- The builder now keeps the guarded transactional batch, requires statement success, then verifies authoritative persisted demo, build provenance and final prospect state before accepting the transaction.
+
+## In progress — Phase 18: Visual QA + Screenshot Package
 
 Build:
 
-- deterministic automated builder orchestration
-- qualified-prospect dependency validation
-- latest compatible research/brand/template/content/asset inputs
-- one config-only build path into the existing universal renderer
-- exact template/version preservation
-- private preview URL generation
-- immutable automated-build provenance/history
-- ownership/concurrency/idempotency protections
-- safe failure on stale/missing/unsupported inputs
-- deterministic prospect-state progression through demo configuration/rendering
+- Playwright desktop QA
+- Playwright mobile QA
+- full-page screenshot
+- hero screenshot
+- broken-image detection
+- horizontal-overflow detection
+- console/page-error detection
+- CTA validation
+- placeholder detection
+- disclosure/noindex validation
+- stored QA results and screenshot references
+- golden ÉLANE regression coverage
+- fail-closed QA state progression
 
 Acceptance targets:
 
-From one qualified prospect, one command/job must produce:
-
-- valid demo config
-- rendered private URL
-- correct template/version
-- no per-prospect code changes
-- no per-prospect deployment
-- no unsupported critical field
-- no bypass of Phase-18/19 QA/send gates
+- deliberately broken fixtures fail
+- correct fixture passes
+- screenshot assets are stored/referenced
+- QA failure blocks later send readiness
+- desktop and mobile checks both pass for a healthy demo
+- golden template regression remains green
 
 ## Current CI condition
 
-Buildkite hosted Linux remains the authoritative private-repository phase gate because GitHub-hosted private allocation is unavailable on this account. During Phase 17 development, incremental commits run strict TypeScript, lint and unit tests; Phase 17 will not close until its D1/Workerd acceptance, architecture audit and full Phase 0–17 hosted regression are green.
+Buildkite hosted Linux remains the authoritative private-repository phase gate. Phase 18 must not close until its targeted Playwright/QA acceptance, D1/storage acceptance as applicable, architecture audit, strict typecheck/lint/unit/build checks and full Phase 0–18 hosted regression are green.
 
 ## Blocked
 
@@ -128,8 +136,8 @@ None.
 
 ## Last fully verified commit
 
-`006a55ec61aff04ce9015362e70de877bee32d0e` — final full Phase 0–16 hosted regression, Buildkite #283 SUCCESS.
+`006902486d73afa0ef5f0c7e1f204e1099d8db4b` — final full Phase 0–17 hosted regression, Buildkite #316 SUCCESS.
 
 ## Next action
 
-Implement Phase 17 as an orchestrator over existing Phase 14–16 outputs and the existing universal renderer. Do not generate arbitrary website code, deploy per prospect, loosen provenance, or expose an unverified critical fact. Keep QA/send readiness for later Phase 18/19 gates.
+Implement Phase 18 by extending the existing Playwright/template/demo QA foundations. Reuse the existing universal renderer and `demo_qa_runs` model. Do not create a parallel renderer, bypass authentication/ownership, weaken noindex/disclosure rules, or allow a failed visual QA result to advance toward send readiness.
