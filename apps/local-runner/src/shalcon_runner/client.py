@@ -178,6 +178,24 @@ class RunnerApiClient:
             {"result": result},
         )
 
+    def visual_qa_input(self, job_id: str) -> dict[str, Any]:
+        response = self._request(
+            "POST",
+            f"/api/v1/runner/agent/jobs/{job_id}/visual-qa/input",
+            {},
+        )
+        raw_input = response.get("input")
+        if not isinstance(raw_input, dict):
+            raise RunnerApiError("Visual QA input response contained an invalid input.")
+        return raw_input
+
+    def complete_visual_qa(self, job_id: str, result: Any) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"/api/v1/runner/agent/jobs/{job_id}/visual-qa/complete",
+            {"result": result},
+        )
+
     def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
         return self._request(
             "POST",
