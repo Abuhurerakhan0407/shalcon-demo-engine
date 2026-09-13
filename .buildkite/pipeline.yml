@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Legacy Phase 5 D1 isolation"
-    key: "phase5-d1-isolation"
+  - label: ":database: Legacy Phase 6 D1 isolation"
+    key: "phase6-d1-isolation"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,7 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run test:phase5:d1
+        npm run test:phase6:d1
       '
     plugins:
       - docker#v5.13.0:
