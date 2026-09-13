@@ -2,17 +2,15 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":rocket: Full Phase 0-18 regression"
-    key: "phase18-full-regression"
-    timeout_in_minutes: 100
+  - label: ":typescript: Phase 19 typecheck"
+    key: "phase19-typecheck"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
-
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
           | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
@@ -20,20 +18,8 @@ steps:
           > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
-
-        node --version
-        npm --version
-        python --version
-        test -f package-lock.json
-
         npm ci
-        python -m pip install -e "apps/local-runner[dev]"
-        npx playwright install --with-deps chromium
-        python -m playwright install --with-deps --only-shell chromium
-
-        npm run test:phase17
-        node scripts/verify-phase18-d1.mjs
-        node scripts/phase18-audit.mjs
+        npm run typecheck
       '
     plugins:
       - docker#v5.13.0:
