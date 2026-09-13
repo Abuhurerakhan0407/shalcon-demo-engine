@@ -96,10 +96,8 @@ for (const [needle, label] of [
 ]) requireText(worker, needle, label);
 
 for (const [needle, label] of [
-  ['desktop.full.png', 'desktop full-page screenshot'],
-  ['desktop.hero.png', 'desktop hero screenshot'],
-  ['mobile.full.png', 'mobile full-page screenshot'],
-  ['mobile.hero.png', 'mobile hero screenshot'],
+  ['f"{label}.full.png"', 'full-page screenshot generation'],
+  ['f"{label}.hero.png"', 'hero screenshot generation'],
   ['horizontalOverflow', 'overflow measurement'],
   ['brokenImageCount', 'broken image measurement'],
   ['consoleErrors', 'console diagnostics'],
@@ -112,6 +110,7 @@ for (const [needle, label] of [
   ['runner-artifact://visual-qa/', 'local runner artifact reference'],
 ]) requireText(browserEngine, needle, label);
 
+requireText(browserTests, '"DESKTOP_FULL", "DESKTOP_HERO", "MOBILE_FULL", "MOBILE_HERO"', 'four browser screenshot kinds');
 requireText(browserTests, 'test_visual_qa_good_fixture_passes_all_required_checks_and_writes_four_pngs', 'passing browser fixture');
 requireText(browserTests, 'test_visual_qa_broken_fixture_is_detected_on_desktop_and_mobile', 'deliberately broken browser fixture');
 
