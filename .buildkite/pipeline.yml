@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 17 upstream isolation"
+  - label: ":test_tube: Phase 17 upstream verifier"
     key: "phase17-prebuild"
     timeout_in_minutes: 20
     command: |
@@ -17,18 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        rm -rf .wrangler/phase17-d1-test
-        npm --workspace @shalcon/api run db:migrate:phase17:local
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase17-prebuild.integration.ts --local --port 8805 --persist-to ../../.wrangler/phase17-d1-test > /tmp/p17-prebuild.log 2>&1 &
-        worker=$!
-        trap "kill $worker >/dev/null 2>&1 || true" EXIT
-        for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8805/healthz >/dev/null; then break; fi
-          sleep 1
-        done
-        response=$(curl -fsS http://127.0.0.1:8805/phase17-prebuild) || { cat /tmp/p17-prebuild.log; exit 1; }
-        printf "%s\n" "$response"
-        printf "%s" "$response" | grep -q '"'"'"ok"'"'":true'
+        node scripts/verify-phase17-prebuild.mjs
       '
     plugins:
       - docker#v5.13.0:
