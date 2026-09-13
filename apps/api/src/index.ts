@@ -11,6 +11,7 @@ import { logger } from 'hono/logger';
 
 import { aiRunnerRoutes } from './ai-runner-routes';
 import { assetRoutes } from './asset-routes';
+import { automatedDemoRoutes } from './automated-demo-routes';
 import {
   OAUTH_STATE_COOKIE,
   OAUTH_STATE_MAX_AGE_SECONDS,
@@ -142,6 +143,7 @@ app.use('/api/v1/scoring/*', requireAuth);
 app.use('/api/v1/brand-template/*', requireAuth);
 app.use('/api/v1/content/*', requireAuth);
 app.use('/api/v1/assets/*', requireAuth);
+app.use('/api/v1/automated-demo/*', requireAuth);
 app.use('/api/v1/demo-admin/*', requireAuth);
 app.use('/api/v1/runner/operator/*', requireAuth);
 
@@ -290,6 +292,7 @@ app.route('/api/v1/scoring', scoringRoutes);
 app.route('/api/v1/brand-template', brandTemplateRoutes);
 app.route('/api/v1/content', contentRoutes);
 app.route('/api/v1/assets', assetRoutes);
+app.route('/api/v1/automated-demo', automatedDemoRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
