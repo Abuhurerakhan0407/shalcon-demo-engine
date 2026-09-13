@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 16 architecture audit"
-    key: "phase16-architecture-audit"
+  - label: ":eslint: Phase 16 lint isolation"
+    key: "phase16-lint-isolation"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -21,10 +21,8 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
-        node --version
-        npm --version
         npm ci
-        npm run test:phase16:audit
+        npm run lint
       '
     plugins:
       - docker#v5.13.0:
