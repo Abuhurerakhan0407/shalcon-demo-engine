@@ -151,14 +151,17 @@ app.get('/phase14', async (c) => {
     .prepare(`
       INSERT INTO assets(
         id, prospect_id, asset_type, source_type, source_url, storage_ref,
-        usage_classification, mime_type, width, height, created_at
-      ) VALUES (?, ?, 'LOGO', 'OFFICIAL_WEBSITE', ?, ?, 'PROSPECT_OFFICIAL', 'image/png', 512, 512, ?)
+        usage_classification, mime_type, width, height, created_at,
+        source_captured_at, association_assumption, watermark_status, asset_status, optimization_json
+      ) VALUES (?, ?, 'LOGO', 'OFFICIAL_WEBSITE', ?, ?, 'PROSPECT_OFFICIAL', 'image/png',
+        512, 512, ?, ?, 'OFFICIAL_PROSPECT_SOURCE', 'CLEAR', 'ACTIVE', '{}')
     `)
     .bind(
       'asset_p14_rich_logo',
       'p14_rich',
       'https://p14_rich.example.com/logo.png',
       'fixture://logo',
+      iso(6),
       iso(6),
     )
     .run();
