@@ -2,25 +2,16 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":snake: Phase 18 runner integration"
-    key: "phase18-runner-tests"
-    timeout_in_minutes: 25
+  - label: ":snake: Phase 18 worker contract"
+    key: "phase18-worker-contract"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl gnupg
-        mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-          > /etc/apt/sources.list.d/nodesource.list
-        apt-get update
-        apt-get install -y --no-install-recommends nodejs
-        npm ci
         python -m pip install -e "apps/local-runner[dev]"
-        npm run test:python
+        cd apps/local-runner
+        PYTHONPATH=src python -m pytest tests/test_worker.py -q
       '
     plugins:
       - docker#v5.13.0:
