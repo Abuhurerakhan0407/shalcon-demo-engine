@@ -332,18 +332,36 @@ export async function runAutomatedDemoBuild(
     `).bind(nowIso, prospect.id, userId),
   ]);
 
-  if (writes.some((result) => Number(result.meta?.changes ?? 0) !== 1)) {
-    await db.prepare('DELETE FROM demos WHERE id = ?').bind(demoId).run().catch(() => undefined);
-    throw new Error('Automated demo build did not commit all guarded writes.');
+  if (writes.some((result) => result.success !== true)) {
+    throw new Error('Automated demo build batch reported an unsuccessful statement.');
   }
 
-  const demo = await new DemoRepository(db).getByIdForUser(demoId, userId);
-  if (!demo) throw new Error('Automated demo could not be reloaded.');
+  const demoRepository = new DemoRepository(db);
+  const [demo, committedProspect, committedBuildRow] = await Promise.all([
+    demoRepository.getByIdForUser(demoId, userId),
+    prospects.getByIdForUser(prospect.id, userId),
+    existingBuild(db, userId, prospect.id, inputFingerprint),
+  ]);
+  const committed =
+    demo !== null &&
+    committedBuildRow !== null &&
+    committedBuildRow.id === buildId &&
+    committedBuildRow.demo_id === demoId &&
+    committedProspect?.currentState === 'RENDERED';
+  if (!committed) {
+    if (demo) {
+      await db.prepare('DELETE FROM demos WHERE id = ?').bind(demoId).run().catch(() => undefined);
+    }
+    throw new Error('Automated demo build failed persisted post-commit invariants.');
+  }
+
   const rendered = renderDemoRecordForOperator(demo, nowIso);
   if (!rendered.ok) throw new Error(`Automated demo config failed renderer validation: ${rendered.reason}.`);
-  const history = await getAutomatedDemoBuildHistory(db, userId, prospect.id);
-  const build = history.find((item) => item.id === buildId);
-  if (!build) throw new Error('Automated demo build provenance could not be reloaded.');
 
-  return { build, demo, previewToken, reused: false };
+  return {
+    build: parseBuild(committedBuildRow),
+    demo,
+    previewToken,
+    reused: false,
+  };
 }
