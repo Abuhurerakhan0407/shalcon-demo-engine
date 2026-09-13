@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":arrows_counterclockwise: Phase 17 batch state truth"
-    key: "phase17-batch-state"
+  - label: ":hammer_and_wrench: Phase 17 fixed build smoke"
+    key: "phase17-build-smoke-fixed"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -19,7 +19,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        node scripts/verify-phase17-batch-meta.mjs
+        node scripts/verify-phase17-build-smoke.mjs
       '
     plugins:
       - docker#v5.13.0:
