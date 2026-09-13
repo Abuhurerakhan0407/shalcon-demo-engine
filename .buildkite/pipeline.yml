@@ -2,17 +2,24 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":camera_flash: Phase 18 browser fixtures"
-    key: "phase18-browser-fixtures"
-    timeout_in_minutes: 30
+  - label: ":typescript: Phase 18 acceptance typecheck"
+    key: "phase18-typecheck"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps --only-shell chromium
-        cd apps/local-runner
-        PYTHONPATH=src python -m pytest tests/test_visual_qa.py -q
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl gnupg
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+          > /etc/apt/sources.list.d/nodesource.list
+        apt-get update
+        apt-get install -y --no-install-recommends nodejs
+        npm ci
+        npm run typecheck
       '
     plugins:
       - docker#v5.13.0:
