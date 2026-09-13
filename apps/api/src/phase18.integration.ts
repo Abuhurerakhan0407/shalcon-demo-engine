@@ -363,7 +363,7 @@ app.get('/phase18', async (c) => {
     publicReleaseStillHeld:
       goodBuild.demo.status === 'RENDERED' &&
       badBuild.demo.status === 'RENDERED' &&
-      goodCompletion?.nextState !== 'DEMO_READY',
+      goodState?.current_state === 'FACT_QA_PENDING',
     foreignKeyViolations: foreignKeys.results.length,
   };
 
