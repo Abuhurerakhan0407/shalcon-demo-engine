@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 17 architecture audit"
-    key: "phase17-audit"
-    timeout_in_minutes: 20
+  - label: ":rocket: Full Phase 0-17 regression"
+    key: "phase17-full-regression"
+    timeout_in_minutes: 60
     command: |
       bash -lc '
         set -euo pipefail
@@ -17,9 +17,9 @@ steps:
         echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
           > /etc/apt/sources.list.d/nodesource.list
         apt-get update
-        apt-get install -y --no-install-recommends nodejs
+        apt-get install -y --no-install-recommends nodejs python3 python3-pip
         npm ci
-        npm run test:phase17:audit
+        npm run test:phase17
       '
     plugins:
       - docker#v5.13.0:
