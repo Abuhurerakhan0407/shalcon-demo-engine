@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Phase 16 D1 acceptance"
-    key: "phase16-d1-acceptance"
+  - label: ":mag: Phase 16 architecture audit"
+    key: "phase16-architecture-audit"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -24,7 +24,7 @@ steps:
         node --version
         npm --version
         npm ci
-        npm run test:phase16:d1
+        npm run test:phase16:audit
       '
     plugins:
       - docker#v5.13.0:
