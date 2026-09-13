@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":construction: Phase 18 development gate"
-    key: "phase18-development-gate"
+  - label: ":snake: Phase 18 runner integration"
+    key: "phase18-runner-tests"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -19,7 +19,8 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run typecheck
+        python -m pip install -e "apps/local-runner[dev]"
+        npm run test:python
       '
     plugins:
       - docker#v5.13.0:
