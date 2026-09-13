@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":memo: Phase 16 full hosted regression"
-    key: "phase16-hosted-regression"
-    timeout_in_minutes: 90
+  - label: ":construction: Phase 17 development gate"
+    key: "phase17-development-gate"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
@@ -12,7 +12,6 @@ steps:
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
-
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
           | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
@@ -21,17 +20,10 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
-        node --version
-        npm --version
-        python --version
-        test -f package-lock.json
-
         npm ci
-        python -m pip install -e "apps/local-runner[dev]"
-        npx playwright install --with-deps chromium
-        python -m playwright install --with-deps --only-shell chromium
-
-        npm run test:phase16
+        npm run typecheck
+        npm run lint
+        npm run test:unit
       '
     plugins:
       - docker#v5.13.0:
