@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":database: Legacy Phase 9 D1 isolation"
-    key: "phase9-d1-isolation"
-    timeout_in_minutes: 20
+  - label: ":playwright: E2E isolation"
+    key: "e2e-isolation"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
@@ -17,7 +17,8 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run test:phase9:d1
+        npx playwright install --with-deps chromium
+        npm run test:e2e
       '
     plugins:
       - docker#v5.13.0:
