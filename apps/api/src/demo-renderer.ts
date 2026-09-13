@@ -40,9 +40,7 @@ function parseConfig(configJson: string): unknown {
   }
 }
 
-export function renderDemoRecord(demo: DemoRecord, nowIso: string): DemoRenderResult {
-  if (!isDemoPubliclyAvailable(demo, nowIso)) return { ok: false, reason: 'UNAVAILABLE' };
-
+function renderValidatedDemoRecord(demo: DemoRecord): DemoRenderResult {
   const template = findTemplateDefinition(demo.templateId, demo.templateVersion);
   if (!template || template.id !== 'elane-v8' || template.version !== '8.0.0') {
     return { ok: false, reason: 'UNKNOWN_TEMPLATE' };
@@ -63,4 +61,19 @@ export function renderDemoRecord(demo: DemoRecord, nowIso: string): DemoRenderRe
   } catch {
     return { ok: false, reason: 'INVALID_CONFIG' };
   }
+}
+
+export function renderDemoRecordForOperator(demo: DemoRecord, nowIso: string): DemoRenderResult {
+  if (demo.expiresAt && Date.parse(demo.expiresAt) <= Date.parse(nowIso)) {
+    return { ok: false, reason: 'UNAVAILABLE' };
+  }
+  if (demo.status === 'DISABLED' || demo.status === 'EXPIRED') {
+    return { ok: false, reason: 'UNAVAILABLE' };
+  }
+  return renderValidatedDemoRecord(demo);
+}
+
+export function renderDemoRecord(demo: DemoRecord, nowIso: string): DemoRenderResult {
+  if (!isDemoPubliclyAvailable(demo, nowIso)) return { ok: false, reason: 'UNAVAILABLE' };
+  return renderValidatedDemoRecord(demo);
 }
