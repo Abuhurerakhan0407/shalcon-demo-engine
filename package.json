@@ -73,7 +73,10 @@
     "test:phase15": "npm run test:phase14 && npm run test:phase15:d1 && npm run test:phase15:audit",
     "test:phase16:d1": "node scripts/verify-phase16-d1.mjs",
     "test:phase16:audit": "node scripts/phase16-audit.mjs",
-    "test:phase16": "npm run test:phase15 && npm run test:phase16:d1 && npm run test:phase16:audit"
+    "test:phase16": "npm run test:phase15 && npm run test:phase16:d1 && npm run test:phase16:audit",
+    "test:phase17:d1": "node scripts/verify-phase17-d1.mjs",
+    "test:phase17:audit": "node scripts/phase17-audit.mjs",
+    "test:phase17": "npm run test:phase16 && npm run test:phase17:d1 && npm run test:phase17:audit"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
