@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":typescript: Phase 19 typecheck"
-    key: "phase19-typecheck"
-    timeout_in_minutes: 25
+  - label: ":database: Phase 19 D1 acceptance"
+    key: "phase19-d1"
+    timeout_in_minutes: 40
     command: |
       bash -lc '
         set -euo pipefail
@@ -19,7 +19,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npm run typecheck
+        node scripts/verify-phase19-d1.mjs
       '
     plugins:
       - docker#v5.13.0:
