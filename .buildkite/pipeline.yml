@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 17 upstream verifier"
-    key: "phase17-prebuild"
+  - label: ":hammer_and_wrench: Phase 17 build smoke"
+    key: "phase17-build-smoke"
     timeout_in_minutes: 20
     command: |
       bash -lc '
@@ -17,7 +17,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        node scripts/verify-phase17-prebuild.mjs
+        node scripts/verify-phase17-build-smoke.mjs
       '
     plugins:
       - docker#v5.13.0:
