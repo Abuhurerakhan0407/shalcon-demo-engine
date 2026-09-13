@@ -6,6 +6,7 @@ from typing import Any
 from shalcon_runner.ai_extract import AiExtractionError
 from shalcon_runner.client import ClaimedJob
 from shalcon_runner.research import ResearchJobError
+from shalcon_runner.visual_qa import VisualQaJobError
 from shalcon_runner.worker import LocalRunnerWorker
 
 
@@ -18,6 +19,7 @@ class FakeClient:
         self.completed: list[tuple[str, Any]] = []
         self.research_completed: list[tuple[str, Any]] = []
         self.ai_completed: list[tuple[str, Any]] = []
+        self.visual_qa_completed: list[tuple[str, Any]] = []
         self.failed: list[tuple[str, str, str]] = []
 
     def heartbeat(self, version: str, capabilities: list[str]) -> dict[str, Any]:
@@ -45,6 +47,10 @@ class FakeClient:
         self.ai_completed.append((job_id, result))
         return {}
 
+    def complete_visual_qa(self, job_id: str, result: Any) -> dict[str, Any]:
+        self.visual_qa_completed.append((job_id, result))
+        return {}
+
     def fail(self, job_id: str, error_code: str, safe_message: str) -> dict[str, Any]:
         self.failed.append((job_id, error_code, safe_message))
         return {}
@@ -69,6 +75,13 @@ def test_idle_poll_still_heartbeats() -> None:
     assert len(client.heartbeats) == 1
     assert client.completed == []
     assert client.failed == []
+
+
+def test_default_capabilities_include_visual_qa() -> None:
+    client = FakeClient(None)
+    outcome = LocalRunnerWorker(client).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "IDLE"
+    assert "PLAYWRIGHT_VISUAL_QA" in client.heartbeats[0][1]
 
 
 def test_explicit_empty_capabilities_stay_empty() -> None:
@@ -99,6 +112,7 @@ def test_echo_job_renews_before_terminal_completion() -> None:
     assert client.completed[0][1]["payload"] == {"hello": "world"}
     assert client.research_completed == []
     assert client.ai_completed == []
+    assert client.visual_qa_completed == []
 
 
 def test_long_job_renews_lease_while_handler_is_running() -> None:
@@ -152,6 +166,25 @@ def test_ai_job_uses_validated_cloud_completion_path() -> None:
     assert client.ai_completed == [("job_test", fixture)]
 
 
+def test_visual_qa_job_uses_validated_cloud_completion_path() -> None:
+    client = FakeClient(job("PLAYWRIGHT_VISUAL_QA"))
+    fixture = {
+        "schemaVersion": "visual-qa.v1",
+        "demoId": "demo_1",
+        "desktop": {},
+        "mobile": {},
+        "screenshots": [],
+    }
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"PLAYWRIGHT_VISUAL_QA": lambda _: fixture},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "COMPLETED"
+    assert client.completed == []
+    assert client.visual_qa_completed == [("job_test", fixture)]
+
+
 def test_research_policy_failure_preserves_specific_safe_error_code() -> None:
     client = FakeClient(job("PLAYWRIGHT_RESEARCH"))
 
@@ -183,6 +216,23 @@ def test_ai_policy_failure_preserves_specific_safe_error_code() -> None:
     assert client.ai_completed == []
     assert client.failed == [
         ("job_test", "OLLAMA_UNAVAILABLE", "Ollama is unavailable on the local machine.")
+    ]
+
+
+def test_visual_qa_policy_failure_preserves_specific_safe_error_code() -> None:
+    client = FakeClient(job("PLAYWRIGHT_VISUAL_QA"))
+
+    def blocked(_: ClaimedJob) -> Any:
+        raise VisualQaJobError("VISUAL_QA_INVALID_INPUT", "Visual QA rendered HTML is missing.")
+
+    outcome = LocalRunnerWorker(
+        client,
+        handlers={"PLAYWRIGHT_VISUAL_QA": blocked},
+    ).run_once()  # type: ignore[arg-type]
+    assert outcome.status == "FAILED"
+    assert client.visual_qa_completed == []
+    assert client.failed == [
+        ("job_test", "VISUAL_QA_INVALID_INPUT", "Visual QA rendered HTML is missing.")
     ]
 
 
