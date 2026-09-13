@@ -309,7 +309,7 @@ app.get('/api/v1/runner/health', (c) =>
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } }, 404));
 app.onError((error, c) => {
   console.error('Unhandled request error', { name: error.name });
-  return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } }, 500));
+  return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error.' } }, 500);
 });
 
 export default app;
