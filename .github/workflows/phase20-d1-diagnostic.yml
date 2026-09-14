@@ -1,0 +1,56 @@
+name: Phase 20 D1 Diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/workflows/phase20-d1-diagnostic.yml'
+      - 'apps/api/src/phase20-db-probe.integration.ts'
+      - 'apps/api/src/phase20-write-control.integration.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  d1-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Apply local D1 migrations
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/phase20-gh-diagnostic
+          npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-gh-diagnostic
+      - name: Run Phase 20 write control with full logs
+        shell: bash
+        run: |
+          set -uo pipefail
+          npm --workspace @shalcon/api exec -- wrangler dev src/phase20-write-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-gh-diagnostic > /tmp/phase20-gh-worker.log 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$worker_pid" 2>/dev/null || true
+            wait "$worker_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          ready=0
+          for _ in $(seq 1 60); do
+            status="$(curl -sS -o /tmp/phase20-gh-response.json -w '%{http_code}' http://127.0.0.1:8807/phase20-write-control || true)"
+            if [ "$status" != "000" ]; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          echo "HTTP_STATUS=${status:-000}"
+          echo '--- RESPONSE ---'
+          cat /tmp/phase20-gh-response.json 2>/dev/null || true
+          echo
+          echo '--- WORKER LOG ---'
+          cat /tmp/phase20-gh-worker.log 2>/dev/null || true
+          if [ "$ready" -ne 1 ] || [ "${status:-000}" != "200" ]; then
+            exit 1
+          fi
