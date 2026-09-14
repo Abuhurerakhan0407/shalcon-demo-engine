@@ -27,16 +27,17 @@ steps:
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
+        status="000"
         for _ in $(seq 1 60); do
           status="$(curl -sS -o /tmp/phase20-get-response.json -w "%{http_code}" http://127.0.0.1:8807/phase20-setup-control || true)"
-          if [ "$status" != "000" ]; then
+          if [ "$status" = "200" ]; then
             ready=1
             break
           fi
           sleep 1
         done
         cat /tmp/phase20-get-response.json 2>/dev/null || true
-        if [ "$ready" -ne 1 ] || [ "$status" != "200" ]; then
+        if [ "$ready" -ne 1 ]; then
           cat /tmp/phase20-get.log
           exit 1
         fi
