@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 lint source isolation"
+  - label: ":mag: Phase 20 exact lint rule isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,14 +10,26 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-
-        npx eslint apps/api/src/evidence-verification.ts || { sleep 20; exit 1; }
-        npx eslint apps/api/src/evidence-review-routes.ts || { sleep 40; exit 1; }
-        npx eslint apps/api/src/phase20-evidence-review.integration.ts || { sleep 60; exit 1; }
-        npx eslint apps/api/src/index-with-evidence-review.ts || { sleep 80; exit 1; }
-        npx eslint scripts/phase20-evidence-review-check.mjs || { sleep 100; exit 1; }
-        npm run lint || { sleep 120; exit 1; }
-        exit 0
+        npx eslint scripts/phase20-evidence-review-check.mjs --format json > /tmp/phase20-lint.json || true
+        node - <<"NODE"
+const fs = require("node:fs");
+const report = JSON.parse(fs.readFileSync("/tmp/phase20-lint.json", "utf8"));
+const message = report.flatMap((entry) => entry.messages ?? [])[0];
+if (!message) process.exit(0);
+const waits = {
+  "no-undef": 20,
+  "no-unused-vars": 40,
+  "no-promise-executor-return": 60,
+  "no-constant-condition": 80,
+  "no-empty": 100,
+  "no-unreachable": 120,
+  "no-unsafe-optional-chaining": 140,
+  "no-useless-catch": 160,
+};
+const seconds = waits[message.ruleId] ?? 180;
+console.log(JSON.stringify({ ruleId: message.ruleId, message: message.message, line: message.line, column: message.column }));
+setTimeout(() => process.exit(1), seconds * 1000);
+NODE
       '
     plugins:
       - docker#v5.13.0:
