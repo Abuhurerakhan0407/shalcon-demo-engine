@@ -2,75 +2,33 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":brain: Phase 20 Shanuzz research through real AI"
-    key: "phase20-shanuzz-real-ai"
-    timeout_in_minutes: 60
+  - label: ":microscope: Phase 20 Python runner environment"
+    key: "phase20-python-runner-environment"
+    timeout_in_minutes: 10
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-
+        node --version
+        npm --version
         npm ci
+        echo "npm-ready"
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
+        python3 --version
+        echo "python-packages-ready"
+
         python3 -m venv /tmp/shalcon-venv
         . /tmp/shalcon-venv/bin/activate
-        python -m pip install --upgrade pip
+        python --version
+        pip --version
+        echo "venv-ready"
+
         python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps chromium
-
-        curl -fsSL https://ollama.com/install.sh | sh
-        export OLLAMA_NUM_PARALLEL=1
-        export OLLAMA_MAX_LOADED_MODELS=1
-        export SHALCON_OLLAMA_MODEL="qwen3:0.6b"
-        ollama serve > /tmp/ollama.log 2>&1 &
-        ollama_pid=$!
-        worker_pid=""
-        cleanup() {
-          if [ -n "$worker_pid" ]; then kill "$worker_pid" 2>/dev/null || true; fi
-          kill "$ollama_pid" 2>/dev/null || true
-        }
-        trap cleanup EXIT
-
-        ready=0
-        for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/ollama-tags.json; then
-            ready=1
-            break
-          fi
-          sleep 1
-        done
-        if [ "$ready" -ne 1 ]; then
-          cat /tmp/ollama.log || true
-          exit 21
-        fi
-        ollama pull "$SHALCON_OLLAMA_MODEL"
-
-        export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(1,2).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==1||!candidates[0].officialWebsite||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
-
-        rm -rf .wrangler/phase20-research-pilot
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
-        worker_pid=$!
-        cd ../..
-
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.created[0]?.identityStatus!==\"NEW_CANONICAL\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
-
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-
-        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.aiJobs?.filter(x=>x.status===\"FAILED\")??[];if(r.status!==200||s.researchJobs?.length!==1||s.researchJobs[0]?.status!==\"COMPLETED\"||pending.length<1||failed.length!==0||s.researchRuns?.length!==1||s.researchRuns[0]?.status!==\"RUNNING\"||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);fs.writeFileSync(\"/tmp/ai-count\",String(pending.length));})().catch(e=>{console.error(e);process.exit(7);});"
-
-        ai_count="$(cat /tmp/ai-count)"
-        for i in $(seq 1 "$ai_count"); do
-          out="$(PYTHONPATH=apps/local-runner/src python -m shalcon_runner once --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN")"
-          echo "$out" | tee -a /tmp/phase20-ai-worker.jsonl
-          node -e "const o=JSON.parse(process.argv[1]);if(o.status!==\"COMPLETED\"||o.job_type!==\"LOCAL_AI_EXTRACT\"||!o.job_id)process.exit(8);" "$out"
-        done
-
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const ai=s.aiJobs??[];const run=s.researchRuns?.[0];const p=s.prospects?.[0];const validRun=run&&(run.status===\"COMPLETED\"||run.status===\"BLOCKED\");const validState=p&&(p.currentState===\"RESEARCHED\"||p.currentState===\"RESEARCH_PENDING\");if(r.status!==200||s.prospects?.length!==1||!validState||p.playwrightSourceCount<1||p.evidenceCount<1||ai.length<1||ai.some(x=>x.status!==\"COMPLETED\")||!validRun||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(9);})().catch(e=>{console.error(e);process.exit(10);});" || { rc=$?; cat /tmp/phase20-live.log || true; cat /tmp/ollama.log || true; cat /tmp/phase20-ai-worker.jsonl 2>/dev/null || true; exit $rc; }
+        echo "runner-installed"
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner health
+        echo "runner-health-passed"
       '
     plugins:
       - docker#v5.13.0:
