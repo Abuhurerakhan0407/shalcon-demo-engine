@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 Shanuzz AI enqueue"
-    key: "phase20-shanuzz-ai-enqueue"
-    timeout_in_minutes: 35
+  - label: ":microscope: Phase 20 first real AI completion"
+    key: "phase20-first-real-ai-completion"
+    timeout_in_minutes: 50
     command: |
       bash -lc '
         set -euo pipefail
@@ -26,14 +26,39 @@ steps:
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
         npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
         worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
+        ollama_pid=""
+        cleanup() {
+          kill "$worker_pid" 2>/dev/null || true
+          if [ -n "$ollama_pid" ]; then kill "$ollama_pid" 2>/dev/null || true; fi
+        }
+        trap cleanup EXIT
         cd ../..
 
         node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.created[0]?.identityStatus!==\"NEW_CANONICAL\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
 
         PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
 
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.aiJobs?.filter(x=>x.status===\"FAILED\")??[];const p=s.prospects?.[0];const run=s.researchRuns?.[0];if(r.status!==200||s.prospects?.length!==1||p?.currentState!==\"RESEARCH_PENDING\"||p?.playwrightSourceCount<1||s.researchJobs?.length!==1||s.researchJobs[0]?.status!==\"COMPLETED\"||pending.length<1||pending.length>6||failed.length!==0||s.researchRuns?.length!==1||run?.status!==\"RUNNING\"||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);console.log(\"AI_ENQUEUE_COUNT=\"+pending.length);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
+        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.[0]?.status!==\"RUNNING\"||s.trialResultsModified!==false)process.exit(6);fs.writeFileSync(\"/tmp/ai-before\",String(pending.length));})().catch(e=>{console.error(e);process.exit(7);});"
+
+        curl -fsSL https://ollama.com/install.sh | sh
+        export OLLAMA_NUM_PARALLEL=1
+        export OLLAMA_MAX_LOADED_MODELS=1
+        export SHALCON_OLLAMA_MODEL="qwen3:0.6b"
+        ollama serve > /tmp/ollama.log 2>&1 &
+        ollama_pid=$!
+        ready=0
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/ollama-tags.json; then ready=1; break; fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then cat /tmp/ollama.log || true; exit 21; fi
+        ollama pull "$SHALCON_OLLAMA_MODEL"
+
+        out="$(PYTHONPATH=apps/local-runner/src python -m shalcon_runner once --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN")"
+        echo "$out" | tee /tmp/phase20-ai-worker.json
+        node -e "const o=JSON.parse(process.argv[1]);if(o.status!==\"COMPLETED\"||o.job_type!==\"LOCAL_AI_EXTRACT\"||!o.job_id)process.exit(8);" "$out"
+
+        node -e "const fs=require(\"fs\");(async()=>{const before=Number(fs.readFileSync(\"/tmp/ai-before\",\"utf8\"));const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.aiJobs?.filter(x=>x.status===\"COMPLETED\")??[];const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.aiJobs?.filter(x=>x.status===\"FAILED\")??[];if(r.status!==200||completed.length!==1||pending.length!==before-1||failed.length!==0||s.researchRuns?.[0]?.status!==\"RUNNING\"||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(9);})().catch(e=>{console.error(e);process.exit(10);});" || { rc=$?; cat /tmp/phase20-live.log || true; cat /tmp/ollama.log || true; cat /tmp/phase20-ai-worker.json 2>/dev/null || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
