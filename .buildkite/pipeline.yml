@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":rocket: Final full Phase 0-19 regression"
-    key: "phase19-final-full-regression"
-    timeout_in_minutes: 110
+  - label: ":test_tube: Phase 20 cohort setup gate"
+    key: "phase20-setup"
+    timeout_in_minutes: 70
     command: |
       bash -lc '
         set -euo pipefail
@@ -20,17 +20,18 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
-        node --version
-        npm --version
-        python --version
-        test -f package-lock.json
-
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
         npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
 
-        node scripts/verify-through-phase19.mjs
+        npm run typecheck
+        npm run lint
+        npm run test:unit
+        npm run test:e2e
+        npm run test:python
+        node scripts/phase20-trial-report.mjs
+        npm run build
       '
     plugins:
       - docker#v5.13.0:
