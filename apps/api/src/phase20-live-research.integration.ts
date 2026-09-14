@@ -31,7 +31,7 @@ const candidateSchema = z.object({
 }).strict();
 
 const setupSchema = z.object({
-  candidates: z.array(candidateSchema).length(3),
+  candidates: z.array(candidateSchema).min(1).max(3),
   runnerToken: z.string().min(24).max(200),
 }).strict();
 
