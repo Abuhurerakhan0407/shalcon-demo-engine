@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Minimal Phase 20 D1 write control"
-    key: "phase20-minimal-write-control"
+  - label: ":test_tube: Phase 20 parse + user setup control"
+    key: "phase20-parse-user-control"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -21,23 +21,24 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.sourceClass===\"OFFICIAL_WEBSITE\");const candidate={id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite};fs.writeFileSync(\"/tmp/phase20-setup-control.json\",JSON.stringify({candidates:[candidate]}));"
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-write-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-write-control.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-setup-control.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
         for _ in $(seq 1 60); do
-          status="$(curl -sS -o /tmp/phase20-write-control.json -w "%{http_code}" http://127.0.0.1:8807/phase20-write-control || true)"
-          if [ "$status" = "200" ]; then
+          status="$(curl -sS -o /tmp/phase20-setup-control-response.json -w "%{http_code}" -H "Content-Type: application/json" --data-binary @/tmp/phase20-setup-control.json http://127.0.0.1:8807/phase20-setup-control || true)"
+          if [ "$status" != "000" ]; then
             ready=1
             break
           fi
           sleep 1
         done
-        cat /tmp/phase20-write-control.json 2>/dev/null || true
-        if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-write-control.log
+        cat /tmp/phase20-setup-control-response.json 2>/dev/null || true
+        if [ "$ready" -ne 1 ] || [ "$status" != "201" ]; then
+          cat /tmp/phase20-setup-control.log
           exit 1
         fi
       '
