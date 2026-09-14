@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { URL } from 'node:url';
 
 const path = new URL('../docs/phase20-salon-accuracy-trial.json', import.meta.url);
 const trial = JSON.parse(await readFile(path, 'utf8'));
