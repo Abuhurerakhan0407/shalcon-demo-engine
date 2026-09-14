@@ -298,6 +298,7 @@ class BrowserResearchEngine:
 
         pages: list[dict[str, Any]] = []
         visited: set[str] = set()
+        final_urls_seen: set[str] = set()
         queue: list[str] = [start_url]
 
         proxy_context = (
@@ -328,9 +329,19 @@ class BrowserResearchEngine:
                         continue
                     visited.add(current)
                     page_result = self._capture_page(context, current, job_dir)
+                    final_url = page_result.get("finalUrl")
+                    if isinstance(final_url, str) and final_url in final_urls_seen:
+                        continue
+                    if isinstance(final_url, str):
+                        final_urls_seen.add(final_url)
                     pages.append(page_result)
                     for discovered in page_result.get("discoveredLinks", []):
-                        if isinstance(discovered, str) and discovered not in visited and discovered not in queue:
+                        if (
+                            isinstance(discovered, str)
+                            and discovered not in visited
+                            and discovered not in queue
+                            and discovered not in final_urls_seen
+                        ):
                             queue.append(discovered)
             finally:
                 context.close()
