@@ -5,7 +5,7 @@ const base = process.env.PHASE20_REVIEW_BASE_URL ?? 'http://127.0.0.1:8808';
 async function request(path, init, expectedStatus) {
   const response = await globalThis.fetch(`${base}${path}`, init);
   const text = await response.text();
-  let body = null;
+  let body;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
