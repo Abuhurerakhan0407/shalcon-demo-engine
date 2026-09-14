@@ -28,6 +28,18 @@ steps:
         npm --workspace @shalcon/web run build
         node scripts/phase20-trial-report.mjs
 
+        rm -rf .wrangler/phase20-evidence-review-ci
+        cd apps/api
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review-ci
+        npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review-ci > /tmp/phase20-evidence-review.log 2>&1 &
+        review_pid=$!
+        cd ../..
+        trap "kill $review_pid 2>/dev/null || true" EXIT
+        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
+        kill "$review_pid" 2>/dev/null || true
+        wait "$review_pid" 2>/dev/null || true
+        trap - EXIT
+
         rm -rf .wrangler/phase20-operator-shell-ci
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-operator-shell-ci
