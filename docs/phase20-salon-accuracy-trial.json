@@ -1,0 +1,226 @@
+{
+  "phase": 20,
+  "name": "20-Prospect Salon Accuracy Trial",
+  "status": "COHORT_LOCKED_RESULTS_PENDING",
+  "baseline": {
+    "phase19VerifiedCommit": "c307e326a0ae8a3e994457ca30b525d202cf1907",
+    "phase19ClosureBuild": 374
+  },
+  "gate": {
+    "prospectCount": 20,
+    "minimumZeroFactualCorrection": 18,
+    "criticalFactualErrorsAllowed": 0,
+    "rule": "Do not hide failures. If the gate fails, stop scaling, fix identity/research/evidence/template logic, and repeat the trial."
+  },
+  "cohortPolicy": {
+    "market": "Mumbai metropolitan area",
+    "niche": "SALON_SPA",
+    "realBusinessesOnly": true,
+    "mixedDifficulty": true,
+    "syntheticProspectsAllowed": false
+  },
+  "prospects": [
+    {
+      "id": "p20-01-lakme-hill-road-bandra",
+      "businessName": "Lakme Salon in Hill Road Bandra, Mumbai",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home",
+      "officialWebsite": "https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home",
+      "difficulty": "MULTI_LOCATION_CHAIN",
+      "existingDatabaseRow": 5,
+      "result": null
+    },
+    {
+      "id": "p20-02-shanuzz-andheri",
+      "businessName": "Shanuzz Salon Andheri",
+      "location": "Andheri West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://shanuzz.com/",
+      "officialWebsite": "https://shanuzz.com/",
+      "difficulty": "MULTI_LOCATION_BRAND",
+      "existingDatabaseRow": 14,
+      "result": null
+    },
+    {
+      "id": "p20-03-akreations-bandra",
+      "businessName": "A'Kreations Hair & Beyond",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://www.akreations.in/",
+      "officialWebsite": "https://www.akreations.in/",
+      "difficulty": "POLISHED_OFFICIAL_SITE",
+      "result": null
+    },
+    {
+      "id": "p20-04-vmat-vikhroli",
+      "businessName": "VMAT Salon & Spa",
+      "location": "Vikhroli West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://vmatsalon.com/",
+      "officialWebsite": "https://vmatsalon.com/",
+      "difficulty": "POLISHED_OFFICIAL_SITE",
+      "result": null
+    },
+    {
+      "id": "p20-05-glory-bandra",
+      "businessName": "Glory Salon",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://www.glorysalon.co.in/",
+      "officialWebsite": "https://www.glorysalon.co.in/",
+      "difficulty": "MULTI_LOCATION_BRAND",
+      "result": null
+    },
+    {
+      "id": "p20-06-bblunt-khar",
+      "businessName": "BBLUNT Salon - Khar, Mumbai",
+      "location": "Khar West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://bbluntsalons.co.in/",
+      "officialWebsite": "https://bbluntsalons.co.in/",
+      "difficulty": "MULTI_LOCATION_CHAIN",
+      "result": null
+    },
+    {
+      "id": "p20-07-biguine-andheri",
+      "businessName": "Jean-Claude Biguine Salon & Spa",
+      "location": "Lokhandwala, Andheri West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://biguineindia.co.in/locations/",
+      "officialWebsite": "https://biguineindia.co.in/",
+      "difficulty": "MULTI_LOCATION_CHAIN",
+      "result": null
+    },
+    {
+      "id": "p20-08-dessange-bandra",
+      "businessName": "Dessange Salon & Spa (Bandra)",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://www.dessangemumbai.com/",
+      "officialWebsite": "https://www.dessangemumbai.com/",
+      "difficulty": "MULTI_LOCATION_BRAND",
+      "result": null
+    },
+    {
+      "id": "p20-09-savio-pali-hill",
+      "businessName": "Savio John Pereira Salon",
+      "location": "Pali Hill, Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://www.saviojohnpereira.com/contact.html",
+      "officialWebsite": "https://www.saviojohnpereira.com/",
+      "difficulty": "MULTI_LOCATION_BRAND",
+      "result": null
+    },
+    {
+      "id": "p20-10-lemon-bandra",
+      "businessName": "Lemon Salons Bandra Branch",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://lemonsalons.com/pages/contact",
+      "officialWebsite": "https://lemonsalons.com/",
+      "difficulty": "MULTI_LOCATION_CHAIN",
+      "result": null
+    },
+    {
+      "id": "p20-11-envi-juhu",
+      "businessName": "Envi Salons and Aesthetics - Juhu",
+      "location": "Juhu, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://envi.in/find-us/mumbai/",
+      "officialWebsite": "https://envi.in/",
+      "difficulty": "MULTI_LOCATION_CHAIN",
+      "result": null
+    },
+    {
+      "id": "p20-12-color-cafe-bandra",
+      "businessName": "Color Cafe - Salon",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://colorcafe.co.in/",
+      "officialWebsite": "https://colorcafe.co.in/",
+      "difficulty": "INDEPENDENT_OFFICIAL_SITE",
+      "result": null
+    },
+    {
+      "id": "p20-13-nalini-yasmin-bandra",
+      "businessName": "Nalini of Nalini & Yasmin Salon",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://nalini.in/",
+      "officialWebsite": "https://nalini.in/",
+      "difficulty": "LEGACY_CONTENT_HEAVY_SITE",
+      "result": null
+    },
+    {
+      "id": "p20-14-kromakay-juhu",
+      "businessName": "Kromakay Salon Juhu",
+      "location": "Juhu, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Kromakay+Salon+Juhu+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-15-happy-in-the-head-bandra",
+      "businessName": "Happy in the Head",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Happy+in+the+Head+Bandra+West+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-16-hakims-aalim-oshiwara",
+      "businessName": "Hakim's Aalim Oshiwara",
+      "location": "Andheri West, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Hakims+Aalim+Oshiwara+Andheri+West+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-17-juice-goregaon",
+      "businessName": "Juice Salon - Goregaon",
+      "location": "Goregaon East, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Juice+Salon+Goregaon+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "HOTEL_LOCATION_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-18-rever-bandra",
+      "businessName": "Rever Salons",
+      "location": "Bandra West, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Rever+Salons+Bandra+West+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-19-classic-andheri",
+      "businessName": "Classic Salons",
+      "location": "Andheri West, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Classic+Salons+Andheri+West+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    },
+    {
+      "id": "p20-20-vivant-kandivali",
+      "businessName": "Vivant Salons Beauty & Spa",
+      "location": "Kandivali East, Mumbai",
+      "sourceClass": "PUBLIC_LISTING",
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=Vivant+Salons+Beauty+Spa+Kandivali+East+Mumbai",
+      "officialWebsite": null,
+      "difficulty": "SPARSE_LISTING_LED",
+      "result": null
+    }
+  ]
+}
