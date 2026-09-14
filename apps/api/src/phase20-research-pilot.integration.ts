@@ -70,6 +70,21 @@ app.route('/api/v1/runner', runnerRoutes);
 
 app.get('/phase20/health', (c) => c.json({ ok: true, phase: 20, mode: 'REAL_RESEARCH_PILOT' }));
 
+app.post('/phase20/user-probe', async (c) => {
+  const db = requireDb(c.env.DB);
+  const now = new Date().toISOString();
+  const id = 'phase20-user-probe';
+  await new UserRepository(db).create({
+    id,
+    email: 'phase20-user-probe@example.invalid',
+    name: 'Phase 20 User Probe',
+    createdAt: now,
+  });
+  const row = await db.prepare('SELECT id FROM users WHERE id = ?').bind(id).first<{ id: string }>();
+  if (row?.id !== id) return c.json({ ok: false, stage: 'USER_WRITE' }, 500);
+  return c.json({ ok: true, stage: 'USER_WRITE', trialResultsModified: false }, 201);
+});
+
 app.post('/phase20/setup', async (c) => {
   const input = setupSchema.parse(await c.req.json());
   const db = requireDb(c.env.DB);
