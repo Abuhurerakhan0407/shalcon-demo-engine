@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":white_check_mark: Phase 20 evidence review workflow"
+  - label: ":white_check_mark: Phase 20 evidence review operator workflow"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -16,7 +16,10 @@ steps:
           apps/api/src/evidence-review-routes.ts \
           apps/api/src/phase20-evidence-review.integration.ts \
           apps/api/src/index-with-evidence-review.ts \
-          scripts/phase20-evidence-review-check.mjs
+          scripts/phase20-evidence-review-check.mjs \
+          apps/web/src/App.tsx \
+          apps/web/src/review/EvidenceReviewPage.tsx
+        npm --workspace @shalcon/web run build
 
         rm -rf .wrangler/phase20-evidence-review
         cd apps/api
