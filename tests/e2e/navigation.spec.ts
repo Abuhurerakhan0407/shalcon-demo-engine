@@ -28,6 +28,13 @@ async function authenticate(page: Page) {
     }
     await route.fallback();
   });
+  await page.route('**/mock-api/api/v1/automated-demo/phase19/review-queue', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ issues: [] }),
+    });
+  });
   await page.route('**/mock-api/api/v1/brand-template/registry', async (route) => {
     await route.fulfill({
       status: 200,
@@ -88,6 +95,8 @@ test('authenticated operator can navigate every dashboard route and logout', asy
       await expect(page.getByRole('heading', { name: 'Brand evidence becomes controlled design.' })).toBeVisible();
     } else if (label === 'Demos') {
       await expect(page.getByRole('heading', { name: 'Verified facts in. Private demo out.' })).toBeVisible();
+    } else if (label === 'QA Queue') {
+      await expect(page.getByRole('heading', { name: 'Nothing becomes ready on vibes.' })).toBeVisible();
     } else {
       await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
     }
