@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":id: Phase 20 listing identities 14-16"
-    key: "phase20-listing-identities-14-16"
-    timeout_in_minutes: 30
+  - label: ":world_map: Phase 20 listing salons 14-16"
+    key: "phase20-listing-14-16"
+    timeout_in_minutes: 75
     command: |
       bash -lc '
         set -euo pipefail
@@ -21,18 +21,26 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
+        python -m pip install -e "apps/local-runner[dev]"
+        python -m playwright install --with-deps chromium
+        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
+
         export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"PUBLIC_LISTING\").slice(0,3).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==3||candidates.some(x=>x.officialWebsite!==null)||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-listing.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"PUBLIC_LISTING\").slice(0,3).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==3||candidates.some(x=>x.officialWebsite!==null)||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
 
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-listing.log 2>&1 &
+        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         cd ../..
 
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-listing.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);const ids=p.created?.map(x=>x.prospectId)??[];if(p.created?.length!==3||new Set(ids).size!==3||p.created.some(x=>x.state!==\"IDENTITY_VERIFIED\"||x.identityStatus!==\"NEW_CANONICAL\")||p.trialResultsModified!==false)process.exit(4);const sr=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await sr.json();console.log(JSON.stringify(s));const pending=s.researchJobs?.filter(x=>x.status===\"PENDING\")??[];if(sr.status!==200||s.prospects?.length!==3||pending.length!==3||s.prospects.some(x=>x.sourceCount!==0)||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(5);})().catch(e=>{console.error(e);process.exit(6);});" || { rc=$?; cat /tmp/phase20-listing.log || true; exit $rc; }
+        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);const ids=p.created?.map(x=>x.prospectId)??[];if(p.created?.length!==3||new Set(ids).size!==3||p.created.some(x=>x.state!==\"IDENTITY_VERIFIED\"||x.identityStatus!==\"NEW_CANONICAL\")||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
+
+        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 3
+
+        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.researchJobs?.filter(x=>x.status===\"COMPLETED\")??[];const failed=s.researchJobs?.filter(x=>x.status===\"FAILED\")??[];if(r.status!==200||s.prospects?.length!==3||completed.length!==3||failed.length!==0||s.prospects.some(x=>x.playwrightSourceCount<1||x.sourceCount<1)||(s.aiJobs?.filter(x=>x.status===\"PENDING\").length??0)<3||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
