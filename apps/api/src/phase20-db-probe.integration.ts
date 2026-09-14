@@ -24,26 +24,29 @@ app.get('/phase20/db-schema-probe', async (c) => {
 });
 
 async function insertProbe(db: D1DatabaseLike) {
-  const id = 'phase20-raw-insert-probe';
+  const suffix = crypto.randomUUID().replaceAll('-', '');
+  const id = `phase20-raw-${suffix}`;
+  const email = `phase20-raw-${suffix}@example.invalid`;
   await db
     .prepare('INSERT INTO users(id, email, name, created_at) VALUES (?, ?, ?, ?)')
-    .bind(id, 'phase20-raw-insert@example.invalid', 'Phase 20 Raw Insert', new Date().toISOString())
+    .bind(id, email, 'Phase 20 Raw Insert', new Date().toISOString())
     .run();
-  return db.prepare('SELECT id FROM users WHERE id = ?').bind(id).first<{ id: string }>();
+  const row = await db.prepare('SELECT id FROM users WHERE id = ?').bind(id).first<{ id: string }>();
+  return { id, row };
 }
 
 app.get('/phase20/db-write-probe', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ ok: false, binding: false }, 503);
-  const row = await insertProbe(db);
-  return c.json({ ok: row?.id === 'phase20-raw-insert-probe', binding: true }, row?.id === 'phase20-raw-insert-probe' ? 200 : 500);
+  const result = await insertProbe(db);
+  return c.json({ ok: result.row?.id === result.id, binding: true }, result.row?.id === result.id ? 200 : 500);
 });
 
 app.post('/phase20/db-insert-probe', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ ok: false, binding: false }, 503);
-  const row = await insertProbe(db);
-  return c.json({ ok: row?.id === 'phase20-raw-insert-probe', binding: true }, row?.id === 'phase20-raw-insert-probe' ? 201 : 500);
+  const result = await insertProbe(db);
+  return c.json({ ok: result.row?.id === result.id, binding: true }, result.row?.id === result.id ? 201 : 500);
 });
 
 export default app;
