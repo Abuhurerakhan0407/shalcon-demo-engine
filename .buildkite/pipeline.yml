@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 19 engine lint"
-    key: "phase19-engine-lint"
+  - label: ":mag: Phase 19 integration lint"
+    key: "phase19-integration-lint"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -19,7 +19,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
         npm ci
-        npx eslint apps/api/src/fact-sales-qa.ts apps/api/src/fact-sales-qa-routes.ts scripts/phase19-audit.mjs scripts/verify-phase19-d1.mjs scripts/verify-through-phase19.mjs
+        npx eslint apps/api/src/phase19.integration.ts
       '
     plugins:
       - docker#v5.13.0:
