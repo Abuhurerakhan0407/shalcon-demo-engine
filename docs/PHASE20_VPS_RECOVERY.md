@@ -18,6 +18,16 @@ Phase 20 remains active. Do not advance to Phase 21 and do not change the overal
 - The operator API remains local-only; the setup does not expose it publicly.
 - Trial result fields remain untouched until actual demo QA/human review.
 
+## Hosted recovery proofs
+
+The recovery path was proved on the existing Buildkite Linux executor before relying on a replacement user device:
+
+- **Buildkite #540 ✅** — `qwen3:4b` installed and executed for a real strict structured-output smoke after the recovery changes; local-runner extraction regressions passed; `sourceOnly: true` and `verified: false` remained intact.
+- **Buildkite #541 ✅** — a brand-new local D1 was migrated and seeded with the locked 20-prospect cohort, Playwright research and local Ollama extraction were run to terminal state, all 20 research jobs completed, every prospect finished with at least one captured source and at least one evidence row, no active or dead-letter research/AI jobs remained, foreign-key violations were zero, and `trialResultsModified` stayed `false`.
+- Build #541 also exported a fresh Phase 20 review packet and recovery status as Buildkite artifacts. These are recovery/evidence artifacts only; they are not human verification decisions and do not close the accuracy trial.
+
+The hosted recovery proves that loss of the laptop-local database no longer blocks Phase 20 engineering execution. Human evidence review and actual demo inspection are still mandatory before any trial result can be recorded.
+
 ## One-time VPS preparation
 
 After cloning this branch/repository onto the Ubuntu VPS:
