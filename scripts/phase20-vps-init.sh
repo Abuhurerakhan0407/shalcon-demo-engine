@@ -27,15 +27,14 @@ SERVICE_USER="$(id -un)"
 NPM_BIN="$(command -v npx)"
 NODE_BIN_DIR="$(dirname "$(command -v node)")"
 PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
-ENV_FILE="/etc/shalcon-phase20.env"
+ENV_FILE="$ROOT_DIR/.env.phase20-vps"
 API_SERVICE="/etc/systemd/system/shalcon-phase20-api.service"
 RUNNER_SERVICE="/etc/systemd/system/shalcon-phase20-runner.service"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   command -v openssl >/dev/null 2>&1 || $SUDO apt-get install -y openssl
   TOKEN="phase20-$(openssl rand -hex 24)"
-  tmp_env="$(mktemp)"
-  cat >"$tmp_env" <<EOF
+  cat >"$ENV_FILE" <<EOF
 SHALCON_API_BASE_URL=http://127.0.0.1:8787
 SHALCON_RUNNER_TOKEN=$TOKEN
 SHALCON_OLLAMA_URL=http://127.0.0.1:11434
@@ -43,10 +42,10 @@ SHALCON_OLLAMA_MODEL=qwen3:4b
 SHALCON_OLLAMA_TIMEOUT_SECONDS=120
 PYTHONPATH=$ROOT_DIR/apps/local-runner/src
 EOF
-  $SUDO install -m 600 "$tmp_env" "$ENV_FILE"
-  rm -f "$tmp_env"
+  chmod 600 "$ENV_FILE"
   log "Created a new private Phase 20 runner token in $ENV_FILE"
 else
+  chmod 600 "$ENV_FILE"
   log "Reusing existing $ENV_FILE"
 fi
 
@@ -123,7 +122,7 @@ prospect_count="$(curl -fsS http://127.0.0.1:8787/api/v1/prospects | python3 -c 
 if [[ "$prospect_count" == "0" ]]; then
   log "Seeding the locked 20-prospect cohort"
   set -a
-  # shellcheck disable=SC1091
+  # shellcheck disable=SC1090
   source "$ENV_FILE"
   set +a
   node scripts/phase20-operator-seed.mjs
