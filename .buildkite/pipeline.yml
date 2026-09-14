@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 first real AI completion"
-    key: "phase20-first-real-ai-completion"
+  - label: ":microscope: Phase 20 claimed AI extraction"
+    key: "phase20-claimed-ai-extraction"
     timeout_in_minutes: 50
     command: |
       bash -lc '
@@ -37,8 +37,7 @@ steps:
         node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.created[0]?.identityStatus!==\"NEW_CANONICAL\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
 
         PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-
-        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.[0]?.status!==\"RUNNING\"||s.trialResultsModified!==false)process.exit(6);fs.writeFileSync(\"/tmp/ai-before\",String(pending.length));})().catch(e=>{console.error(e);process.exit(7);});"
+        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.[0]?.status!==\"RUNNING\"||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});"
 
         curl -fsSL https://ollama.com/install.sh | sh
         export OLLAMA_NUM_PARALLEL=1
@@ -54,12 +53,22 @@ steps:
         if [ "$ready" -ne 1 ]; then cat /tmp/ollama.log || true; exit 21; fi
         ollama pull "$SHALCON_OLLAMA_MODEL"
 
-        out="$(PYTHONPATH=apps/local-runner/src python -m shalcon_runner once --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN")"
-        echo "$out" | tee /tmp/phase20-ai-worker.json
-        node -e "const o=JSON.parse(process.argv[1]);if(o.status!==\"COMPLETED\"||o.job_type!==\"LOCAL_AI_EXTRACT\"||!o.job_id)process.exit(8);" "$out"
+        PYTHONPATH=apps/local-runner/src python - <<"PY"
+import json, os
+from shalcon_runner.ai_extract import ai_extract_job
+from shalcon_runner.client import RunnerApiClient
 
-        node -e "const fs=require(\"fs\");(async()=>{const before=Number(fs.readFileSync(\"/tmp/ai-before\",\"utf8\"));const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.aiJobs?.filter(x=>x.status===\"COMPLETED\")??[];const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.aiJobs?.filter(x=>x.status===\"FAILED\")??[];const run=s.researchRuns?.[0];const expectedRunStatus=before===1?[\"COMPLETED\",\"BLOCKED\"].includes(run?.status):run?.status===\"RUNNING\";if(r.status!==200||completed.length!==1||pending.length!==before-1||failed.length!==0||!expectedRunStatus||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(9);})().catch(e=>{console.error(e);process.exit(10);});" || { rc=$?; cat /tmp/phase20-live.log || true; cat /tmp/ollama.log || true; cat /tmp/phase20-ai-worker.json 2>/dev/null || true; exit $rc; }
-      '
+client = RunnerApiClient("http://127.0.0.1:8807", os.environ["SHALCON_RUNNER_TOKEN"], timeout_seconds=30.0)
+client.heartbeat("phase20-ai-probe", ["LOCAL_AI_EXTRACT"])
+job = client.claim()
+if job is None or job.job_type != "LOCAL_AI_EXTRACT":
+    raise SystemExit("expected a LOCAL_AI_EXTRACT job")
+result = ai_extract_job(job)
+if result.get("sourceOnly") is not True or result.get("verified") is not False or result.get("provider") != "ollama":
+    raise SystemExit("real AI extraction result invariants failed")
+print(json.dumps({"ok": True, "jobId": job.id, "sourceChars": len(job.payload.get("sourceText", "")), "provider": result.get("provider"), "model": result.get("model"), "adapter": result.get("adapter"), "extractedFields": sorted(result.get("extracted", {}).keys())}, sort_keys=True))
+PY
+      ' || { rc=$?; cat /tmp/phase20-live.log 2>/dev/null || true; cat /tmp/ollama.log 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
