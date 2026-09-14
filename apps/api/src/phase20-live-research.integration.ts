@@ -88,7 +88,7 @@ app.post('/phase20/setup', async (c) => {
     name: 'Phase 20 Dynamic Research Runner',
     tokenHash: await hashSessionToken(input.runnerToken),
     version: 'phase20-live',
-    capabilitiesJson: JSON.stringify(['PLAYWRIGHT_RESEARCH']),
+    capabilitiesJson: JSON.stringify(['PLAYWRIGHT_RESEARCH', 'LOCAL_AI_EXTRACT']),
     status: 'ACTIVE',
     lastHeartbeatAt: now,
     createdAt: now,
@@ -157,6 +157,10 @@ app.get('/phase20/status', async (c) => {
   const prospectStatus = await Promise.all(
     prospects.map(async (prospect) => {
       const captured = await sources.listForProspect(prospect.id);
+      const evidence = await db
+        .prepare('SELECT COUNT(*) AS count FROM evidence WHERE prospect_id = ?')
+        .bind(prospect.id)
+        .first<{ count: number | null }>();
       return {
         id: prospect.id,
         canonicalName: prospect.canonicalName,
@@ -166,6 +170,7 @@ app.get('/phase20/status', async (c) => {
           (source) => source.provider === 'PLAYWRIGHT' && source.sourceType === 'WEBSITE_PAGE',
         ).length,
         sourceUrls: captured.map((source) => source.sourceUrl),
+        evidenceCount: Number(evidence?.count ?? 0),
       };
     }),
   );
@@ -184,12 +189,26 @@ app.get('/phase20/status', async (c) => {
     last_error_code: string | null;
     last_error_safe_message: string | null;
   }>();
+  const researchRuns = await db.prepare(`
+    SELECT id, prospect_id, status, model, started_at, completed_at
+    FROM research_runs
+    WHERE user_id = ?
+    ORDER BY created_at, id
+  `).bind(USER_ID).all<{
+    id: string;
+    prospect_id: string;
+    status: string;
+    model: string | null;
+    started_at: string;
+    completed_at: string | null;
+  }>();
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
 
   return c.json({
     prospects: prospectStatus,
     researchJobs: jobs.results.filter((job) => job.job_type === 'PLAYWRIGHT_RESEARCH'),
     aiJobs: jobs.results.filter((job) => job.job_type === 'LOCAL_AI_EXTRACT'),
+    researchRuns: researchRuns.results,
     foreignKeyViolations: foreignKeyViolations.results.length,
     trialResultsModified: false,
   });
