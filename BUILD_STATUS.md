@@ -1,8 +1,8 @@
 # Build Status
 
-Current phase: **Phase 19 — Fact QA + Sales QA**  
-Launch progress: **~61%**  
-Status: **PHASE 18 CLOSED — PHASE 19 ACTIVE**
+Current phase: **Phase 20 — 20-Prospect Salon Accuracy Trial**  
+Launch progress: **~65%**  
+Status: **PHASE 19 CLOSED — PHASE 20 ACTIVE**
 
 ## Completed phases
 
@@ -78,96 +78,99 @@ Closure evidence:
 - Verified commit: `006902486d73afa0ef5f0c7e1f204e1099d8db4b`
 
 ### Phase 18 — Visual QA + Screenshot Package ✅
+Implemented local-runner Playwright visual QA, authenticated lease-bound QA input/completion, desktop/mobile checks, full-page + hero screenshots, artifact provenance, D1 screenshot/QA metadata, overflow/broken-image/console/page-error/CTA/placeholder/disclosure/noindex checks, idempotent QA enqueue, tenant isolation, and guarded `RENDERED → VISUAL_QA_PENDING → FACT_QA_PENDING` or fail-closed `QA_FAILED` progression.
 
-Implemented:
+Closure evidence:
 
-- local-runner Playwright visual-QA job capability
-- authenticated, lease-bound QA input and completion APIs
-- desktop and mobile browser checks
-- desktop full-page screenshot
-- desktop hero screenshot
-- mobile full-page screenshot
-- mobile hero screenshot
-- local-runner artifact references with SHA-256 provenance
-- D1 screenshot metadata and QA-run provenance
-- horizontal-overflow detection
-- broken-image detection
-- console-error detection
-- page-error detection
-- CTA detection
-- placeholder detection
-- concept-disclosure validation
-- noindex/nofollow validation
-- idempotent QA enqueue
-- tenant isolation and runner ownership guards
-- PASS progression: `RENDERED → VISUAL_QA_PENDING → FACT_QA_PENDING`
-- FAIL progression: `RENDERED → VISUAL_QA_PENDING → QA_FAILED`
-- visual failure blocks later fact/sales/send readiness
-- public release remains unavailable after visual PASS
-- existing universal renderer reused; no parallel renderer and no per-prospect deployment
+- Initial compile: **Buildkite #325 ✅**
+- Runner worker contract: **#331 ✅**
+- Healthy + broken browser fixtures: **#332 ✅**
+- D1 acceptance: **#339 ✅**
+- Architecture audit: **#341 ✅**
+- Strict regression: **#342 ✅**
+- Full Phase 0–18 regression: **#343 ✅**
+- Verified commit: `5acc14ac7a9d1cb7a5f0a5e75efeb35ddcc8175b`
 
-Acceptance evidence:
+### Phase 19 — Fact QA + Sales QA ✅
+Implemented evidence-bound visible-fact validation, conflict enforcement, 180-day evidence freshness review policy, CTA correctness checks, deterministic Fact QA results, structured issue/remediation ledger, authenticated evidence/source inspection, explicit human Sales QA, mandatory five-item human checklist, approve/reject decision ledger, tenant/FK guards, and fail-closed state transitions.
 
-- Phase-18 initial TypeScript/control-plane compile: **Buildkite #325 ✅**
-- Runner worker contract: **Buildkite #331 ✅**
-- Browser healthy + deliberately broken fixtures: **Buildkite #332 ✅**
-- Phase-18 acceptance typecheck after D1 worker integration: **Buildkite #337 ✅**
-- Full Phase-18 D1/Workerd acceptance: **Buildkite #339 ✅**
-- Phase-18 architecture audit: **Buildkite #341 ✅**
-- Strict regression — typecheck/lint/unit/E2E/Python/build + golden ÉLANE coverage: **Buildkite #342 ✅**
-- Authoritative full Phase 0–18 hosted regression: **Buildkite #343 ✅**
-- Final fully verified implementation commit: `5acc14ac7a9d1cb7a5f0a5e75efeb35ddcc8175b`
+Operator QA workspace is active at `/qa` and includes:
 
-Important Phase-18 safety properties:
+- review queue
+- supporting evidence/source links
+- private demo preview
+- Fact QA rerun
+- resolve/waive actions with required notes
+- human Sales QA checklist
+- explicit approve/reject
+- visible outreach-disabled guard
 
-- one healthy demo produces exactly four screenshot records and advances only to `FACT_QA_PENDING`;
-- a deliberately broken visual result fails closed to terminal `QA_FAILED`;
-- QA artifacts remain local-runner files with D1 metadata references for the free-first MVP; PNG blobs are not stuffed into D1 and no paid storage dependency was introduced;
-- screenshot metadata is bound to the QA run/demo through FK and trigger guards;
-- runner completion is accepted only from the active lease owner;
-- another tenant cannot read the QA history;
-- no visual PASS can skip Phase 19 or become send-ready.
+Safety properties:
 
-## In progress — Phase 19: Fact QA + Sales QA
+- visual PASS alone cannot become ready;
+- unsupported visible critical facts fail;
+- wrong CTA fails;
+- stale/conflicted evidence can hold review;
+- unresolved issues block Sales approval;
+- every human checklist item is mandatory;
+- explicit rejection fails closed;
+- approval may make a demo ready but cannot send outreach;
+- later Contact Finder / Outreach Copy / Gmail phases remain required.
 
-Build:
+Closure evidence:
 
-- fact-to-evidence validation for every visible critical field
-- conflict enforcement
-- evidence freshness/review policy
-- quality checklist
-- human approval queue
-- issue/remediation records
-- operator inspection of supporting sources
-- CTA correctness validation
-- sales-readiness checklist
-- deterministic PASS/FAIL outcome
-- guarded `FACT_QA_PENDING → SALES_QA_PENDING → DEMO_READY` progression only after required approvals
-- fail-closed path to `QA_FAILED` for unsupported/wrong critical facts or sales QA failure
+- Initial Phase-19 compile: **Buildkite #350 ✅**
+- Adversarial real-D1 acceptance: **Buildkite #356 ✅**
+- Architecture audit: **Buildkite #357 ✅**
+- Integration lint correction verified: **Buildkite #364 ✅**
+- Operator QA UI + Playwright + audit + production build: **Buildkite #373 ✅**
+- Authoritative full Phase 0–19 hosted regression: **Buildkite #374 ✅**
+- Final fully verified Phase-19 implementation commit: `c307e326a0ae8a3e994457ca30b525d202cf1907`
 
-Acceptance targets:
+## Active — Phase 20: 20-Prospect Salon Accuracy Trial
 
-- one unsupported visible critical fact fails the demo
-- wrong CTA fails
-- expired/stale evidence can force review
-- human can inspect sources supporting visible claims
-- visual QA PASS alone is insufficient for readiness
-- only fully passing fact + sales QA can become `DEMO_READY`
-- tenant ownership and audit history remain intact
-- no autonomous send or negotiation is introduced in Phase 19
+This is a real-market accuracy gate, not a synthetic fixture exercise.
+
+Run **20 actual Salon & Spa prospects** through the system and record separately:
+
+- wrong identity
+- wrong fact
+- missing fact
+- wrong template
+- bad copy
+- bad image
+- visual bug
+- contact problem
+- manual correction required
+
+Hard gate:
+
+- at least **18/20 demos require zero factual correction before send**;
+- any critical factual error is a failure that must be investigated;
+- failures must not be hidden or reclassified as visual/copy problems;
+- if the gate fails, stop scaling, fix identity/research/evidence/template logic, and repeat the trial.
+
+Current cohort sourcing:
+
+- existing Shalcon 500-prospect database contributes only **2** Salon/Spa candidates;
+- source and verify at least 18 additional real Salon/Spa businesses before final cohort lock;
+- preserve source URLs and business identity evidence for every trial row;
+- use a mixed-difficulty cohort rather than only easy chain sites.
 
 ## Current CI condition
 
-Buildkite hosted Linux remains the authoritative private-repository phase gate. Phase 19 must not close until targeted fact/sales QA acceptance, D1/state-machine acceptance, architecture audit, strict typecheck/lint/unit/build checks and full Phase 0–19 hosted regression are green.
+Phase 19 is closed. Buildkite #374 is the authoritative Phase 0–19 baseline. Phase 20 must not alter that historical result.
+
+Any Phase-20 harness or ledger code must preserve strict TypeScript/lint/test/build gates, but Phase 20 itself closes only from the real 20-prospect market accuracy result.
 
 ## Blocked
 
-None.
+None. Cohort expansion and verification are active work.
 
 ## Last fully verified implementation commit
 
-`5acc14ac7a9d1cb7a5f0a5e75efeb35ddcc8175b` — final full Phase 0–18 hosted regression, Buildkite #343 SUCCESS.
+`c307e326a0ae8a3e994457ca30b525d202cf1907` — authoritative full Phase 0–19 hosted regression, Buildkite #374 SUCCESS.
 
 ## Next action
 
-Implement Phase 19 on top of the verified Phase-18 visual PASS state. Reuse canonical facts/evidence and existing demo QA/history models. Do not allow unsupported visible critical facts, stale/conflicted evidence, a wrong CTA, or a failed human/sales checklist to advance to `DEMO_READY`. Do not introduce outreach sending in this phase.
+Lock a 20-business real Salon/Spa cohort with source evidence, run every prospect through identity → research/evidence → audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA, record correction categories without hiding failures, and evaluate the 18/20 factual-accuracy gate before starting Phase 21.
