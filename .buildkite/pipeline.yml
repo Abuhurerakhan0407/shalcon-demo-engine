@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":globe_with_meridians: Phase 20 direct live research"
-    key: "phase20-direct-live-research"
-    timeout_in_minutes: 50
+  - label: ":globe_with_meridians: Phase 20 three live research jobs"
+    key: "phase20-three-live-research"
+    timeout_in_minutes: 70
     command: |
       bash -lc '
         set -euo pipefail
@@ -37,9 +37,9 @@ steps:
 
         node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==3||p.created.some(x=>x.state!==\"IDENTITY_VERIFIED\")||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
 
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
+        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 3
 
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.researchJobs?.filter(x=>x.status===\"COMPLETED\")??[];const pending=s.researchJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.researchJobs?.filter(x=>x.status===\"FAILED\")??[];const done=new Set(completed.map(x=>x.entity_id));const researched=s.prospects?.filter(x=>done.has(x.id))??[];if(r.status!==200||completed.length!==1||pending.length!==2||failed.length!==0||researched.length!==1||researched[0].playwrightSourceCount<1||researched[0].sourceCount<1||(s.aiJobs?.filter(x=>x.status===\"PENDING\").length??0)<1||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
+        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.researchJobs?.filter(x=>x.status===\"COMPLETED\")??[];const pending=s.researchJobs?.filter(x=>x.status===\"PENDING\")??[];const failed=s.researchJobs?.filter(x=>x.status===\"FAILED\")??[];const done=new Set(completed.map(x=>x.entity_id));const researched=s.prospects?.filter(x=>done.has(x.id))??[];if(r.status!==200||completed.length!==3||pending.length!==0||failed.length!==0||researched.length!==3||researched.some(x=>x.playwrightSourceCount<1||x.sourceCount<1)||(s.aiJobs?.filter(x=>x.status===\"PENDING\").length??0)<3||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
