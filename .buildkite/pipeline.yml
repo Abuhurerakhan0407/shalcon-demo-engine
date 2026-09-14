@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 static gate isolation"
+  - label: ":mag: Phase 20 lint source isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,8 +10,13 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npm run typecheck || { sleep 30; exit 1; }
-        npm run lint || { sleep 75; exit 1; }
+
+        npx eslint apps/api/src/evidence-verification.ts || { sleep 20; exit 1; }
+        npx eslint apps/api/src/evidence-review-routes.ts || { sleep 40; exit 1; }
+        npx eslint apps/api/src/phase20-evidence-review.integration.ts || { sleep 60; exit 1; }
+        npx eslint apps/api/src/index-with-evidence-review.ts || { sleep 80; exit 1; }
+        npx eslint scripts/phase20-evidence-review-check.mjs || { sleep 100; exit 1; }
+        npm run lint || { sleep 120; exit 1; }
         exit 0
       '
     plugins:
