@@ -10,6 +10,7 @@ from .ai_extract import (
     DEFAULT_OLLAMA_URL,
     AiExtractionError,
     OllamaProvider,
+    _configured_ollama_timeout_seconds,
     build_extraction_prompt,
 )
 from .client import RunnerApiClient, RunnerApiError
@@ -56,7 +57,11 @@ def run_ai_smoke(args: argparse.Namespace) -> int:
     if not source_text.strip() or len(source_text) > 40_000:
         raise AiExtractionError("AI_SMOKE_SOURCE_INVALID", "AI smoke source text is empty or oversized.")
 
-    provider = OllamaProvider(args.ollama_url, timeout_seconds=60.0, retries=1)
+    provider = OllamaProvider(
+        args.ollama_url,
+        timeout_seconds=_configured_ollama_timeout_seconds(),
+        retries=1,
+    )
     health = provider.health(args.model)
     if not health.model_available:
         raise AiExtractionError("OLLAMA_MODEL_MISSING", "Configured Ollama model is not installed.")
