@@ -77,12 +77,15 @@ app.post('/phase20/setup', async (c) => {
   const db = requireDb(c.env.DB);
   const now = new Date().toISOString();
 
-  await new UserRepository(db).create({
-    id: USER_ID,
-    email: 'phase20-live@example.invalid',
-    name: 'Phase 20 Live Research',
-    createdAt: now,
-  });
+  const users = new UserRepository(db);
+  if (!(await users.getById(USER_ID))) {
+    await users.create({
+      id: USER_ID,
+      email: 'phase20-live@example.invalid',
+      name: 'Phase 20 Live Research',
+      createdAt: now,
+    });
+  }
   const campaign = await new CampaignRepository(db).ensureManualSalonCampaign(USER_ID, now);
   await new LocalRunnerRepository(db).registerOrRotate({
     id: RUNNER_ID,
