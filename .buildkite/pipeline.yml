@@ -2,56 +2,118 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":llama: Phase 20 qwen3:4b recovery smoke"
-    key: "phase20-qwen4-recovery-smoke"
-    timeout_in_minutes: 45
+  - label: ":salon: Phase 20 clean recovery workload"
+    key: "phase20-clean-recovery-workload"
+    timeout_in_minutes: 180
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        npm ci
-
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
-        python3 -m venv /tmp/shalcon-qwen4-venv
-        . /tmp/shalcon-qwen4-venv/bin/activate
-        python -m pip install -e "apps/local-runner[dev]"
-        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_ai_extract.py -q
-        echo "ai-extract-regression-passed"
-
-        curl -fsSL https://ollama.com/install.sh | sh
-        export OLLAMA_NUM_PARALLEL=1
-        export OLLAMA_MAX_LOADED_MODELS=1
+        export PHASE20_OPERATOR_BASE_URL="http://127.0.0.1:8787"
+        export SHALCON_API_BASE_URL="http://127.0.0.1:8787"
+        export SHALCON_RUNNER_TOKEN="phase20-buildkite-recovery-token-00000001"
         export SHALCON_OLLAMA_URL="http://127.0.0.1:11434"
         export SHALCON_OLLAMA_MODEL="qwen3:4b"
         export SHALCON_OLLAMA_TIMEOUT_SECONDS="120"
-        ollama serve > /tmp/phase20-qwen4-ollama.log 2>&1 &
-        ollama_pid=$!
-        trap "kill $ollama_pid 2>/dev/null || true" EXIT
+        export OLLAMA_NUM_PARALLEL=1
+        export OLLAMA_MAX_LOADED_MODELS=1
 
+        cleanup() {
+          kill "${runner_pid:-}" 2>/dev/null || true
+          kill "${api_pid:-}" 2>/dev/null || true
+          kill "${ollama_pid:-}" 2>/dev/null || true
+        }
+        trap cleanup EXIT
+
+        npm ci
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
+        python3 -m venv /tmp/shalcon-phase20-recovery-venv
+        . /tmp/shalcon-phase20-recovery-venv/bin/activate
+        python -m pip install -e "apps/local-runner[dev]"
+        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_ai_extract.py apps/local-runner/tests/test_worker.py -q
+        python -m playwright install --with-deps chromium
+
+        curl -fsSL https://ollama.com/install.sh | sh
+        ollama serve > /tmp/phase20-recovery-ollama.log 2>&1 &
+        ollama_pid=$!
         ready=0
         for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/phase20-qwen4-tags.json; then
+          if curl -fsS "$SHALCON_OLLAMA_URL/api/tags" >/tmp/phase20-recovery-tags.json; then
             ready=1
             break
           fi
           sleep 1
         done
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-qwen4-ollama.log || true
-          exit 51
+          cat /tmp/phase20-recovery-ollama.log || true
+          exit 61
         fi
         ollama pull "$SHALCON_OLLAMA_MODEL"
-        ollama list
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-recovery-smoke.json
+        grep -q '"'"'"ok"'"'": true' /tmp/phase20-recovery-smoke.json
+        grep -q '"'"'"sourceOnly"'"'": true' /tmp/phase20-recovery-smoke.json
+        grep -q '"'"'"verified"'"'": false' /tmp/phase20-recovery-smoke.json
 
-        PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-qwen4-smoke.json
-        grep -q '"'"'"ok"'"'": true' /tmp/phase20-qwen4-smoke.json
-        grep -q '"'"'"provider"'"'": "'"'"ollama"'"'"' /tmp/phase20-qwen4-smoke.json
-        grep -q '"'"'"model"'"'": "'"'"qwen3:4b"'"'"' /tmp/phase20-qwen4-smoke.json
-        grep -q '"'"'"sourceOnly"'"'": true' /tmp/phase20-qwen4-smoke.json
-        grep -q '"'"'"verified"'"'": false' /tmp/phase20-qwen4-smoke.json
-        echo "qwen3:4b structured recovery smoke passed"
-      ' || { rc=$?; cat /tmp/phase20-qwen4-ollama.log 2>/dev/null || true; exit $rc; }
+        rm -rf .wrangler/phase20-buildkite-recovery
+        cd apps/api
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-buildkite-recovery
+        npx wrangler dev src/phase20-operator.integration.ts --local --port 8787 --persist-to ../../.wrangler/phase20-buildkite-recovery > /tmp/phase20-recovery-api.log 2>&1 &
+        api_pid=$!
+        cd ../..
+
+        api_ready=0
+        for i in $(seq 1 90); do
+          if curl -fsS "$PHASE20_OPERATOR_BASE_URL/phase20/operator-health" >/tmp/phase20-recovery-health.json; then
+            api_ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$api_ready" -ne 1 ]; then
+          cat /tmp/phase20-recovery-api.log || true
+          exit 62
+        fi
+
+        node scripts/phase20-operator-seed.mjs | tee /tmp/phase20-recovery-seed.json
+        curl -fsS "$PHASE20_OPERATOR_BASE_URL/phase20/status" >/tmp/phase20-recovery-seeded-status.json
+        node -e "const s=require(\"/tmp/phase20-recovery-seeded-status.json\");if(s.prospects.length!==20||s.researchJobs.length!==20||s.trialResultsModified!==false||s.foreignKeyViolations!==0)process.exit(63);"
+
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner run > /tmp/phase20-recovery-runner.log 2>&1 &
+        runner_pid=$!
+
+        terminal_streak=0
+        finished=0
+        for iteration in $(seq 1 360); do
+          curl -fsS "$PHASE20_OPERATOR_BASE_URL/phase20/status" >/tmp/phase20-recovery-status.json
+          summary=$(node -e "const s=require(\"/tmp/phase20-recovery-status.json\");const jobs=[...(s.researchJobs||[]),...(s.aiJobs||[])];const active=jobs.filter(j=>[\"PENDING\",\"RUNNING\",\"FAILED\"].includes(j.status)).length;const dead=jobs.filter(j=>j.status===\"DEAD_LETTER\").length;const rc=(s.researchJobs||[]).filter(j=>j.status===\"COMPLETED\").length;const ac=(s.aiJobs||[]).filter(j=>j.status===\"COMPLETED\").length;process.stdout.write([rc,(s.researchJobs||[]).length,ac,(s.aiJobs||[]).length,active,dead].join(\" \"));")
+          set -- $summary
+          echo "iteration=$iteration research=$1/$2 ai=$3/$4 active=$5 dead=$6"
+          if [ "$2" -eq 20 ] && [ "$5" -eq 0 ]; then
+            terminal_streak=$((terminal_streak + 1))
+          else
+            terminal_streak=0
+          fi
+          if [ "$terminal_streak" -ge 3 ]; then
+            finished=1
+            break
+          fi
+          sleep 20
+        done
+
+        if [ "$finished" -ne 1 ]; then
+          cat /tmp/phase20-recovery-status.json || true
+          cat /tmp/phase20-recovery-runner.log || true
+          exit 64
+        fi
+
+        curl -fsS "$PHASE20_OPERATOR_BASE_URL/phase20/status" > phase20-buildkite-recovery-status.json
+        node scripts/phase20-export-review-packet.mjs --out=phase20-buildkite-review-packet.json
+
+        node -e "const fs=require(\"node:fs\");const s=JSON.parse(fs.readFileSync(\"phase20-buildkite-recovery-status.json\",\"utf8\"));const jobs=[...(s.researchJobs||[]),...(s.aiJobs||[])];const dead=jobs.filter(j=>j.status===\"DEAD_LETTER\");const active=jobs.filter(j=>[\"PENDING\",\"RUNNING\",\"FAILED\"].includes(j.status));const badProspects=(s.prospects||[]).filter(p=>p.sourceCount<1||p.evidenceCount<1);if(s.trialResultsModified!==false||s.foreignKeyViolations!==0||(s.researchJobs||[]).length!==20||(s.researchJobs||[]).some(j=>j.status!==\"COMPLETED\")||dead.length||active.length||badProspects.length){console.error(JSON.stringify({dead,active,badProspects},null,2));process.exit(65);}const packet=JSON.parse(fs.readFileSync(\"phase20-buildkite-review-packet.json\",\"utf8\"));if(packet.phase!==20||packet.prospectCount!==20||packet.trialResultsModified!==false||packet.foreignKeyViolations!==0)process.exit(66);console.log(JSON.stringify({ok:true,phase:20,researchCompleted:s.researchJobs.length,aiCompleted:(s.aiJobs||[]).length,prospectsWithEvidence:s.prospects.length,trialResultsModified:s.trialResultsModified,foreignKeyViolations:s.foreignKeyViolations},null,2));"
+
+        buildkite-agent artifact upload "phase20-buildkite-recovery-status.json;phase20-buildkite-review-packet.json;/tmp/phase20-recovery-smoke.json;/tmp/phase20-recovery-seed.json;/tmp/phase20-recovery-api.log;/tmp/phase20-recovery-runner.log;/tmp/phase20-recovery-ollama.log" || true
+      ' || { rc=$?; echo "--- API LOG ---"; tail -n 200 /tmp/phase20-recovery-api.log 2>/dev/null || true; echo "--- RUNNER LOG ---"; tail -n 200 /tmp/phase20-recovery-runner.log 2>/dev/null || true; echo "--- OLLAMA LOG ---"; tail -n 200 /tmp/phase20-recovery-ollama.log 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
