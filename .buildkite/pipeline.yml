@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":page_facing_up: Phase 20 payload generation"
-    key: "phase20-payload-generation"
-    timeout_in_minutes: 20
+  - label: ":incoming_envelope: Phase 20 POST transport"
+    key: "phase20-post-transport"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
@@ -20,8 +20,27 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.sourceClass===\"OFFICIAL_WEBSITE\");if(!p)throw new Error(\"No official-site prospect found\");const candidate={id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite};fs.writeFileSync(\"/tmp/phase20-payload.json\",JSON.stringify({candidates:[candidate]}));"
-        node -e "const fs=require(\"fs\");const v=JSON.parse(fs.readFileSync(\"/tmp/phase20-payload.json\",\"utf8\"));if(!Array.isArray(v.candidates)||v.candidates.length!==1||!v.candidates[0].id)process.exit(1);console.log(JSON.stringify(v));"
+        npm ci
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.sourceClass===\"OFFICIAL_WEBSITE\");const candidate={id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite};fs.writeFileSync(\"/tmp/phase20-post.json\",JSON.stringify({candidates:[candidate]}));"
+        rm -rf .wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-post.log 2>&1 &
+        worker_pid=$!
+        trap "kill $worker_pid 2>/dev/null || true" EXIT
+        ready=0
+        for _ in $(seq 1 60); do
+          status="$(curl -sS -o /tmp/phase20-post-response.json -w "%{http_code}" -H "Content-Type: application/json" --data-binary @/tmp/phase20-post.json http://127.0.0.1:8807/phase20-setup-control || true)"
+          if [ "$status" != "000" ]; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        cat /tmp/phase20-post-response.json 2>/dev/null || true
+        if [ "$ready" -ne 1 ] || [ "$status" != "200" ]; then
+          cat /tmp/phase20-post.log
+          exit 1
+        fi
       '
     plugins:
       - docker#v5.13.0:
