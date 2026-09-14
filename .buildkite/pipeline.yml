@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 official salons 7-9"
-    key: "phase20-official-7-9"
+  - label: ":mag: Phase 20 official salons 10-12"
+    key: "phase20-official-10-12"
     timeout_in_minutes: 75
     command: |
       bash -lc '
@@ -26,7 +26,7 @@ steps:
         PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
 
         export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(6,9).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==3||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(9,12).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==3||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
 
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
