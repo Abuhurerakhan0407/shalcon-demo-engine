@@ -8,11 +8,13 @@ steps:
     command: |
       bash -lc '
         set -euo pipefail
+        export CI=true
         npm ci
 
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
+        echo "phase20 migrations applied"
         npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
