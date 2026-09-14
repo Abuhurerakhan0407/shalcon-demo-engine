@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 claimed AI extraction"
-    key: "phase20-claimed-ai-extraction"
+  - label: ":brain: Phase 20 AI evidence persistence"
+    key: "phase20-ai-evidence-persistence"
     timeout_in_minutes: 50
     command: |
       bash -lc '
@@ -37,7 +37,7 @@ steps:
         node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.created[0]?.identityStatus!==\"NEW_CANONICAL\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
 
         PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.[0]?.status!==\"RUNNING\"||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});"
+        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.length!==1||s.researchRuns[0]?.status!==\"RUNNING\"||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);fs.writeFileSync(\"/tmp/ai-count\",String(pending.length));})().catch(e=>{console.error(e);process.exit(7);});"
 
         curl -fsSL https://ollama.com/install.sh | sh
         export OLLAMA_NUM_PARALLEL=1
@@ -53,9 +53,11 @@ steps:
         if [ "$ready" -ne 1 ]; then cat /tmp/ollama.log || true; exit 21; fi
         ollama pull "$SHALCON_OLLAMA_MODEL"
 
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-ai-probe.py --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN" | tee /tmp/phase20-ai-probe.json
-        grep -q '"ok": true' /tmp/phase20-ai-probe.json
-        grep -q '"trialResultsModified": false' /tmp/phase20-ai-probe.json
+        export AI_COUNT="$(cat /tmp/ai-count)"
+        PYTHONPATH=apps/local-runner/src python scripts/phase20-ai-probe.py --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN" --jobs "$AI_COUNT" | tee /tmp/phase20-ai-probe.json
+        node -e "const fs=require(\"fs\");const p=JSON.parse(fs.readFileSync(\"/tmp/phase20-ai-probe.json\",\"utf8\"));if(p.ok!==true||p.trialResultsModified!==false||p.provider!==\"ollama\"||p.sourceOnly!==true||p.verified!==false||p.completedCount!==Number(process.env.AI_COUNT))process.exit(8);"
+
+        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const p=s.prospects?.[0];const run=s.researchRuns?.[0];const ai=s.aiJobs??[];const validRun=run&&(run.status===\"COMPLETED\"||run.status===\"BLOCKED\");const validState=p&&run&&((run.status===\"COMPLETED\"&&p.currentState===\"RESEARCHED\")||(run.status===\"BLOCKED\"&&p.currentState===\"RESEARCH_PENDING\"));if(r.status!==200||s.prospects?.length!==1||!validRun||!validState||p.playwrightSourceCount<1||p.evidenceCount<1||ai.length<1||ai.some(x=>x.status!==\"COMPLETED\")||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(9);})().catch(e=>{console.error(e);process.exit(10);});"
       ' || { rc=$?; cat /tmp/phase20-live.log 2>/dev/null || true; cat /tmp/ollama.log 2>/dev/null || true; cat /tmp/phase20-ai-probe.json 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
