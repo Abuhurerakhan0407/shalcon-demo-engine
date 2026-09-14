@@ -45,17 +45,12 @@ steps:
         ollama list
 
         PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-qwen4-smoke.json
-        python - <<"PY"
-import json
-from pathlib import Path
-result = json.loads(Path("/tmp/phase20-qwen4-smoke.json").read_text(encoding="utf-8"))
-assert result["ok"] is True
-assert result["provider"] == "ollama"
-assert result["model"] == "qwen3:4b"
-assert result["sourceOnly"] is True
-assert result["verified"] is False
-print("qwen3:4b structured recovery smoke passed")
-PY
+        grep -q '"'"'"ok"'"'": true' /tmp/phase20-qwen4-smoke.json
+        grep -q '"'"'"provider"'"'": "'"'"ollama"'"'"' /tmp/phase20-qwen4-smoke.json
+        grep -q '"'"'"model"'"'": "'"'"qwen3:4b"'"'"' /tmp/phase20-qwen4-smoke.json
+        grep -q '"'"'"sourceOnly"'"'": true' /tmp/phase20-qwen4-smoke.json
+        grep -q '"'"'"verified"'"'": false' /tmp/phase20-qwen4-smoke.json
+        echo "qwen3:4b structured recovery smoke passed"
       ' || { rc=$?; cat /tmp/phase20-qwen4-ollama.log 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
