@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 19 worker on Phase 20 D1 path"
-    key: "phase19-worker-phase20-path-control"
-    timeout_in_minutes: 40
+  - label: ":test_tube: Minimal Phase 20 D1 write control"
+    key: "phase20-minimal-write-control"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
@@ -23,21 +23,21 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase19.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase19-on-phase20.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-write-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-write-control.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
-        for _ in $(seq 1 90); do
-          status="$(curl -sS -o /tmp/phase19-on-phase20.json -w "%{http_code}" http://127.0.0.1:8807/phase19 || true)"
+        for _ in $(seq 1 60); do
+          status="$(curl -sS -o /tmp/phase20-write-control.json -w "%{http_code}" http://127.0.0.1:8807/phase20-write-control || true)"
           if [ "$status" = "200" ]; then
             ready=1
             break
           fi
           sleep 1
         done
-        cat /tmp/phase19-on-phase20.json 2>/dev/null || true
+        cat /tmp/phase20-write-control.json 2>/dev/null || true
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase19-on-phase20.log
+          cat /tmp/phase20-write-control.log
           exit 1
         fi
       '
