@@ -1,41 +1,15 @@
-import { request as httpRequest } from 'node:http';
-import { setTimeout as delay } from 'node:timers/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const base = process.env.PHASE20_REVIEW_BASE_URL ?? 'http://127.0.0.1:8808';
 
-function transport(path, init = {}) {
-  return new Promise((resolve, reject) => {
-    const body = init.body ?? null;
-    const req = httpRequest(
-      `${base}${path}`,
-      {
-        method: init.method ?? 'GET',
-        headers: init.headers ?? {},
-      },
-      (response) => {
-        let text = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          text += chunk;
-        });
-        response.on('end', () => {
-          resolve({ status: response.statusCode ?? 0, text });
-        });
-      },
-    );
-    req.on('error', reject);
-    if (body !== null) req.write(body);
-    req.end();
-  });
-}
-
 async function request(path, init, expectedStatus) {
-  const response = await transport(path, init);
+  const response = await globalThis.fetch(`${base}${path}`, init);
+  const text = await response.text();
   let body = null;
   try {
-    body = response.text ? JSON.parse(response.text) : null;
+    body = text ? JSON.parse(text) : null;
   } catch {
-    body = { raw: response.text };
+    body = { raw: text };
   }
   console.log(path, response.status, JSON.stringify(body));
   if (response.status !== expectedStatus) {
@@ -48,16 +22,16 @@ async function main() {
   let healthy = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await transport('/phase20/health');
-      const body = response.text ? JSON.parse(response.text) : null;
-      if (response.status === 200 && body?.ok === true && body.phase === 20) {
+      const response = await globalThis.fetch(`${base}/phase20/health`);
+      const body = await response.json();
+      if (response.status === 200 && body.ok === true && body.phase === 20) {
         healthy = true;
         break;
       }
     } catch {
       // Worker is still starting.
     }
-    await delay(1000);
+    await sleep(1000);
   }
   if (!healthy) throw new Error('Phase 20 evidence review integration worker did not become healthy.');
 
