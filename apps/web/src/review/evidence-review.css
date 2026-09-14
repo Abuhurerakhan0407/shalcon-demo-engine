@@ -244,6 +244,50 @@
   line-height: 1.45;
 }
 
+.review-note {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.review-note > span {
+  color: #a4a4ac;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-note > span small {
+  color: #606069;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+.review-note textarea {
+  width: 100%;
+  min-height: 62px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #303037;
+  border-radius: 10px;
+  outline: none;
+  background: #0b0b0e;
+  color: #dedee3;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.review-note textarea::placeholder {
+  color: #5f5f68;
+}
+
+.review-note textarea:focus {
+  border-color: #61616b;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 4%);
+}
+
 .review-actions {
   flex-wrap: wrap;
   gap: 8px;
@@ -335,8 +379,12 @@
 }
 
 .review-history-row small {
+  max-width: 50%;
+  overflow-wrap: anywhere;
   color: #66666f;
   font-size: 10px;
+  line-height: 1.45;
+  text-align: right;
 }
 
 @media (max-width: 880px) {
@@ -404,7 +452,10 @@
     margin-left: 0;
   }
 
-  .review-history-row > span {
+  .review-history-row > span,
+  .review-history-row small {
     width: auto;
+    max-width: none;
+    text-align: left;
   }
 }
