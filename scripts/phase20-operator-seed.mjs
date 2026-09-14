@@ -6,7 +6,7 @@ if (!runnerToken || runnerToken.length < 24) {
   throw new Error('Set SHALCON_RUNNER_TOKEN to a local Phase 20 runner token with at least 24 characters.');
 }
 
-const trialUrl = new URL('../docs/phase20-salon-accuracy-trial.json', import.meta.url);
+const trialUrl = new globalThis.URL('../docs/phase20-salon-accuracy-trial.json', import.meta.url);
 const trial = JSON.parse(await readFile(trialUrl, 'utf8'));
 if (trial.phase !== 20 || !Array.isArray(trial.prospects) || trial.prospects.length !== 20) {
   throw new Error('Phase 20 operator seed requires the locked 20-prospect trial cohort.');
