@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":white_check_mark: Phase 20 evidence review workflow"
+  - label: ":mag: Phase 20 evidence review typecheck isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,18 +10,13 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npm run typecheck
-        npm run lint
 
-        rm -rf .wrangler/phase20-evidence-review
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review
-        npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review > /tmp/phase20-evidence-review.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
-        cd ../..
+        npm --workspace @shalcon/api run typecheck || { sleep 15; exit 1; }
+        npm --workspace @shalcon/web run typecheck || { sleep 35; exit 1; }
+        npm run lint || { sleep 55; exit 1; }
 
-        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
+        sleep 75
+        exit 1
       '
     plugins:
       - docker#v5.13.0:
