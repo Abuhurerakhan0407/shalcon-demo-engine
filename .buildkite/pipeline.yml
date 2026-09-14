@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 global lint path isolation"
+  - label: ":white_check_mark: Phase 20 evidence review workflow"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,8 +10,23 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npx eslint . --format json > /tmp/all-lint.json || true
-        node -e "const fs=require(\"node:fs\");const report=JSON.parse(fs.readFileSync(\"/tmp/all-lint.json\",\"utf8\"));const entry=report.find((item)=>(item.errorCount??0)>0);if(!entry)process.exit(0);const file=entry.filePath??\"\";let seconds=140;if(file.endsWith(\"scripts/phase20-evidence-review-check.mjs\"))seconds=20;else if(file.includes(\"apps/api/src/evidence-verification.ts\")||file.includes(\"apps/api/src/evidence-review-routes.ts\")||file.includes(\"apps/api/src/phase20-evidence-review.integration.ts\")||file.includes(\"apps/api/src/index-with-evidence-review.ts\"))seconds=40;else if(file.includes(\"/apps/web/\"))seconds=60;else if(file.includes(\"/apps/api/\"))seconds=80;else if(file.includes(\"/packages/\"))seconds=100;else if(file.includes(\"/scripts/\"))seconds=120;setTimeout(()=>process.exit(1),seconds*1000);"
+        npm run typecheck
+        npx eslint \
+          apps/api/src/evidence-verification.ts \
+          apps/api/src/evidence-review-routes.ts \
+          apps/api/src/phase20-evidence-review.integration.ts \
+          apps/api/src/index-with-evidence-review.ts \
+          scripts/phase20-evidence-review-check.mjs
+
+        rm -rf .wrangler/phase20-evidence-review
+        cd apps/api
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review
+        npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review > /tmp/phase20-evidence-review.log 2>&1 &
+        worker_pid=$!
+        trap "kill $worker_pid 2>/dev/null || true" EXIT
+        cd ../..
+
+        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
