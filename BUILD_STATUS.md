@@ -150,27 +150,46 @@ Hard gate:
 - failures must not be hidden or reclassified as visual/copy problems;
 - if the gate fails, stop scaling, fix identity/research/evidence/template logic, and repeat the trial.
 
-Current cohort sourcing:
+Current cohort status:
 
-- existing Shalcon 500-prospect database contributes only **2** Salon/Spa candidates;
-- source and verify at least 18 additional real Salon/Spa businesses before final cohort lock;
-- preserve source URLs and business identity evidence for every trial row;
-- use a mixed-difficulty cohort rather than only easy chain sites.
+- the cohort is locked at **20 real Mumbai Salon/Spa prospects**;
+- **13** are official-website-led identities and **7** are public-listing-led identities;
+- listing-provider domains are not promoted into business identity domains;
+- all **20/20** prospects have passed the live research boundary without mutating trial results;
+- the locked trial ledger still has `result: null` for every prospect pending genuine end-to-end demo QA.
+
+Phase-20 operator/review infrastructure now proven:
+
+- auditable evidence verification/rejection with immutable review events;
+- no automatic promotion of AI evidence to VERIFIED;
+- critical scalar conflict guards and multi-value fact-promotion guards;
+- dedicated Evidence Review operator UI;
+- localhost-only durable operator shell that rejects production mode;
+- locked-20 seeder that refuses non-empty/dirty trial workspaces;
+- portable review-packet export containing unresolved evidence, conflicts, canonical facts and review history;
+- separate local D1 workspaces used for integration and full 20-prospect seed proof;
+- Buildkite **#516 ✅** — operator workspace end-to-end proof;
+- Buildkite **#519 ✅** — operator workspace + review-packet export proof;
+- latest Phase-20 operator proof commit: `9de59a248eb8bfdd16c7c03323574c6007e08c02`.
 
 ## Current CI condition
 
-Phase 19 is closed. Buildkite #374 is the authoritative Phase 0–19 baseline. Phase 20 must not alter that historical result.
+Phase 19 is closed. Buildkite #374 remains the authoritative Phase 0–19 baseline and Phase 20 does not alter that historical result.
 
-Any Phase-20 harness or ledger code must preserve strict TypeScript/lint/test/build gates, but Phase 20 itself closes only from the real 20-prospect market accuracy result.
+Phase-20 operator infrastructure is green through Buildkite #519. Feature-scoped TypeScript/lint/web-build gates, local D1 migrations, operator API integration, locked cohort seeding, FK integrity, trial immutability and review-packet export are proven.
+
+Phase 20 itself is **not closed**. Closure still requires actual evidence review, demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
 
 ## Blocked
 
-None. Cohort expansion and verification are active work.
+No engineering blocker is known. Phase-20 closure is intentionally waiting on genuine human evidence verification and actual demo inspection; those decisions must not be fabricated by CI or inferred from model output.
 
 ## Last fully verified implementation commit
 
-`c307e326a0ae8a3e994457ca30b525d202cf1907` — authoritative full Phase 0–19 hosted regression, Buildkite #374 SUCCESS.
+Phase-19 baseline: `c307e326a0ae8a3e994457ca30b525d202cf1907` — authoritative full Phase 0–19 hosted regression, Buildkite #374 SUCCESS.
+
+Phase-20 operator infrastructure proof: `9de59a248eb8bfdd16c7c03323574c6007e08c02` — Buildkite #519 SUCCESS.
 
 ## Next action
 
-Lock a 20-business real Salon/Spa cohort with source evidence, run every prospect through identity → research/evidence → audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA, record correction categories without hiding failures, and evaluate the 18/20 factual-accuracy gate before starting Phase 21.
+Run the durable local Phase-20 workspace, let Playwright + Ollama populate the locked cohort, export the review packet, perform human evidence decisions, then run every prospect through audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA. Record all nine correction categories only after each actual demo is inspected, then evaluate the 18/20 factual-accuracy gate before starting Phase 21.
