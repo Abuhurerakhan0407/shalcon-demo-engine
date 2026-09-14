@@ -13,6 +13,7 @@ import { normalizeBusinessName, normalizeCity, normalizeDomain } from '@shalcon/
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+import { aiRunnerRoutes } from './ai-runner-routes';
 import { hashSessionToken } from './auth';
 import type { Bindings } from './context';
 import { createOrResolveProspectIdentity } from './prospect-identity';
@@ -63,6 +64,7 @@ function researchJob(id: string, prospectId: string, now: string): JobRecord {
 }
 
 const app = new Hono<Bindings>();
+app.route('/api/v1/runner/ai', aiRunnerRoutes);
 app.route('/api/v1/runner/research', researchRunnerRoutes);
 app.route('/api/v1/runner', runnerRoutes);
 
