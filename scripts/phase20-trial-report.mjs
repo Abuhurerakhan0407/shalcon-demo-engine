@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 const fileArg = process.argv.find((arg) => arg.startsWith('--file='));
 const path = fileArg
   ? pathToFileURL(resolve(fileArg.slice('--file='.length)))
-  : new URL('../docs/phase20-salon-accuracy-trial.json', import.meta.url);
+  : new globalThis.URL('../docs/phase20-salon-accuracy-trial.json', import.meta.url);
 const trial = JSON.parse(await readFile(path, 'utf8'));
 const enforce = process.argv.includes('--enforce');
 
