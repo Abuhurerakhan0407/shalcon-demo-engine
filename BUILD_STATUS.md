@@ -160,23 +160,25 @@ Current cohort status:
 
 Phase-20 operator/review infrastructure now proven:
 
-- auditable evidence verification/rejection with immutable review events;
+- auditable evidence verification/rejection with immutable review events and persisted operator notes;
 - no automatic promotion of AI evidence to VERIFIED;
 - critical scalar conflict guards and multi-value fact-promotion guards;
-- dedicated Evidence Review operator UI;
+- dedicated Evidence Review operator UI with optional review notes;
 - localhost-only durable operator shell that rejects production mode;
 - locked-20 seeder that refuses non-empty/dirty trial workspaces;
 - portable review-packet export containing unresolved evidence, conflicts, canonical facts and review history;
-- separate local D1 workspaces used for integration and full 20-prospect seed proof;
+- separate local D1 workspaces used for evidence-review runtime, operator integration and full 20-prospect seed proof;
 - Buildkite **#516 ✅** — operator workspace end-to-end proof;
 - Buildkite **#519 ✅** — operator workspace + review-packet export proof;
-- latest Phase-20 operator proof commit: `9de59a248eb8bfdd16c7c03323574c6007e08c02`.
+- Buildkite **#522 ✅** — Evidence Review note UX + full operator regression;
+- Buildkite **#524 ✅** — strongest Phase-20 operator gate: evidence-review runtime/note persistence + operator shell + web build + locked-20 seed + review-packet export + FK/trial immutability;
+- latest Phase-20 operator proof commit: `0e35c7be730382e9f3262ae7c8dce069dc840585`.
 
 ## Current CI condition
 
 Phase 19 is closed. Buildkite #374 remains the authoritative Phase 0–19 baseline and Phase 20 does not alter that historical result.
 
-Phase-20 operator infrastructure is green through Buildkite #519. Feature-scoped TypeScript/lint/web-build gates, local D1 migrations, operator API integration, locked cohort seeding, FK integrity, trial immutability and review-packet export are proven.
+Phase-20 operator infrastructure is green through Buildkite #524. Feature-scoped TypeScript/lint/web-build gates, local D1 migrations, evidence-review runtime and note persistence, operator API integration, locked cohort seeding, FK integrity, trial immutability and review-packet export are proven.
 
 Phase 20 itself is **not closed**. Closure still requires actual evidence review, demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
 
@@ -188,7 +190,7 @@ No engineering blocker is known. Phase-20 closure is intentionally waiting on ge
 
 Phase-19 baseline: `c307e326a0ae8a3e994457ca30b525d202cf1907` — authoritative full Phase 0–19 hosted regression, Buildkite #374 SUCCESS.
 
-Phase-20 operator infrastructure proof: `9de59a248eb8bfdd16c7c03323574c6007e08c02` — Buildkite #519 SUCCESS.
+Phase-20 operator infrastructure proof: `0e35c7be730382e9f3262ae7c8dce069dc840585` — Buildkite #524 SUCCESS.
 
 ## Next action
 
