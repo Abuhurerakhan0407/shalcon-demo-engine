@@ -53,22 +53,10 @@ steps:
         if [ "$ready" -ne 1 ]; then cat /tmp/ollama.log || true; exit 21; fi
         ollama pull "$SHALCON_OLLAMA_MODEL"
 
-        PYTHONPATH=apps/local-runner/src python - <<"PY"
-import json, os
-from shalcon_runner.ai_extract import ai_extract_job
-from shalcon_runner.client import RunnerApiClient
-
-client = RunnerApiClient("http://127.0.0.1:8807", os.environ["SHALCON_RUNNER_TOKEN"], timeout_seconds=30.0)
-client.heartbeat("phase20-ai-probe", ["LOCAL_AI_EXTRACT"])
-job = client.claim()
-if job is None or job.job_type != "LOCAL_AI_EXTRACT":
-    raise SystemExit("expected a LOCAL_AI_EXTRACT job")
-result = ai_extract_job(job)
-if result.get("sourceOnly") is not True or result.get("verified") is not False or result.get("provider") != "ollama":
-    raise SystemExit("real AI extraction result invariants failed")
-print(json.dumps({"ok": True, "jobId": job.id, "sourceChars": len(job.payload.get("sourceText", "")), "provider": result.get("provider"), "model": result.get("model"), "adapter": result.get("adapter"), "extractedFields": sorted(result.get("extracted", {}).keys())}, sort_keys=True))
-PY
-      ' || { rc=$?; cat /tmp/phase20-live.log 2>/dev/null || true; cat /tmp/ollama.log 2>/dev/null || true; exit $rc; }
+        PYTHONPATH=apps/local-runner/src python scripts/phase20-ai-probe.py --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN" | tee /tmp/phase20-ai-probe.json
+        grep -q '"ok": true' /tmp/phase20-ai-probe.json
+        grep -q '"trialResultsModified": false' /tmp/phase20-ai-probe.json
+      ' || { rc=$?; cat /tmp/phase20-live.log 2>/dev/null || true; cat /tmp/ollama.log 2>/dev/null || true; cat /tmp/phase20-ai-probe.json 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
