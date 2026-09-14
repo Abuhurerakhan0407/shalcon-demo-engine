@@ -72,3 +72,64 @@ steps:
           image: "node:22-bookworm"
           workdir: /workdir
           mount-checkout: true
+
+  - label: ":llama: Phase 20 qwen3:4b recovery smoke"
+    key: "phase20-qwen4-recovery-smoke"
+    timeout_in_minutes: 45
+    command: |
+      bash -lc '
+        set -euo pipefail
+        export CI=true
+        npm ci
+
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
+        python3 -m venv /tmp/shalcon-qwen4-venv
+        . /tmp/shalcon-qwen4-venv/bin/activate
+        python -m pip install -e "apps/local-runner[dev]"
+        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_ai_extract.py -q
+        echo "ai-extract-regression-passed"
+
+        curl -fsSL https://ollama.com/install.sh | sh
+        export OLLAMA_NUM_PARALLEL=1
+        export OLLAMA_MAX_LOADED_MODELS=1
+        export SHALCON_OLLAMA_URL="http://127.0.0.1:11434"
+        export SHALCON_OLLAMA_MODEL="qwen3:4b"
+        export SHALCON_OLLAMA_TIMEOUT_SECONDS="120"
+        ollama serve > /tmp/phase20-qwen4-ollama.log 2>&1 &
+        ollama_pid=$!
+        trap "kill $ollama_pid 2>/dev/null || true" EXIT
+
+        ready=0
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/phase20-qwen4-tags.json; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then
+          cat /tmp/phase20-qwen4-ollama.log || true
+          exit 51
+        fi
+        ollama pull "$SHALCON_OLLAMA_MODEL"
+        ollama list
+
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-qwen4-smoke.json
+        python - <<"PY"
+import json
+from pathlib import Path
+result = json.loads(Path("/tmp/phase20-qwen4-smoke.json").read_text(encoding="utf-8"))
+assert result["ok"] is True
+assert result["provider"] == "ollama"
+assert result["model"] == "qwen3:4b"
+assert result["sourceOnly"] is True
+assert result["verified"] is False
+print("qwen3:4b structured recovery smoke passed")
+PY
+      ' || { rc=$?; cat /tmp/phase20-qwen4-ollama.log 2>/dev/null || true; exit $rc; }
+    plugins:
+      - docker#v5.13.0:
+          image: "node:22-bookworm"
+          workdir: /workdir
+          mount-checkout: true
