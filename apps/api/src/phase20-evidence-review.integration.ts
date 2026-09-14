@@ -84,7 +84,7 @@ app.post('/phase20/fixture', async (c) => {
   });
 
   const evidence = new EvidenceRepository(db);
-  const createEvidence = async (
+  const createEvidence = (
     id: string,
     field: string,
     value: string,
