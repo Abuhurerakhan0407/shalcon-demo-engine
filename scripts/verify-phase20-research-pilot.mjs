@@ -6,6 +6,10 @@ const persistDir = '.wrangler/phase20-research-pilot';
 const port = 8807;
 const baseUrl = `http://127.0.0.1:${port}`;
 const runnerToken = 'rnr_phase20_research_pilot_token_1234567890';
+const requestedJobs = Number.parseInt(process.env.PHASE20_PILOT_JOBS ?? '3', 10);
+if (!Number.isInteger(requestedJobs) || requestedJobs < 0 || requestedJobs > 3) {
+  throw new Error('PHASE20_PILOT_JOBS must be an integer from 0 to 3.');
+}
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -113,42 +117,48 @@ try {
     throw new Error(`Phase 20 pilot identity gate failed: ${JSON.stringify(setup.created)}`);
   }
 
-  await run(
-    'python',
-    ['scripts/phase20-research-pilot.py', '--api-url', baseUrl, '--jobs', '3'],
-    {
-      env: {
-        ...process.env,
-        PYTHONPATH: 'apps/local-runner/src',
-        SHALCON_RUNNER_TOKEN: runnerToken,
+  if (requestedJobs > 0) {
+    await run(
+      'python',
+      ['scripts/phase20-research-pilot.py', '--api-url', baseUrl, '--jobs', String(requestedJobs)],
+      {
+        env: {
+          ...process.env,
+          PYTHONPATH: 'apps/local-runner/src',
+          SHALCON_RUNNER_TOKEN: runnerToken,
+        },
       },
-    },
-  );
+    );
+  }
 
   const statusResponse = await waitFor(`${baseUrl}/phase20/status`);
   const status = await statusResponse.json();
   const completedResearch = status.researchJobs?.filter((job) => job.status === 'COMPLETED') ?? [];
-  const failedResearch = status.researchJobs?.filter((job) => job.status !== 'COMPLETED') ?? [];
-  const sourceCoverage = status.prospects?.every(
+  const pendingResearch = status.researchJobs?.filter((job) => job.status === 'PENDING') ?? [];
+  const failedResearch = status.researchJobs?.filter((job) => job.status === 'FAILED') ?? [];
+  const completedEntities = new Set(completedResearch.map((job) => job.entity_id));
+  const completedProspects = status.prospects?.filter((prospect) => completedEntities.has(prospect.id)) ?? [];
+  const sourceCoverage = completedProspects.every(
     (prospect) => prospect.playwrightSourceCount >= 1 && prospect.sourceCount >= 1,
-  ) ?? false;
-  const phase11Coverage = status.prospects?.every(
+  );
+  const phase11Coverage = completedProspects.every(
     (prospect) => status.aiJobs?.some((job) => job.entity_id === prospect.id && job.status === 'PENDING'),
-  ) ?? false;
+  );
 
   const required = [
     status.trialResultsModified === false,
     status.foreignKeyViolations === 0,
     status.prospects?.length === 3,
     status.researchJobs?.length === 3,
-    completedResearch.length === 3,
+    completedResearch.length === requestedJobs,
+    pendingResearch.length === 3 - requestedJobs,
     failedResearch.length === 0,
     sourceCoverage,
-    (status.aiJobs?.length ?? 0) >= 3,
+    requestedJobs === 0 ? (status.aiJobs?.length ?? 0) === 0 : (status.aiJobs?.length ?? 0) >= requestedJobs,
     phase11Coverage,
   ];
   if (required.some((value) => !value)) {
-    throw new Error(`Phase 20 live research pilot assertion failed: ${JSON.stringify(status, null, 2)}`);
+    throw new Error(`Phase 20 live research pilot assertion failed: ${JSON.stringify({ requestedJobs, status }, null, 2)}`);
   }
 
   const after = JSON.parse(await readFile('docs/phase20-salon-accuracy-trial.json', 'utf8'));
@@ -158,10 +168,12 @@ try {
 
   console.log(JSON.stringify({
     ok: true,
+    requestedJobs,
     prospectCount: status.prospects.length,
     completedResearchJobs: completedResearch.length,
+    pendingResearchJobs: pendingResearch.length,
     phase11JobsQueued: status.aiJobs.length,
-    sourceCoverage: true,
+    sourceCoverage,
     trialResultsModified: false,
   }, null, 2));
 } catch (error) {
