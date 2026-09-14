@@ -69,6 +69,16 @@ VITE_API_BASE_URL=http://127.0.0.1:8787 npm --workspace @shalcon/web run dev -- 
 
 Open the local web app and use **Evidence Review**. Review the exact source URL, excerpt, confidence, and source quality before choosing Verify, Verify + use as fact, or Reject.
 
-## 6. Trial discipline
+## 6. Export a review packet
+
+After research has populated evidence, export a portable snapshot of the unresolved review queue:
+
+```bash
+node scripts/phase20-export-review-packet.mjs --out=phase20-review-packet.json
+```
+
+The exporter only accepts the local operator workspace. It refuses a dirty trial state and includes each prospect's unresolved evidence, conflicts, canonical facts, and immutable review history without changing any review decision or trial result.
+
+## 7. Trial discipline
 
 After human evidence review, run the normal audit/scoring/demo/QA path for each prospect. Record a result in `docs/phase20-salon-accuracy-trial.json` only after the actual prospect demo has been inspected. Every completed result must explicitly record all nine correction categories. Phase 20 closes only at 18/20 zero-factual-correction demos with zero critical factual errors.
