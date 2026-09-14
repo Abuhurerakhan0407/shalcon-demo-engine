@@ -2,31 +2,47 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":lock: Phase 20 trial ledger gate"
-    key: "phase20-trial-ledger-gate"
-    timeout_in_minutes: 15
+  - label: ":llama: Phase 20 real Ollama capability"
+    key: "phase20-real-ollama-capability"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
 
-        node scripts/phase20-trial-report.mjs
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl
+        python -m pip install -e apps/local-runner
 
-        if node scripts/phase20-trial-report.mjs --enforce; then
-          echo "expected --enforce to fail while real trial results are pending"
-          exit 12
+        curl -fsSL https://ollama.com/install.sh | sh
+        export OLLAMA_NUM_PARALLEL=1
+        export OLLAMA_MAX_LOADED_MODELS=1
+        export SHALCON_OLLAMA_MODEL="qwen3:0.6b"
+
+        ollama serve > /tmp/ollama.log 2>&1 &
+        ollama_pid=$!
+        trap "kill $ollama_pid 2>/dev/null || true" EXIT
+
+        ready=0
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/ollama-tags.json; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then
+          cat /tmp/ollama.log || true
+          exit 21
         fi
 
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));t.prospects[0].result={status:\"COMPLETE\",factualCorrectionRequired:false,criticalFactualError:false,correctionCategories:{wrongIdentity:false,wrongFact:false,missingFact:false,wrongTemplate:false,badCopy:false,badImage:false,contactProblem:false,manualCorrectionRequired:false}};fs.writeFileSync(\"/tmp/p20-bad.json\",JSON.stringify(t));"
-        if node scripts/phase20-trial-report.mjs --file=/tmp/p20-bad.json; then
-          echo "expected malformed COMPLETE result to fail when one correction category is missing"
-          exit 13
-        fi
-
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const keys=[\"wrongIdentity\",\"wrongFact\",\"missingFact\",\"wrongTemplate\",\"badCopy\",\"badImage\",\"visualBug\",\"contactProblem\",\"manualCorrectionRequired\"];t.prospects[0].result={status:\"COMPLETE\",factualCorrectionRequired:false,criticalFactualError:false,correctionCategories:Object.fromEntries(keys.map(k=>[k,false]))};fs.writeFileSync(\"/tmp/p20-good.json\",JSON.stringify(t));"
-        node scripts/phase20-trial-report.mjs --file=/tmp/p20-good.json
-      '
+        ollama pull "$SHALCON_OLLAMA_MODEL"
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-ai-smoke.json
+        grep -q '"ok": true' /tmp/phase20-ai-smoke.json
+        grep -q '"sourceOnly": true' /tmp/phase20-ai-smoke.json
+        grep -q '"verified": false' /tmp/phase20-ai-smoke.json
+      ' || { rc=$?; cat /tmp/ollama.log 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
-          image: "node:22-bookworm"
+          image: "python:3.13-bookworm"
           workdir: /workdir
           mount-checkout: true
