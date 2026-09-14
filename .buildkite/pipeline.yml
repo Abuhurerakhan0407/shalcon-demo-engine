@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":white_check_mark: Phase 20 evidence review workflow"
+  - label: ":mag: Phase 20 evidence review runtime isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,18 +10,31 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npm run typecheck
-        npm run lint
 
         rm -rf .wrangler/phase20-evidence-review
         cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review || { sleep 20; exit 1; }
         npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review > /tmp/phase20-evidence-review.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         cd ../..
 
-        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
+        for _ in $(seq 1 30); do
+          if node -e "require(\"node:http\").get(\"http://127.0.0.1:8808/phase20/health\", r => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))"; then
+            break
+          fi
+          sleep 1
+        done
+
+        if ! node -e "require(\"node:http\").get(\"http://127.0.0.1:8808/phase20/health\", r => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))"; then
+          cat /tmp/phase20-evidence-review.log || true
+          sleep 45
+          exit 1
+        fi
+
+        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; sleep 70; exit $rc; }
+        sleep 95
+        exit 1
       '
     plugins:
       - docker#v5.13.0:
