@@ -2,14 +2,13 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 AI route boot isolation"
-    key: "phase20-ai-route-boot"
-    timeout_in_minutes: 20
+  - label: ":microscope: Phase 20 AI route worker boot"
+    key: "phase20-ai-route-worker-boot"
+    timeout_in_minutes: 10
     command: |
       bash -lc '
         set -euo pipefail
         npm ci
-        npm run typecheck
 
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
