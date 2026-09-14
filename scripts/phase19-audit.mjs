@@ -12,7 +12,20 @@ function requirePhaseAtLeast(source, minimum) {
   }
 }
 
-const [migration, engine, routes, automatedRoutes, integration, verifier, phase, renderer, stateMachine] = await Promise.all([
+const [
+  migration,
+  engine,
+  routes,
+  automatedRoutes,
+  integration,
+  verifier,
+  phase,
+  renderer,
+  stateMachine,
+  qaPage,
+  app,
+  qaE2e,
+] = await Promise.all([
   text('apps/api/migrations/0015_fact_sales_qa.sql'),
   text('apps/api/src/fact-sales-qa.ts'),
   text('apps/api/src/fact-sales-qa-routes.ts'),
@@ -22,6 +35,9 @@ const [migration, engine, routes, automatedRoutes, integration, verifier, phase,
   text('apps/api/src/phase.ts'),
   text('apps/api/src/demo-renderer.ts'),
   text('packages/state-machine/src/index.ts'),
+  text('apps/web/src/qa/Phase19QaPage.tsx'),
+  text('apps/web/src/App.tsx'),
+  text('tests/e2e/phase19-qa.spec.ts'),
 ]);
 
 for (const [needle, label] of [
@@ -81,6 +97,34 @@ for (const [needle, label] of [
   ['crossTenantBlocked', 'tenant isolation acceptance'],
   ['foreignKeyViolations', 'foreign-key acceptance'],
 ]) requireText(integration, needle, label);
+
+for (const [needle, label] of [
+  ['/api/v1/automated-demo/phase19/review-queue', 'operator review queue client'],
+  ['/fact-qa/run', 'operator Fact QA action'],
+  ['/evidence', 'operator evidence inspection'],
+  ['/issues/${issueId}/resolve', 'operator issue remediation action'],
+  ['/sales-qa', 'operator Sales QA action'],
+  ['Inspect source ↗', 'human source inspection link'],
+  ['Mark resolved', 'human remediation control'],
+  ['Waive with note', 'audited waiver control'],
+  ['Private preview reviewed', 'human preview checklist'],
+  ['Visible facts and sources reviewed', 'human fact checklist'],
+  ['CTA and verified contact path reviewed', 'human CTA checklist'],
+  ['Desktop + mobile screenshots reviewed', 'human screenshot checklist'],
+  ['Concept disclosure / noindex reviewed', 'human disclosure checklist'],
+  ['Approve demo', 'explicit human approval control'],
+  ['Reject demo', 'explicit human rejection control'],
+  ['It does not queue or send outreach', 'UI outreach separation warning'],
+]) requireText(qaPage, needle, label);
+
+requireText(app, "import { Phase19QaPage } from './qa/Phase19QaPage';", 'Phase 19 QA page import');
+requireText(app, '<Route path="/qa" element={<Phase19QaPage/>}/>', 'active /qa route');
+requireText(app, '<strong>19</strong><small>Fact + Sales QA</small>', 'current dashboard phase marker');
+
+requireText(qaE2e, 'human sales approval requires the complete checklist and keeps outreach separate', 'human approval E2E');
+requireText(qaE2e, 'operator can inspect evidence, resolve a review issue with a note, and rerun Fact QA', 'remediation E2E');
+requireText(qaE2e, "expect(postedDecision?.decision).toBe('APPROVED')", 'approval payload assertion');
+requireText(qaE2e, "expect(resolutionPayload).toEqual({ action: 'RESOLVED'", 'remediation-note assertion');
 
 requireText(verifier, 'checks.explicitHumanApprovalRequired === true', 'D1 human approval gate');
 requireText(verifier, 'checks.unsupportedFactFailsClosed === true', 'D1 unsupported fact gate');
