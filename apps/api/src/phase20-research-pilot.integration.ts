@@ -32,7 +32,7 @@ const candidateSchema = z.object({
 }).strict();
 
 const setupSchema = z.object({
-  candidates: z.array(candidateSchema).length(3),
+  candidates: z.array(candidateSchema).min(1).max(3),
 }).strict();
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
