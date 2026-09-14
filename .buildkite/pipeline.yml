@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":arrow_down: Phase 20 GET transport"
-    key: "phase20-get-transport"
+  - label: ":incoming_envelope: Phase 20 POST after readiness"
+    key: "phase20-post-after-readiness"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -23,22 +23,25 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-get.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-post-ready.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
-        status="000"
         for _ in $(seq 1 60); do
-          status="$(curl -sS -o /tmp/phase20-get-response.json -w "%{http_code}" http://127.0.0.1:8807/phase20-setup-control || true)"
-          if [ "$status" = "200" ]; then
+          if curl -fsS http://127.0.0.1:8807/phase20-health-control >/dev/null; then
             ready=1
             break
           fi
           sleep 1
         done
-        cat /tmp/phase20-get-response.json 2>/dev/null || true
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-get.log
+          cat /tmp/phase20-post-ready.log
+          exit 1
+        fi
+        status="$(curl -sS -o /tmp/phase20-post-ready-response.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20-setup-control)"
+        cat /tmp/phase20-post-ready-response.json
+        if [ "$status" != "201" ]; then
+          cat /tmp/phase20-post-ready.log
           exit 1
         fi
       '
