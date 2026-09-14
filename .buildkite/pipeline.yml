@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 Worker on Phase 19 D1 state"
-    key: "phase20-worker-phase19-d1-state"
+  - label: ":arrow_down: Phase 20 GET-based Worker write"
+    key: "phase20-worker-get-write"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -39,9 +39,9 @@ steps:
           cat /tmp/phase20-db-probe.log
           exit 1
         fi
-        insert_status="$(curl -sS -o /tmp/phase20-db-insert.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20/db-insert-probe)"
-        cat /tmp/phase20-db-insert.json
-        if [ "$insert_status" != "201" ]; then
+        write_status="$(curl -sS -o /tmp/phase20-db-write.json -w "%{http_code}" http://127.0.0.1:8807/phase20/db-write-probe)"
+        cat /tmp/phase20-db-write.json
+        if [ "$write_status" != "200" ]; then
           cat /tmp/phase20-db-probe.log
           exit 1
         fi
