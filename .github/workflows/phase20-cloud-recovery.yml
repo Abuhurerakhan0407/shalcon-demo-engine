@@ -1,0 +1,245 @@
+name: Phase 20 Cloud Recovery
+
+on:
+  push:
+    branches: [phase20-vps-recovery]
+    paths:
+      - '.github/workflows/phase20-cloud-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase20-cloud-recovery:
+    name: Rebuild Phase 20 operator workspace and run locked cohort
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PHASE20_OPERATOR_BASE_URL: http://127.0.0.1:8787
+      SHALCON_API_BASE_URL: http://127.0.0.1:8787
+      SHALCON_OLLAMA_URL: http://127.0.0.1:11434
+      SHALCON_OLLAMA_MODEL: qwen3:4b
+      SHALCON_OLLAMA_TIMEOUT_SECONDS: '120'
+      PYTHONPATH: ${{ github.workspace }}/apps/local-runner/src
+
+    steps:
+      - name: Checkout recovery branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          python -m pip install -e 'apps/local-runner[dev]'
+          python -m playwright install --with-deps chromium
+
+      - name: Run local-runner regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest apps/local-runner/tests -q
+
+      - name: Install and start Ollama
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh | sh
+          nohup ollama serve >/tmp/phase20-ollama.log 2>&1 &
+          echo $! >/tmp/phase20-ollama.pid
+          ready=0
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/phase20-ollama.log
+            exit 1
+          fi
+          ollama pull qwen3:4b
+          ollama list
+
+      - name: Prove qwen3:4b structured extraction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m shalcon_runner ai-smoke | tee /tmp/phase20-ai-smoke.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/phase20-ai-smoke.json').read_text(encoding='utf-8'))
+          assert data['ok'] is True
+          assert data['provider'] == 'ollama'
+          assert data['model'] == 'qwen3:4b'
+          assert data['sourceOnly'] is True
+          assert data['verified'] is False
+          print('Phase 20 qwen3:4b structured smoke passed.')
+          PY
+
+      - name: Initialize clean Phase 20 local D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/phase20-cloud-recovery
+          cd apps/api
+          npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-cloud-recovery
+
+      - name: Start local-only Phase 20 operator API
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/api
+          nohup npx wrangler dev src/phase20-operator.integration.ts \
+            --local \
+            --port 8787 \
+            --persist-to ../../.wrangler/phase20-cloud-recovery \
+            >/tmp/phase20-api.log 2>&1 &
+          echo $! >/tmp/phase20-api.pid
+          ready=0
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8787/phase20/operator-health >/tmp/phase20-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          cat /tmp/phase20-health.json || true
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/phase20-api.log
+            exit 1
+          fi
+
+      - name: Seed locked 20-prospect trial
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="phase20-gh-$(openssl rand -hex 24)"
+          echo "SHALCON_RUNNER_TOKEN=$token" >> "$GITHUB_ENV"
+          export SHALCON_RUNNER_TOKEN="$token"
+          node scripts/phase20-operator-seed.mjs | tee /tmp/phase20-seed.json
+
+      - name: Run research and local AI workload to terminal state
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup python -m shalcon_runner run >/tmp/phase20-runner.log 2>&1 &
+          echo $! >/tmp/phase20-runner.pid
+
+          terminal_streak=0
+          for iteration in $(seq 1 600); do
+            curl -fsS http://127.0.0.1:8787/phase20/status >/tmp/phase20-status.json
+            read -r research_count active_count dead_count ai_count <<<"$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(Path('/tmp/phase20-status.json').read_text(encoding='utf-8'))
+          research = status.get('researchJobs', [])
+          ai = status.get('aiJobs', [])
+          jobs = research + ai
+          active = sum(j.get('status') in {'PENDING', 'RUNNING', 'FAILED'} for j in jobs)
+          dead = sum(j.get('status') == 'DEAD_LETTER' for j in jobs)
+          print(len(research), active, dead, len(ai))
+          PY
+          )"
+
+            printf 'iteration=%s research=%s ai=%s active=%s dead=%s\n' \
+              "$iteration" "$research_count" "$ai_count" "$active_count" "$dead_count"
+
+            if [ "$research_count" -eq 20 ] && [ "$active_count" -eq 0 ]; then
+              terminal_streak=$((terminal_streak + 1))
+            else
+              terminal_streak=0
+            fi
+
+            if [ "$terminal_streak" -ge 3 ]; then
+              break
+            fi
+            sleep 30
+          done
+
+          curl -fsS http://127.0.0.1:8787/phase20/status >phase20-cloud-final-status.json
+          python -m json.tool phase20-cloud-final-status.json
+
+          if [ -f /tmp/phase20-runner.pid ]; then
+            kill "$(cat /tmp/phase20-runner.pid)" 2>/dev/null || true
+            wait "$(cat /tmp/phase20-runner.pid)" 2>/dev/null || true
+          fi
+
+      - name: Export Phase 20 evidence review packet
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          if curl -fsS http://127.0.0.1:8787/phase20/operator-health >/dev/null 2>&1; then
+            node scripts/phase20-export-review-packet.mjs --out=phase20-cloud-review-packet.json || true
+            curl -fsS http://127.0.0.1:8787/phase20/status >phase20-cloud-final-status.json || true
+          fi
+          mkdir -p phase20-cloud-artifacts
+          cp phase20-cloud-final-status.json phase20-cloud-artifacts/ 2>/dev/null || true
+          cp phase20-cloud-review-packet.json phase20-cloud-artifacts/ 2>/dev/null || true
+          cp /tmp/phase20-ai-smoke.json phase20-cloud-artifacts/ 2>/dev/null || true
+          cp /tmp/phase20-seed.json phase20-cloud-artifacts/ 2>/dev/null || true
+          cp /tmp/phase20-api.log phase20-cloud-artifacts/ 2>/dev/null || true
+          cp /tmp/phase20-runner.log phase20-cloud-artifacts/ 2>/dev/null || true
+          cp /tmp/phase20-ollama.log phase20-cloud-artifacts/ 2>/dev/null || true
+          if [ -d .wrangler/phase20-cloud-recovery ]; then
+            tar -czf phase20-cloud-artifacts/phase20-cloud-d1.tgz .wrangler/phase20-cloud-recovery
+          fi
+
+      - name: Upload recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase20-cloud-recovery-${{ github.run_id }}
+          path: phase20-cloud-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Assert workload integrity
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f phase20-cloud-final-status.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(Path('phase20-cloud-final-status.json').read_text(encoding='utf-8'))
+          assert status.get('foreignKeyViolations') == 0, status.get('foreignKeyViolations')
+          assert status.get('trialResultsModified') is False
+          research = status.get('researchJobs', [])
+          ai = status.get('aiJobs', [])
+          assert len(research) == 20, len(research)
+          active = [j for j in research + ai if j.get('status') in {'PENDING', 'RUNNING', 'FAILED'}]
+          assert not active, active
+          dead = [j for j in research + ai if j.get('status') == 'DEAD_LETTER']
+          if dead:
+              raise AssertionError(f'{len(dead)} jobs reached DEAD_LETTER; inspect uploaded evidence before retrying')
+          completed_research = sum(j.get('status') == 'COMPLETED' for j in research)
+          completed_ai = sum(j.get('status') == 'COMPLETED' for j in ai)
+          print(f'Phase 20 workload terminal: research completed={completed_research}/20, AI completed={completed_ai}, dead=0')
+          PY
+
+      - name: Stop local processes
+        if: always()
+        shell: bash
+        run: |
+          for pidfile in /tmp/phase20-runner.pid /tmp/phase20-api.pid /tmp/phase20-ollama.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" 2>/dev/null || true
+            fi
+          done
