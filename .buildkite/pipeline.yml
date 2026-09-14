@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":pencil2: Phase 20 raw Worker D1 insert"
-    key: "phase20-worker-raw-insert"
+  - label: ":bust_in_silhouette: Phase 20 repository user-write recheck"
+    key: "phase20-repository-user-write-recheck"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -24,25 +24,25 @@ steps:
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-db-probe.log 2>&1 &
+        npx wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-pilot-worker.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
         for _ in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8807/phase20/db-schema-probe >/dev/null; then
+          if curl -fsS http://127.0.0.1:8807/phase20/health >/dev/null; then
             ready=1
             break
           fi
           sleep 1
         done
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-db-probe.log
+          cat /tmp/phase20-pilot-worker.log
           exit 1
         fi
-        insert_status="$(curl -sS -o /tmp/phase20-db-insert.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20/db-insert-probe)"
-        cat /tmp/phase20-db-insert.json
-        if [ "$insert_status" != "201" ]; then
-          cat /tmp/phase20-db-probe.log
+        probe_status="$(curl -sS -o /tmp/phase20-user-probe.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20/user-probe)"
+        cat /tmp/phase20-user-probe.json
+        if [ "$probe_status" != "201" ]; then
+          cat /tmp/phase20-pilot-worker.log
           exit 1
         fi
       '
