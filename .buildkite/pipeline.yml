@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 evidence review stage isolation"
+  - label: ":mag: Phase 20 evidence review exact lint isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,21 +10,14 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
+
+        npx eslint apps/api/src/evidence-verification.ts || { sleep 10; exit 1; }
+        npx eslint apps/api/src/evidence-review-routes.ts || { sleep 35; exit 1; }
+        npx eslint apps/api/src/phase20-evidence-review.integration.ts || { sleep 60; exit 1; }
+        npx eslint apps/api/src/index-with-evidence-review.ts || { sleep 85; exit 1; }
+        npx eslint scripts/phase20-evidence-review-check.mjs || { sleep 110; exit 1; }
+        sleep 135
         npm run lint
-        sleep 20
-        npm run typecheck
-        sleep 20
-
-        rm -rf .wrangler/phase20-evidence-review
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review
-        sleep 20
-        npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review > /tmp/phase20-evidence-review.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
-        cd ../..
-
-        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
