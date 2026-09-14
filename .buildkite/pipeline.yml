@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":white_check_mark: Phase 19 strict regression"
-    key: "phase19-strict-regression"
-    timeout_in_minutes: 65
+  - label: ":rocket: Full Phase 0-19 regression"
+    key: "phase19-full-regression"
+    timeout_in_minutes: 110
     command: |
       bash -lc '
         set -euo pipefail
@@ -20,17 +20,17 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends nodejs
 
+        node --version
+        npm --version
+        python --version
+        test -f package-lock.json
+
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
         npx playwright install --with-deps chromium
         python -m playwright install --with-deps --only-shell chromium
 
-        npm run typecheck
-        npm run lint
-        npm run test:unit
-        npm run test:e2e
-        npm run test:python
-        npm run build
+        node scripts/verify-through-phase19.mjs
       '
     plugins:
       - docker#v5.13.0:
