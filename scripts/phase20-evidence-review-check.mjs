@@ -29,7 +29,9 @@ async function main() {
     } catch {
       // Worker is still starting.
     }
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 1000));
+    await new Promise((resolve) => {
+      globalThis.setTimeout(resolve, 1000);
+    });
   }
   if (!healthy) throw new Error('Phase 20 evidence review integration worker did not become healthy.');
 
