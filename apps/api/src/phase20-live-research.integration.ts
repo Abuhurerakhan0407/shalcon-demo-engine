@@ -103,8 +103,9 @@ app.post('/phase20/setup', async (c) => {
   }> = [];
 
   for (const candidate of input.candidates) {
-    const identityUrl = candidate.officialWebsite ?? candidate.sourceUrl;
-    const domain = normalizeDomain(new URL(identityUrl).hostname);
+    const domain = candidate.officialWebsite
+      ? normalizeDomain(new URL(candidate.officialWebsite).hostname)
+      : null;
     const identity = await createOrResolveProspectIdentity(
       db,
       {
@@ -162,6 +163,7 @@ app.get('/phase20/status', async (c) => {
         playwrightSourceCount: captured.filter(
           (source) => source.provider === 'PLAYWRIGHT' && source.sourceType === 'WEBSITE_PAGE',
         ).length,
+        sourceUrls: captured.map((source) => source.sourceUrl),
       };
     }),
   );
