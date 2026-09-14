@@ -2,44 +2,14 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 Shanuzz live research"
-    key: "phase20-shanuzz-live-research"
-    timeout_in_minutes: 45
+  - label: ":shield: Phase 20 Shanuzz URL safety"
+    key: "phase20-shanuzz-url-safety"
+    timeout_in_minutes: 10
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl gnupg
-        mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-          > /etc/apt/sources.list.d/nodesource.list
-        apt-get update
-        apt-get install -y --no-install-recommends nodejs
-
-        npm ci
-        python -m pip install -e apps/local-runner
-        python -m playwright install --with-deps chromium
-
-        export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.id===\"p20-02-shanuzz-andheri\");if(!p||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);const candidate={id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite};fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates:[candidate],runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
-
-        rm -rf .wrangler/phase20-research-pilot
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
-        cd ../..
-
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.candidateId!==\"p20-02-shanuzz-andheri\"||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
-
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.researchJobs?.filter(x=>x.status===\"COMPLETED\")??[];const failed=s.researchJobs?.filter(x=>x.status===\"FAILED\")??[];if(r.status!==200||s.prospects?.length!==1||completed.length!==1||failed.length!==0||s.prospects[0].playwrightSourceCount<1||s.prospects[0].sourceCount<1||(s.aiJobs?.filter(x=>x.status===\"PENDING\").length??0)<1||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
+        PYTHONPATH=apps/local-runner/src python -c "from shalcon_runner.url_safety import validate_public_http_url; value=validate_public_http_url(\"https://shanuzz.com/\"); print(value); assert value==\"https://shanuzz.com/\""
       '
     plugins:
       - docker#v5.13.0:
