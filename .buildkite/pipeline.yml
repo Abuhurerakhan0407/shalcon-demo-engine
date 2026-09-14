@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":card_file_box: Phase 20 direct D1 persistence probe"
-    key: "phase20-direct-d1-probe"
+  - label: ":pencil2: Phase 20 raw Worker D1 insert"
+    key: "phase20-worker-raw-insert"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -24,9 +24,27 @@ steps:
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler d1 execute DB --local --persist-to ../../.wrangler/phase20-research-pilot --command "SELECT COUNT(*) AS user_count FROM users"
-        npx wrangler d1 execute DB --local --persist-to ../../.wrangler/phase20-research-pilot --command "INSERT INTO users(id,email,name,created_at) VALUES (\"phase20-cli-probe\",\"phase20-cli-probe@example.invalid\",\"Phase 20 CLI Probe\",\"2026-09-14T05:00:00.000Z\")"
-        npx wrangler d1 execute DB --local --persist-to ../../.wrangler/phase20-research-pilot --command "SELECT id FROM users WHERE id=\"phase20-cli-probe\""
+        npx wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-db-probe.log 2>&1 &
+        worker_pid=$!
+        trap "kill $worker_pid 2>/dev/null || true" EXIT
+        ready=0
+        for _ in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:8807/phase20/db-schema-probe >/dev/null; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then
+          cat /tmp/phase20-db-probe.log
+          exit 1
+        fi
+        insert_status="$(curl -sS -o /tmp/phase20-db-insert.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20/db-insert-probe)"
+        cat /tmp/phase20-db-insert.json
+        if [ "$insert_status" != "201" ]; then
+          cat /tmp/phase20-db-probe.log
+          exit 1
+        fi
       '
     plugins:
       - docker#v5.13.0:
