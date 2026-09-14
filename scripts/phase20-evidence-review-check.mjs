@@ -5,10 +5,9 @@ const base = process.env.PHASE20_REVIEW_BASE_URL ?? 'http://127.0.0.1:8808';
 
 function transport(path, init = {}) {
   return new Promise((resolve, reject) => {
-    const url = new URL(`${base}${path}`);
     const body = init.body ?? null;
     const req = httpRequest(
-      url,
+      `${base}${path}`,
       {
         method: init.method ?? 'GET',
         headers: init.headers ?? {},
