@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":incoming_envelope: Phase 20 POST via Node fetch"
-    key: "phase20-post-node-fetch"
-    timeout_in_minutes: 25
+  - label: ":globe_with_meridians: Phase 20 live research pilot"
+    key: "phase20-live-research-pilot"
+    timeout_in_minutes: 70
     command: |
       bash -lc '
         set -euo pipefail
@@ -21,11 +21,13 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 > /tmp/phase20-post-node.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
+        python -m pip install -e "apps/local-runner[dev]"
+        python -m playwright install --with-deps chromium
 
-        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20-health-control\"); if(r.status===200){ready=true; console.log(\"health ready\",i); break;}}catch{} await sleep(1000);} if(!ready){console.error(\"health never ready\"); process.exit(2);} const r=await fetch(\"http://127.0.0.1:8807/phase20-setup-control\",{method:\"POST\"}); const body=await r.text(); console.log(\"POST status\",r.status); console.log(body); if(r.status!==201) process.exit(3);})().catch(e=>{console.error(e);process.exit(4);});"
+        npm run typecheck
+        npm run lint
+        node scripts/phase20-trial-report.mjs
+        node scripts/verify-phase20-research-pilot.mjs
       '
     plugins:
       - docker#v5.13.0:
