@@ -54,8 +54,9 @@ if (
   phone.fact?.verificationStatus !== 'VERIFIED' ||
   phone.fact?.evidenceId !== 'ev_p20_phone' ||
   phone.event?.decision !== 'VERIFY' ||
-  phone.event?.promotedToFact !== true
-) throw new Error('Verified phone review did not persist its evidence-backed canonical fact.');
+  phone.event?.promotedToFact !== true ||
+  phone.event?.note !== 'Fixture operator confirmed source.'
+) throw new Error('Verified phone review did not persist its evidence-backed canonical fact and audit note.');
 
 const blockedMulti = await request(
   '/api/v1/prospects/p20_review/evidence/ev_p20_service/review',
@@ -92,8 +93,12 @@ const rejected = await request(
   },
   200,
 );
-if (rejected.evidence?.verificationStatus !== 'REJECTED' || rejected.fact !== null) {
-  throw new Error('Rejected evidence persisted an invalid fact.');
+if (
+  rejected.evidence?.verificationStatus !== 'REJECTED' ||
+  rejected.fact !== null ||
+  rejected.event?.note !== 'Fixture operator rejected unsupported claim.'
+) {
+  throw new Error('Rejected evidence did not persist its rejection note or remained factual.');
 }
 
 const conflict = await request(
@@ -136,6 +141,14 @@ const reviews = await request('/api/v1/prospects/p20_review/evidence/reviews', u
 if (!Array.isArray(reviews.events) || reviews.events.length !== 3) {
   throw new Error('Evidence review audit history is incomplete.');
 }
+const phoneReview = reviews.events.find((event) => event.evidenceId === 'ev_p20_phone');
+const rejectedReview = reviews.events.find((event) => event.evidenceId === 'ev_p20_reject');
+if (
+  phoneReview?.note !== 'Fixture operator confirmed source.' ||
+  rejectedReview?.note !== 'Fixture operator rejected unsupported claim.'
+) {
+  throw new Error('Evidence review audit history did not retain operator notes.');
+}
 
 const summary = await request('/phase20/summary', undefined, 200);
 const status = new Map((summary.evidence ?? []).map((item) => [item.id, item.verificationStatus]));
@@ -152,4 +165,4 @@ if (
   summary.foreignKeyViolations !== 0
 ) throw new Error('Evidence review integration summary failed its persistence invariants.');
 
-console.log(JSON.stringify({ ok: true, phase: 20, reviewed: 3, foreignKeyViolations: 0 }));
+console.log(JSON.stringify({ ok: true, phase: 20, reviewed: 3, notesPersisted: true, foreignKeyViolations: 0 }));
