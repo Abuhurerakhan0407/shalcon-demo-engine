@@ -2,33 +2,26 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 Python runner environment"
-    key: "phase20-python-runner-environment"
-    timeout_in_minutes: 10
+  - label: ":microscope: Phase 20 Playwright environment"
+    key: "phase20-playwright-environment"
+    timeout_in_minutes: 20
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        node --version
-        npm --version
         npm ci
-        echo "npm-ready"
 
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
-        python3 --version
-        echo "python-packages-ready"
-
         python3 -m venv /tmp/shalcon-venv
         . /tmp/shalcon-venv/bin/activate
-        python --version
-        pip --version
-        echo "venv-ready"
-
         python -m pip install -e "apps/local-runner[dev]"
         echo "runner-installed"
-        PYTHONPATH=apps/local-runner/src python -m shalcon_runner health
-        echo "runner-health-passed"
+
+        python -m playwright install --with-deps chromium
+        echo "chromium-installed"
+        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
+        echo "research-regression-passed"
       '
     plugins:
       - docker#v5.13.0:
