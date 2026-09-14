@@ -6,11 +6,13 @@ steps:
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
-      set -euo pipefail
-      export CI=true
-      npm ci
-      npx eslint scripts/phase20-evidence-review-check.mjs --format json > /tmp/phase20-lint.json || true
-      node -e 'const fs=require("node:fs");const report=JSON.parse(fs.readFileSync("/tmp/phase20-lint.json","utf8"));const message=report.flatMap((entry)=>entry.messages??[])[0];if(!message)process.exit(0);const waits={"no-undef":20,"no-unused-vars":40,"no-promise-executor-return":60,"no-constant-condition":80,"no-empty":100,"no-unreachable":120,"no-unsafe-optional-chaining":140,"no-useless-catch":160};const seconds=waits[message.ruleId]??180;console.log(JSON.stringify({ruleId:message.ruleId,message:message.message,line:message.line,column:message.column}));setTimeout(()=>process.exit(1),seconds*1000);'
+      bash -lc '
+        set -euo pipefail
+        export CI=true
+        npm ci
+        npx eslint scripts/phase20-evidence-review-check.mjs --format json > /tmp/phase20-lint.json || true
+        node -e "const fs=require(\"node:fs\");const report=JSON.parse(fs.readFileSync(\"/tmp/phase20-lint.json\",\"utf8\"));const message=report.flatMap((entry)=>entry.messages??[])[0];if(!message)process.exit(0);const waits={\"no-undef\":20,\"no-unused-vars\":40,\"no-promise-executor-return\":60,\"no-constant-condition\":80,\"no-empty\":100,\"no-unreachable\":120,\"no-unsafe-optional-chaining\":140,\"no-useless-catch\":160};const seconds=waits[message.ruleId]??180;console.log(JSON.stringify({ruleId:message.ruleId,message:message.message,line:message.line,column:message.column}));setTimeout(()=>process.exit(1),seconds*1000);"
+      '
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
