@@ -86,6 +86,7 @@ export function EvidenceReviewPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const prospectsQuery = useQuery({
     queryKey: ['prospects'],
@@ -117,25 +118,29 @@ export function EvidenceReviewPage() {
       evidenceId,
       decision,
       promoteToFact,
+      note,
     }: {
       prospectId: string;
       evidenceId: string;
       decision: 'VERIFY' | 'REJECT';
       promoteToFact?: boolean;
-    }) =>
-      apiJson<ReviewResponse>(`/api/v1/prospects/${prospectId}/evidence/${evidenceId}/review`, {
+      note?: string;
+    }) => {
+      const trimmedNote = note?.trim();
+      return apiJson<ReviewResponse>(`/api/v1/prospects/${prospectId}/evidence/${evidenceId}/review`, {
         method: 'POST',
         body: JSON.stringify(
           decision === 'VERIFY'
-            ? { decision, promoteToFact: promoteToFact === true }
-            : { decision },
+            ? { decision, promoteToFact: promoteToFact === true, note: trimmedNote || undefined }
+            : { decision, note: trimmedNote || undefined },
         ),
-      }),
+      });
+    },
     onMutate: ({ evidenceId }) => {
       setActiveEvidenceId(evidenceId);
       setNotice(null);
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, variables) => {
       setNotice(
         result.event.decision === 'VERIFY'
           ? result.event.promotedToFact
@@ -143,10 +148,15 @@ export function EvidenceReviewPage() {
             : 'Evidence verified. No canonical fact was replaced.'
           : 'Evidence rejected and excluded from verified content.',
       );
+      setNotes((current) => {
+        const next = { ...current };
+        delete next[variables.evidenceId];
+        return next;
+      });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['evidence-review-bundle', selectedId] }),
-        queryClient.invalidateQueries({ queryKey: ['evidence-review-events', selectedId] }),
-        queryClient.invalidateQueries({ queryKey: ['prospect-evidence', selectedId] }),
+        queryClient.invalidateQueries({ queryKey: ['evidence-review-bundle', variables.prospectId] }),
+        queryClient.invalidateQueries({ queryKey: ['evidence-review-events', variables.prospectId] }),
+        queryClient.invalidateQueries({ queryKey: ['prospect-evidence', variables.prospectId] }),
       ]);
     },
     onError: (error: Error) => setNotice(error.message),
@@ -223,6 +233,7 @@ export function EvidenceReviewPage() {
                     const hasConflict = conflicts.has(item.field);
                     const multiValue = MULTI_VALUE_FIELDS.has(normalizedField(item.field));
                     const busy = reviewMutation.isPending && activeEvidenceId === item.id;
+                    const note = notes[item.id] ?? '';
                     return (
                       <article className={`review-card ${hasConflict ? 'has-conflict' : ''}`} key={item.id}>
                         <div className="review-card-head">
@@ -241,11 +252,21 @@ export function EvidenceReviewPage() {
                         {hasConflict ? (
                           <p className="review-warning">Conflicting values exist for this field. Resolve/reject the conflict before verification.</p>
                         ) : null}
+                        <label className="review-note">
+                          <span>Review note <small>optional</small></span>
+                          <textarea
+                            value={note}
+                            maxLength={500}
+                            rows={2}
+                            placeholder="What did you confirm or reject?"
+                            onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                          />
+                        </label>
                         <div className="review-actions">
                           <button
                             type="button"
                             disabled={busy || hasConflict}
-                            onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'VERIFY' })}
+                            onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'VERIFY', note })}
                           >
                             Verify evidence
                           </button>
@@ -254,7 +275,7 @@ export function EvidenceReviewPage() {
                               className="primary-review"
                               type="button"
                               disabled={busy || hasConflict}
-                              onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'VERIFY', promoteToFact: true })}
+                              onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'VERIFY', promoteToFact: true, note })}
                             >
                               Verify + use as fact
                             </button>
@@ -263,7 +284,7 @@ export function EvidenceReviewPage() {
                             className="reject-review"
                             type="button"
                             disabled={busy}
-                            onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'REJECT' })}
+                            onClick={() => reviewMutation.mutate({ prospectId: bundle.prospect.id, evidenceId: item.id, decision: 'REJECT', note })}
                           >
                             Reject
                           </button>
@@ -285,7 +306,7 @@ export function EvidenceReviewPage() {
                   <div className="review-history-row" key={event.id}>
                     <span>{event.decision}</span>
                     <code>{event.evidenceId}</code>
-                    <small>{event.fromStatus} → {event.toStatus}{event.promotedToFact ? ' · canonical fact' : ''}</small>
+                    <small>{event.fromStatus} → {event.toStatus}{event.promotedToFact ? ' · canonical fact' : ''}{event.note ? ` · ${event.note}` : ''}</small>
                   </div>
                 ))}
               </section>
