@@ -19,13 +19,18 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if self.path == "/":
             body = """<!doctype html><html><head><title>Aura Salon Fixture</title></head><body>
             <h1>Aura</h1><div id='dynamic'></div>
-            <a href='/services'>Our Services</a><a href='/services-error'>Services Error Fixture</a>
+            <a href='/services'>Our Services</a><a href='/services-alias'>Services Alias</a><a href='/services-error'>Services Error Fixture</a>
             <script>document.getElementById('dynamic').textContent='JS-rendered premium salon content';console.warn('fixture warning');</script>
             </body></html>"""
             self.send_response(200)
         elif self.path == "/services":
             body = "<!doctype html><html><head><title>Services</title></head><body><h1>Hair & Spa Services</h1></body></html>"
             self.send_response(200)
+        elif self.path == "/services-alias":
+            self.send_response(302)
+            self.send_header("Location", "/services")
+            self.end_headers()
+            return
         elif self.path == "/services-error":
             body = "<!doctype html><html><head><title>Broken Services</title></head><body><h1>Temporary failure</h1></body></html>"
             self.send_response(500)
@@ -73,6 +78,8 @@ def test_js_rendered_site_discovery_screenshots_and_diagnostics(tmp_path: Path) 
     assert "facts" not in result
 
     pages = result["pages"]
+    final_urls = [page["finalUrl"] for page in pages]
+    assert len(final_urls) == len(set(final_urls))
     home = next(page for page in pages if page["finalUrl"] == f"{base}/")
     services = next(page for page in pages if page["finalUrl"] == f"{base}/services")
     broken = next(page for page in pages if page["finalUrl"] == f"{base}/services-error")
@@ -80,6 +87,7 @@ def test_js_rendered_site_discovery_screenshots_and_diagnostics(tmp_path: Path) 
     assert "JS-rendered premium salon content" in home["text"]
     assert any(item["type"] == "warning" and "fixture warning" in item["text"] for item in home["console"])
     assert f"{base}/services" in home["discoveredLinks"]
+    assert f"{base}/services-alias" in home["discoveredLinks"]
     assert "Hair & Spa Services" in services["text"]
     assert broken["httpStatus"] == 500
     assert any(item["status"] == 500 for item in broken["httpErrors"])
