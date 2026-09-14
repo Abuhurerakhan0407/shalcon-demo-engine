@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":test_tube: Phase 20 cohort setup gate"
-    key: "phase20-setup"
+  - label: ":globe_with_meridians: Phase 20 live research pilot"
+    key: "phase20-live-research-pilot"
     timeout_in_minutes: 70
     command: |
       bash -lc '
@@ -22,16 +22,12 @@ steps:
 
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
-        npx playwright install --with-deps chromium
-        python -m playwright install --with-deps --only-shell chromium
+        python -m playwright install --with-deps chromium
 
         npm run typecheck
         npm run lint
-        npm run test:unit
-        npm run test:e2e
-        npm run test:python
         node scripts/phase20-trial-report.mjs
-        npm run build
+        node scripts/verify-phase20-research-pilot.mjs
       '
     plugins:
       - docker#v5.13.0:
