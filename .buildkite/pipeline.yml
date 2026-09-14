@@ -10,8 +10,8 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npm run typecheck
         npm run lint
+        npm run typecheck
 
         rm -rf .wrangler/phase20-evidence-review
         cd apps/api
