@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":incoming_envelope: Phase 20 POST transport diagnostic"
-    key: "phase20-post-after-readiness"
+  - label: ":incoming_envelope: Phase 20 POST via Node fetch"
+    key: "phase20-post-node-fetch"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -21,69 +21,11 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        rm -rf .wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-post-ready.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 > /tmp/phase20-post-node.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        ready=0
-        for attempt in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8807/phase20-health-control >/dev/null; then
-            ready=1
-            echo "health ready on attempt $attempt"
-            break
-          fi
-          sleep 1
-        done
-
-        if [ "$ready" -ne 1 ]; then
-          echo "health endpoint never became ready"
-          cat /tmp/phase20-post-ready.log || true
-          exit 1
-        fi
-
-        if ! kill -0 "$worker_pid" 2>/dev/null; then
-          echo "wrangler process exited immediately after readiness"
-          cat /tmp/phase20-post-ready.log || true
-          exit 1
-        fi
-
-        post_ok=0
-        status="000"
-        curl_rc=0
-        for attempt in $(seq 1 5); do
-          rm -f /tmp/phase20-post-ready-response.json
-          set +e
-          status="$(curl -sS -o /tmp/phase20-post-ready-response.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20-setup-control)"
-          curl_rc=$?
-          set -e
-
-          echo "POST attempt $attempt: curl_rc=$curl_rc status=$status"
-          cat /tmp/phase20-post-ready-response.json 2>/dev/null || true
-          echo
-
-          if [ "$curl_rc" -eq 0 ] && [ "$status" = "201" ]; then
-            post_ok=1
-            break
-          fi
-
-          if [ "$curl_rc" -eq 0 ]; then
-            break
-          fi
-
-          if ! kill -0 "$worker_pid" 2>/dev/null; then
-            echo "wrangler process exited during POST transport retries"
-            break
-          fi
-          sleep 1
-        done
-
-        if [ "$post_ok" -ne 1 ]; then
-          echo "POST transport control failed: curl_rc=$curl_rc status=$status"
-          cat /tmp/phase20-post-ready.log || true
-          exit 1
-        fi
+        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20-health-control\"); if(r.status===200){ready=true; console.log(\"health ready\",i); break;}}catch{} await sleep(1000);} if(!ready){console.error(\"health never ready\"); process.exit(2);} const r=await fetch(\"http://127.0.0.1:8807/phase20-setup-control\",{method:\"POST\"}); const body=await r.text(); console.log(\"POST status\",r.status); console.log(body); if(r.status!==201) process.exit(3);})().catch(e=>{console.error(e);process.exit(4);});"
       '
     plugins:
       - docker#v5.13.0:
