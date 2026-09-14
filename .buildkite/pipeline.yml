@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 setup IDENTITY stage"
-    key: "phase20-setup-identity-stage"
+  - label: ":clipboard: Phase 20 setup JOB stage"
+    key: "phase20-setup-job-stage"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -23,11 +23,11 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-identity-stage.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-job-stage.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const payload={candidates:[{id:\"p20-01-lakme-hill-road-bandra\",businessName:\"Lakme Salon in Hill Road Bandra, Mumbai\",location:\"Bandra West, Mumbai\",sourceUrl:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\",officialWebsite:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\"}],stopAfter:\"IDENTITY\"}; const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify(payload)}); const body=await r.text(); console.log(\"setup-identity\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); const row=parsed.created?.[0]; if(parsed.stage!==\"IDENTITY\"||parsed.created?.length!==1||row?.state!==\"IDENTITY_VERIFIED\"||row?.jobId!==\"\"||parsed.trialResultsModified!==false) process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; echo "setup IDENTITY failed rc=$rc"; cat /tmp/phase20-identity-stage.log || true; exit $rc; }
+        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const payload={candidates:[{id:\"p20-01-lakme-hill-road-bandra\",businessName:\"Lakme Salon in Hill Road Bandra, Mumbai\",location:\"Bandra West, Mumbai\",sourceUrl:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\",officialWebsite:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\"}],stopAfter:\"JOB\"}; const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify(payload)}); const body=await r.text(); console.log(\"setup-job\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); const row=parsed.created?.[0]; if(parsed.stage!==\"JOB\"||parsed.created?.length!==1||row?.state!==\"IDENTITY_VERIFIED\"||row?.jobId!==\"job_p20-01-lakme-hill-road-bandra\"||parsed.trialResultsModified!==false) process.exit(4); const s=await fetch(\"http://127.0.0.1:8807/phase20/status\"); const status=await s.json(); if(s.status!==200||status.researchJobs?.length!==1||status.researchJobs[0]?.status!==\"PENDING\"||status.foreignKeyViolations!==0||status.trialResultsModified!==false) process.exit(5);})().catch(e=>{console.error(e);process.exit(6);});" || { rc=$?; echo "setup JOB failed rc=$rc"; cat /tmp/phase20-job-stage.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
