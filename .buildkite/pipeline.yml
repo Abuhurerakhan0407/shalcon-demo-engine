@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":white_check_mark: Phase 20 evidence review workflow"
+  - label: ":mag: Phase 20 evidence review lint isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,6 +10,13 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
+
+        npx eslint apps/api/src/evidence-verification.ts || { sleep 8; exit 1; }
+        npx eslint apps/api/src/evidence-review-routes.ts || { sleep 18; exit 1; }
+        npx eslint apps/api/src/phase20-evidence-review.integration.ts || { sleep 28; exit 1; }
+        npx eslint apps/api/src/index-with-evidence-review.ts || { sleep 38; exit 1; }
+        npx eslint scripts/phase20-evidence-review-check.mjs || { sleep 48; exit 1; }
+
         npm run lint
         npm run typecheck
 
