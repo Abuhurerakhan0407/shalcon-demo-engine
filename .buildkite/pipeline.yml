@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":three: Phase 20 combined setup direct"
-    key: "phase20-combined-setup-direct"
-    timeout_in_minutes: 25
+  - label: ":globe_with_meridians: Phase 20 one live research job"
+    key: "phase20-one-live-research"
+    timeout_in_minutes: 50
     command: |
       bash -lc '
         set -euo pipefail
@@ -21,16 +21,9 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(0,3).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==3)process.exit(11);fs.writeFileSync(\"/tmp/p20-three.json\",JSON.stringify({candidates}));"
-        rm -rf .wrangler/phase20-research-pilot
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-three.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
-        cd ../..
-
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-three.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"three-setup\",r.status,body);if(r.status!==201)process.exit(3);const parsed=JSON.parse(body);if(parsed.created?.length!==3||parsed.created.some(x=>x.state!==\"IDENTITY_VERIFIED\"||!x.jobId)||parsed.trialResultsModified!==false)process.exit(4);const s=await fetch(\"http://127.0.0.1:8807/phase20/status\");const status=await s.json();console.log(JSON.stringify(status));if(s.status!==200||status.prospects?.length!==3||status.researchJobs?.length!==3||status.researchJobs.some(x=>x.status!==\"PENDING\")||(status.aiJobs?.length??0)!==0||status.foreignKeyViolations!==0||status.trialResultsModified!==false)process.exit(5);})().catch(e=>{console.error(e);process.exit(6);});" || { rc=$?; cat /tmp/phase20-three.log || true; exit $rc; }
+        python -m pip install -e apps/local-runner
+        python -m playwright install --with-deps chromium
+        PHASE20_PILOT_JOBS=1 node scripts/verify-phase20-research-pilot.mjs
       '
     plugins:
       - docker#v5.13.0:
