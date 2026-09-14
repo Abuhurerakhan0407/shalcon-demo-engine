@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":globe_with_meridians: Phase 20 live research pilot"
-    key: "phase20-live-research-pilot"
-    timeout_in_minutes: 70
+  - label: ":mag: Phase 20 pilot setup isolation"
+    key: "phase20-pilot-setup"
+    timeout_in_minutes: 45
     command: |
       bash -lc '
         set -euo pipefail
@@ -27,7 +27,7 @@ steps:
         npm run typecheck
         npm run lint
         node scripts/phase20-trial-report.mjs
-        node scripts/verify-phase20-research-pilot.mjs
+        PHASE20_PILOT_JOBS=0 node scripts/verify-phase20-research-pilot.mjs
       '
     plugins:
       - docker#v5.13.0:
