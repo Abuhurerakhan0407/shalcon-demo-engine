@@ -16,9 +16,11 @@ import { z } from 'zod';
 import { aiRunnerRoutes } from './ai-runner-routes';
 import { hashSessionToken } from './auth';
 import type { Bindings } from './context';
+import { runDemoWorthinessScoring } from './demo-worthiness';
 import { createOrResolveProspectIdentity } from './prospect-identity';
 import { researchRunnerRoutes } from './research-runner-routes';
 import { runnerRoutes } from './runner-routes';
+import { runWebsiteOpportunityAudit } from './website-audit';
 
 const USER_ID = 'phase20-live-research-user';
 const RUNNER_ID = 'phase20-live-research-runner';
@@ -150,6 +152,61 @@ app.post('/phase20/setup', async (c) => {
   return c.json({ created, trialResultsModified: false }, 201);
 });
 
+app.post('/phase20/audit-score', async (c) => {
+  const db = requireDb(c.env.DB);
+  const prospects = new ProspectRepository(db);
+  const owned = await prospects.listForUser(USER_ID);
+  if (owned.length !== 1) {
+    return c.json(
+      { error: { code: 'PHASE20_SINGLE_PROSPECT_REQUIRED', message: 'Audit-score pilot requires exactly one prospect.' } },
+      409,
+    );
+  }
+  const prospect = owned[0];
+  if (!prospect || prospect.currentState !== 'RESEARCHED') {
+    return c.json(
+      {
+        error: {
+          code: 'PHASE20_RESEARCH_NOT_READY',
+          message: `Audit-score pilot requires RESEARCHED state; found ${prospect?.currentState ?? 'missing'}.`,
+        },
+      },
+      409,
+    );
+  }
+
+  const auditPendingAt = new Date().toISOString();
+  await prospects.transition(prospect.id, 'AUDIT_PENDING', auditPendingAt);
+  const audit = await runWebsiteOpportunityAudit(db, USER_ID, prospect.id, new Date().toISOString());
+  await prospects.transition(prospect.id, 'AUDITED', new Date().toISOString());
+  const score = await runDemoWorthinessScoring(db, USER_ID, prospect.id, new Date().toISOString());
+  const finalProspect = await prospects.getByIdForUser(prospect.id, USER_ID);
+  if (!finalProspect || finalProspect.currentState !== score.score.decision) {
+    throw new Error('Phase 20 audit-score state did not match the deterministic score decision.');
+  }
+
+  return c.json({
+    prospectId: prospect.id,
+    audit: {
+      id: audit.id,
+      websitePresence: audit.websitePresence,
+      qualityScore: audit.qualityScore,
+      qualityRating: audit.qualityRating,
+      recommendation: audit.recommendation,
+      observationCount: audit.observations.length,
+    },
+    score: {
+      id: score.id,
+      total: score.score.total,
+      band: score.score.band,
+      decision: score.score.decision,
+      components: score.score.components,
+    },
+    finalState: finalProspect.currentState,
+    trialResultsModified: false,
+  });
+});
+
 app.get('/phase20/status', async (c) => {
   const db = requireDb(c.env.DB);
   const prospects = await new ProspectRepository(db).listForUser(USER_ID);
@@ -202,6 +259,20 @@ app.get('/phase20/status', async (c) => {
     started_at: string;
     completed_at: string | null;
   }>();
+  const auditRuns = await db.prepare(`
+    SELECT id, prospect_id, status, recommendation, quality_score, quality_rating
+    FROM website_audit_runs
+    WHERE user_id = ?
+    ORDER BY created_at, id
+  `).bind(USER_ID).all<Record<string, unknown>>();
+  const scoreRuns = await db.prepare(`
+    SELECT s.id, s.prospect_id, s.total, s.breakdown_json
+    FROM scores s
+    JOIN prospects p ON p.id = s.prospect_id
+    JOIN campaigns c ON c.id = p.campaign_id
+    WHERE c.user_id = ? AND s.score_type = 'DEMO_WORTHINESS_V1'
+    ORDER BY s.created_at, s.id
+  `).bind(USER_ID).all<Record<string, unknown>>();
   const foreignKeyViolations = await db.prepare('PRAGMA foreign_key_check').all();
 
   return c.json({
@@ -209,6 +280,8 @@ app.get('/phase20/status', async (c) => {
     researchJobs: jobs.results.filter((job) => job.job_type === 'PLAYWRIGHT_RESEARCH'),
     aiJobs: jobs.results.filter((job) => job.job_type === 'LOCAL_AI_EXTRACT'),
     researchRuns: researchRuns.results,
+    auditRuns: auditRuns.results,
+    scoreRuns: scoreRuns.results,
     foreignKeyViolations: foreignKeyViolations.results.length,
     trialResultsModified: false,
   });
