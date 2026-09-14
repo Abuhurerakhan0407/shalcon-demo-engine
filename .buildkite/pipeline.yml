@@ -21,7 +21,7 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        python -m pip install -e apps/local-runner
+        python -m pip install -e "apps/local-runner[dev]"
         python -m playwright install --with-deps chromium
         PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
 
