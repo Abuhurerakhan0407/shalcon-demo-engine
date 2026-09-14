@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":arrow_down: Phase 20 GET-based Worker write"
-    key: "phase20-worker-get-write"
+  - label: ":package: Phase 20 Worker via npm workspace"
+    key: "phase20-worker-npm-workspace"
     timeout_in_minutes: 30
     command: |
       bash -lc '
@@ -21,10 +21,9 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        rm -rf .wrangler/phase19-d1-test
-        npm --workspace @shalcon/api run db:migrate:phase19:local
-        cd apps/api
-        npx wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase19-d1-test > /tmp/phase20-db-probe.log 2>&1 &
+        rm -rf .wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-db-probe.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
