@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "shalcon-demo-engine-api",
-  "main": "src/index.ts",
+  "main": "src/index-with-evidence-review.ts",
   "compatibility_date": "2026-09-03",
   "observability": {
     "enabled": true

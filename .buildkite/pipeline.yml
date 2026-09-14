@@ -2,67 +2,27 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":chart_with_upwards_trend: Phase 20 real research to score"
-    key: "phase20-real-research-to-score"
-    timeout_in_minutes: 60
+  - label: ":white_check_mark: Phase 20 evidence review workflow"
+    key: "phase20-evidence-review-workflow"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
         npm ci
+        npm run typecheck
+        npm run lint
 
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv
-        python3 -m venv /tmp/shalcon-venv
-        . /tmp/shalcon-venv/bin/activate
-        python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps chromium
-
-        export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(1,2).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==1||!candidates[0].officialWebsite||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
-
-        rm -rf .wrangler/phase20-research-pilot
+        rm -rf .wrangler/phase20-evidence-review
         cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-review
+        npx wrangler dev src/phase20-evidence-review.integration.ts --local --port 8808 --persist-to ../../.wrangler/phase20-evidence-review > /tmp/phase20-evidence-review.log 2>&1 &
         worker_pid=$!
-        ollama_pid=""
-        cleanup() {
-          kill "$worker_pid" 2>/dev/null || true
-          if [ -n "$ollama_pid" ]; then kill "$ollama_pid" 2>/dev/null || true; fi
-        }
-        trap cleanup EXIT
+        trap "kill $worker_pid 2>/dev/null || true" EXIT
         cd ../..
 
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);if(p.created?.length!==1||p.created[0]?.state!==\"IDENTITY_VERIFIED\"||p.created[0]?.identityStatus!==\"NEW_CANONICAL\"||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
-
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();const pending=s.aiJobs?.filter(x=>x.status===\"PENDING\")??[];console.log(JSON.stringify(s));if(r.status!==200||pending.length<1||pending.length>6||s.researchRuns?.length!==1||s.researchRuns[0]?.status!==\"RUNNING\"||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);fs.writeFileSync(\"/tmp/ai-count\",String(pending.length));})().catch(e=>{console.error(e);process.exit(7);});"
-
-        curl -fsSL https://ollama.com/install.sh | sh
-        export OLLAMA_NUM_PARALLEL=1
-        export OLLAMA_MAX_LOADED_MODELS=1
-        export SHALCON_OLLAMA_MODEL="qwen3:0.6b"
-        ollama serve > /tmp/ollama.log 2>&1 &
-        ollama_pid=$!
-        ready=0
-        for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/ollama-tags.json; then ready=1; break; fi
-          sleep 1
-        done
-        if [ "$ready" -ne 1 ]; then cat /tmp/ollama.log || true; exit 21; fi
-        ollama pull "$SHALCON_OLLAMA_MODEL"
-
-        export AI_COUNT="$(cat /tmp/ai-count)"
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-ai-probe.py --api-url http://127.0.0.1:8807 --token "$SHALCON_RUNNER_TOKEN" --jobs "$AI_COUNT" | tee /tmp/phase20-ai-probe.json
-        node -e "const fs=require(\"fs\");const p=JSON.parse(fs.readFileSync(\"/tmp/phase20-ai-probe.json\",\"utf8\"));if(p.ok!==true||p.trialResultsModified!==false||p.provider!==\"ollama\"||p.sourceOnly!==true||p.verified!==false||p.completedCount!==Number(process.env.AI_COUNT))process.exit(8);"
-
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const p=s.prospects?.[0];const run=s.researchRuns?.[0];const ai=s.aiJobs??[];if(r.status!==200||s.prospects?.length!==1||!run||run.status!==\"COMPLETED\"||!p||p.currentState!==\"RESEARCHED\"||p.playwrightSourceCount<1||p.evidenceCount<1||ai.length<1||ai.some(x=>x.status!==\"COMPLETED\")||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(9);})().catch(e=>{console.error(e);process.exit(10);});"
-
-        node -e "const fs=require(\"fs\");(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/audit-score\",{method:\"POST\"});const body=await r.text();console.log(\"audit-score\",r.status,body);fs.writeFileSync(\"/tmp/p20-audit-score.json\",body);if(r.status!==200)process.exit(12);const v=JSON.parse(body);const allowed=new Set([\"DEMO_QUALIFIED\",\"RESEARCH_MORE\",\"REJECTED\"]);if(v.trialResultsModified!==false||!v.audit?.id||!v.score?.id||!Number.isFinite(v.score?.total)||!allowed.has(v.score?.decision)||v.finalState!==v.score.decision)process.exit(13);})().catch(e=>{console.error(e);process.exit(14);});"
-
-        node -e "const fs=require(\"fs\");(async()=>{const expected=JSON.parse(fs.readFileSync(\"/tmp/p20-audit-score.json\",\"utf8\"));const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const p=s.prospects?.[0];if(r.status!==200||s.auditRuns?.length!==1||s.scoreRuns?.length!==1||!p||p.currentState!==expected.score.decision||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(15);})().catch(e=>{console.error(e);process.exit(16);});"
-      ' || { rc=$?; cat /tmp/phase20-live.log 2>/dev/null || true; cat /tmp/ollama.log 2>/dev/null || true; cat /tmp/phase20-ai-probe.json 2>/dev/null || true; cat /tmp/p20-audit-score.json 2>/dev/null || true; exit $rc; }
+        node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
+      '
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
