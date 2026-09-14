@@ -31,8 +31,10 @@ const candidateSchema = z.object({
   officialWebsite: z.string().trim().url().max(2048).nullable().optional(),
 }).strict();
 
+const setupStageSchema = z.enum(['USER', 'CAMPAIGN', 'RUNNER', 'IDENTITY', 'JOB']);
 const setupSchema = z.object({
   candidates: z.array(candidateSchema).min(1).max(3),
+  stopAfter: setupStageSchema.optional(),
 }).strict();
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
@@ -79,7 +81,15 @@ app.post('/phase20/setup', async (c) => {
     name: 'Phase 20 Real Research Pilot',
     createdAt: now,
   });
+  if (input.stopAfter === 'USER') {
+    return c.json({ stage: 'USER', trialResultsModified: false }, 201);
+  }
+
   const campaign = await new CampaignRepository(db).ensureManualSalonCampaign(USER_ID, now);
+  if (input.stopAfter === 'CAMPAIGN') {
+    return c.json({ stage: 'CAMPAIGN', campaignId: campaign.id, trialResultsModified: false }, 201);
+  }
+
   await new LocalRunnerRepository(db).registerOrRotate({
     id: RUNNER_ID,
     userId: USER_ID,
@@ -93,6 +103,9 @@ app.post('/phase20/setup', async (c) => {
     updatedAt: now,
     revokedAt: null,
   });
+  if (input.stopAfter === 'RUNNER') {
+    return c.json({ stage: 'RUNNER', runnerId: RUNNER_ID, trialResultsModified: false }, 201);
+  }
 
   const created: Array<{
     candidateId: string;
@@ -126,6 +139,16 @@ app.post('/phase20/setup', async (c) => {
         `Phase 20 pilot identity for ${candidate.id} requires review before research (${identity.identity.status}).`,
       );
     }
+    if (input.stopAfter === 'IDENTITY') {
+      created.push({
+        candidateId: candidate.id,
+        prospectId: identity.prospect.id,
+        state: identity.prospect.currentState,
+        identityStatus: identity.identity.status,
+        jobId: '',
+      });
+      continue;
+    }
 
     const jobId = `job_${candidate.id}`;
     await new JobRepository(db).createOrGet(researchJob(jobId, identity.prospect.id, now));
@@ -146,7 +169,12 @@ app.post('/phase20/setup', async (c) => {
     });
   }
 
-  return c.json({ created, runnerCapabilities: ['PLAYWRIGHT_RESEARCH'], trialResultsModified: false }, 201);
+  return c.json({
+    stage: input.stopAfter ?? 'JOB',
+    created,
+    runnerCapabilities: ['PLAYWRIGHT_RESEARCH'],
+    trialResultsModified: false,
+  }, 201);
 });
 
 app.get('/phase20/status', async (c) => {
