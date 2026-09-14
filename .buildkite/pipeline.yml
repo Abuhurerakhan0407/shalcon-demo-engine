@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":bust_in_silhouette: Phase 20 setup USER stage"
-    key: "phase20-setup-user-stage"
+  - label: ":card_index_dividers: Phase 20 setup CAMPAIGN stage"
+    key: "phase20-setup-campaign-stage"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -23,11 +23,11 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-user-stage.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-campaign-stage.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const payload={candidates:[{id:\"p20-01-lakme-hill-road-bandra\",businessName:\"Lakme Salon in Hill Road Bandra, Mumbai\",location:\"Bandra West, Mumbai\",sourceUrl:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\",officialWebsite:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\"}],stopAfter:\"USER\"}; const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify(payload)}); const body=await r.text(); console.log(\"setup-user\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); if(parsed.stage!==\"USER\"||parsed.trialResultsModified!==false) process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; echo "setup USER failed rc=$rc"; cat /tmp/phase20-user-stage.log || true; exit $rc; }
+        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const payload={candidates:[{id:\"p20-01-lakme-hill-road-bandra\",businessName:\"Lakme Salon in Hill Road Bandra, Mumbai\",location:\"Bandra West, Mumbai\",sourceUrl:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\",officialWebsite:\"https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home\"}],stopAfter:\"CAMPAIGN\"}; const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify(payload)}); const body=await r.text(); console.log(\"setup-campaign\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); if(parsed.stage!==\"CAMPAIGN\"||!parsed.campaignId||parsed.trialResultsModified!==false) process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; echo "setup CAMPAIGN failed rc=$rc"; cat /tmp/phase20-campaign-stage.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
