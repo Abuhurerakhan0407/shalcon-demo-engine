@@ -1,7 +1,7 @@
 const base = process.env.PHASE20_REVIEW_BASE_URL ?? 'http://127.0.0.1:8808';
 
 async function request(path, init, expectedStatus) {
-  const response = await fetch(`${base}${path}`, init);
+  const response = await globalThis.fetch(`${base}${path}`, init);
   const text = await response.text();
   let body = null;
   try {
@@ -20,7 +20,7 @@ async function main() {
   let healthy = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await fetch(`${base}/phase20/health`);
+      const response = await globalThis.fetch(`${base}/phase20/health`);
       const body = await response.json();
       if (response.status === 200 && body.ok === true && body.phase === 20) {
         healthy = true;
@@ -29,7 +29,7 @@ async function main() {
     } catch {
       // Worker is still starting.
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 1000));
   }
   if (!healthy) throw new Error('Phase 20 evidence review integration worker did not become healthy.');
 
