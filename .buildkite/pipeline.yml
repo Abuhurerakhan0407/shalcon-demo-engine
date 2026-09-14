@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":microscope: Phase 20 Playwright environment"
-    key: "phase20-playwright-environment"
-    timeout_in_minutes: 20
+  - label: ":microscope: Phase 20 Ollama on Node runner"
+    key: "phase20-ollama-node-runner"
+    timeout_in_minutes: 30
     command: |
       bash -lc '
         set -euo pipefail
@@ -18,11 +18,36 @@ steps:
         python -m pip install -e "apps/local-runner[dev]"
         echo "runner-installed"
 
-        python -m playwright install --with-deps chromium
-        echo "chromium-installed"
-        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
-        echo "research-regression-passed"
-      '
+        curl -fsSL https://ollama.com/install.sh | sh
+        export OLLAMA_NUM_PARALLEL=1
+        export OLLAMA_MAX_LOADED_MODELS=1
+        export SHALCON_OLLAMA_MODEL="qwen3:0.6b"
+        ollama serve > /tmp/ollama.log 2>&1 &
+        ollama_pid=$!
+        trap "kill $ollama_pid 2>/dev/null || true" EXIT
+
+        ready=0
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:11434/api/tags >/tmp/ollama-tags.json; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then
+          cat /tmp/ollama.log || true
+          exit 21
+        fi
+        echo "ollama-ready"
+        ollama pull "$SHALCON_OLLAMA_MODEL"
+        echo "model-ready"
+
+        PYTHONPATH=apps/local-runner/src python -m shalcon_runner ai-smoke --model "$SHALCON_OLLAMA_MODEL" | tee /tmp/phase20-ai-smoke.json
+        grep -q '"ok": true' /tmp/phase20-ai-smoke.json
+        grep -q '"sourceOnly": true' /tmp/phase20-ai-smoke.json
+        grep -q '"verified": false' /tmp/phase20-ai-smoke.json
+        echo "ollama-smoke-passed"
+      ' || { rc=$?; cat /tmp/ollama.log 2>/dev/null || true; exit $rc; }
     plugins:
       - docker#v5.13.0:
           image: "node:22-bookworm"
