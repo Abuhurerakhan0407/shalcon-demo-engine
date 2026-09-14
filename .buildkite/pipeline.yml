@@ -2,14 +2,16 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":shield: Phase 20 Shanuzz URL safety"
-    key: "phase20-shanuzz-url-safety"
-    timeout_in_minutes: 10
+  - label: ":chromium: Phase 20 Shanuzz browser engine"
+    key: "phase20-shanuzz-browser-engine"
+    timeout_in_minutes: 40
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
-        PYTHONPATH=apps/local-runner/src python -c "from shalcon_runner.url_safety import validate_public_http_url; value=validate_public_http_url(\"https://shanuzz.com/\"); print(value); assert value==\"https://shanuzz.com/\""
+        python -m pip install -e apps/local-runner
+        python -m playwright install --with-deps chromium
+        PYTHONPATH=apps/local-runner/src python -c "from shalcon_runner.research import BrowserResearchEngine; r=BrowserResearchEngine().research(job_id=\"job_shanuzz_probe\",prospect_id=\"pro_shanuzz_probe\",raw_url=\"https://shanuzz.com/\",max_pages=4); assert r[\"pageCount\"]>=1; assert r[\"pages\"][0][\"requestedUrl\"]==\"https://shanuzz.com/\"; print({\"pageCount\":r[\"pageCount\"],\"finalUrls\":[p[\"finalUrl\"] for p in r[\"pages\"]],\"navigationErrors\":[p[\"navigationError\"] for p in r[\"pages\"]]})"
       '
     plugins:
       - docker#v5.13.0:
