@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":floppy_disk: Phase 20 D1 user-write probe"
-    key: "phase20-pilot-user-write-probe"
+  - label: ":mag: Phase 20 D1 schema probe"
+    key: "phase20-d1-schema-probe"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -24,25 +24,21 @@ steps:
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-pilot-worker.log 2>&1 &
+        npx wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-db-probe.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
         for _ in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8807/phase20/health >/dev/null; then
+          status="$(curl -sS -o /tmp/phase20-db-schema.json -w "%{http_code}" http://127.0.0.1:8807/phase20/db-schema-probe || true)"
+          if [ "$status" = "200" ]; then
             ready=1
             break
           fi
           sleep 1
         done
+        cat /tmp/phase20-db-schema.json 2>/dev/null || true
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-pilot-worker.log
-          exit 1
-        fi
-        probe_status="$(curl -sS -o /tmp/phase20-user-probe.json -w "%{http_code}" -X POST http://127.0.0.1:8807/phase20/user-probe)"
-        cat /tmp/phase20-user-probe.json
-        if [ "$probe_status" != "201" ]; then
-          cat /tmp/phase20-pilot-worker.log
+          cat /tmp/phase20-db-probe.log
           exit 1
         fi
       '
