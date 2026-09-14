@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 pilot setup isolation"
-    key: "phase20-pilot-setup"
-    timeout_in_minutes: 45
+  - label: ":shield: Reprove Phase 0-19 baseline on Phase 20 head"
+    key: "phase20-reprove-phase19-baseline"
+    timeout_in_minutes: 110
     command: |
       bash -lc '
         set -euo pipefail
@@ -22,12 +22,10 @@ steps:
 
         npm ci
         python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps chromium
+        npx playwright install --with-deps chromium
+        python -m playwright install --with-deps --only-shell chromium
 
-        npm run typecheck
-        npm run lint
-        node scripts/phase20-trial-report.mjs
-        PHASE20_PILOT_JOBS=0 node scripts/verify-phase20-research-pilot.mjs
+        node scripts/verify-through-phase19.mjs
       '
     plugins:
       - docker#v5.13.0:
