@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 parse-only control"
-    key: "phase20-parse-only-control"
-    timeout_in_minutes: 20
+  - label: ":mag: Phase 20 parse-only control on migrated D1"
+    key: "phase20-parse-only-migrated"
+    timeout_in_minutes: 25
     command: |
       bash -lc '
         set -euo pipefail
@@ -22,7 +22,9 @@ steps:
 
         npm ci
         node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.sourceClass===\"OFFICIAL_WEBSITE\");const candidate={id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite};fs.writeFileSync(\"/tmp/phase20-parse.json\",JSON.stringify({candidates:[candidate]}));"
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 > /tmp/phase20-parse-control.log 2>&1 &
+        rm -rf .wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-setup-control.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-parse-control.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
