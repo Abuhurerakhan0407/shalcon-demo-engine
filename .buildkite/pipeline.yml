@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":identification_card: Phase 20 identity setup isolation"
-    key: "phase20-pilot-identity-setup"
+  - label: ":identification_card: Phase 20 identity candidate 1"
+    key: "phase20-pilot-identity-candidate-1"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -21,7 +21,7 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(0,3).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));fs.writeFileSync(\"/tmp/phase20-setup.json\",JSON.stringify({candidates}));"
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(0,1).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));fs.writeFileSync(\"/tmp/phase20-setup.json\",JSON.stringify({candidates}));"
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
