@@ -2,9 +2,9 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":package: Phase 20 Worker via npm workspace"
-    key: "phase20-worker-npm-workspace"
-    timeout_in_minutes: 30
+  - label: ":test_tube: Phase 19 worker on Phase 20 D1 path"
+    key: "phase19-worker-phase20-path-control"
+    timeout_in_minutes: 40
     command: |
       bash -lc '
         set -euo pipefail
@@ -23,25 +23,21 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-db-probe.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-db-probe.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase19.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase19-on-phase20.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
-        for _ in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8807/phase20/db-schema-probe >/dev/null; then
+        for _ in $(seq 1 90); do
+          status="$(curl -sS -o /tmp/phase19-on-phase20.json -w "%{http_code}" http://127.0.0.1:8807/phase19 || true)"
+          if [ "$status" = "200" ]; then
             ready=1
             break
           fi
           sleep 1
         done
+        cat /tmp/phase19-on-phase20.json 2>/dev/null || true
         if [ "$ready" -ne 1 ]; then
-          cat /tmp/phase20-db-probe.log
-          exit 1
-        fi
-        write_status="$(curl -sS -o /tmp/phase20-db-write.json -w "%{http_code}" http://127.0.0.1:8807/phase20/db-write-probe)"
-        cat /tmp/phase20-db-write.json
-        if [ "$write_status" != "200" ]; then
-          cat /tmp/phase20-db-probe.log
+          cat /tmp/phase19-on-phase20.log
           exit 1
         fi
       '
