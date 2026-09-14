@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":heartbeat: Phase 20 real integration boot with D1"
-    key: "phase20-real-boot-d1"
+  - label: ":floppy_disk: Phase 20 real D1 user write via Node fetch"
+    key: "phase20-real-user-write-node"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -23,11 +23,11 @@ steps:
         npm ci
         rm -rf .wrangler/phase20-research-pilot
         npm --workspace @shalcon/api exec -- wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-real-boot.log 2>&1 &
+        npm --workspace @shalcon/api exec -- wrangler dev src/phase20-research-pilot.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-user-write.log 2>&1 &
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); const body=await r.text(); console.log(\"health attempt\",i,\"status\",r.status,body); if(r.status===200) process.exit(0);}catch(e){if(i===60) console.error(e);} await sleep(1000);} process.exit(2);})().catch(e=>{console.error(e);process.exit(3);});" || { rc=$?; echo "health probe failed rc=$rc"; cat /tmp/phase20-real-boot.log || true; exit $rc; }
+        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const r=await fetch(\"http://127.0.0.1:8807/phase20/user-probe\",{method:\"POST\"}); const body=await r.text(); console.log(\"user-probe\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); if(parsed.ok!==true||parsed.stage!==\"USER_WRITE\"||parsed.trialResultsModified!==false) process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; echo "user write probe failed rc=$rc"; cat /tmp/phase20-user-write.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
