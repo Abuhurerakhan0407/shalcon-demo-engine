@@ -2,48 +2,31 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":world_map: Phase 20 listing salon 20"
-    key: "phase20-listing-20"
-    timeout_in_minutes: 75
+  - label: ":lock: Phase 20 trial ledger gate"
+    key: "phase20-trial-ledger-gate"
+    timeout_in_minutes: 15
     command: |
       bash -lc '
         set -euo pipefail
-        export CI=true
 
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl gnupg
-        mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-          > /etc/apt/sources.list.d/nodesource.list
-        apt-get update
-        apt-get install -y --no-install-recommends nodejs
+        node scripts/phase20-trial-report.mjs
 
-        npm ci
-        python -m pip install -e "apps/local-runner[dev]"
-        python -m playwright install --with-deps chromium
-        PYTHONPATH=apps/local-runner/src python -m pytest apps/local-runner/tests/test_research.py -q
+        if node scripts/phase20-trial-report.mjs --enforce; then
+          echo "expected --enforce to fail while real trial results are pending"
+          exit 12
+        fi
 
-        export SHALCON_RUNNER_TOKEN="$(node -e "process.stdout.write(require(\"crypto\").randomBytes(32).toString(\"hex\"))")"
-        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"PUBLIC_LISTING\").slice(6,7).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));if(candidates.length!==1||candidates.some(x=>x.officialWebsite!==null)||!process.env.SHALCON_RUNNER_TOKEN)process.exit(11);fs.writeFileSync(\"/tmp/p20-live.json\",JSON.stringify({candidates,runnerToken:process.env.SHALCON_RUNNER_TOKEN}));"
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));t.prospects[0].result={status:\"COMPLETE\",factualCorrectionRequired:false,criticalFactualError:false,correctionCategories:{wrongIdentity:false,wrongFact:false,missingFact:false,wrongTemplate:false,badCopy:false,badImage:false,contactProblem:false,manualCorrectionRequired:false}};fs.writeFileSync(\"/tmp/p20-bad.json\",JSON.stringify(t));"
+        if node scripts/phase20-trial-report.mjs --file=/tmp/p20-bad.json; then
+          echo "expected malformed COMPLETE result to fail when one correction category is missing"
+          exit 13
+        fi
 
-        rm -rf .wrangler/phase20-research-pilot
-        cd apps/api
-        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
-        npx wrangler dev src/phase20-live-research.integration.ts --local --port 8807 --persist-to ../../.wrangler/phase20-research-pilot > /tmp/phase20-live.log 2>&1 &
-        worker_pid=$!
-        trap "kill $worker_pid 2>/dev/null || true" EXIT
-        cd ../..
-
-        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p20-live.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"setup\",r.status,body);if(r.status!==201)process.exit(3);const p=JSON.parse(body);const ids=p.created?.map(x=>x.prospectId)??[];if(p.created?.length!==1||new Set(ids).size!==1||p.created.some(x=>x.state!==\"IDENTITY_VERIFIED\"||x.identityStatus!==\"NEW_CANONICAL\")||p.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});"
-
-        PYTHONPATH=apps/local-runner/src python scripts/phase20-research-pilot.py --api-url http://127.0.0.1:8807 --jobs 1
-
-        node -e "(async()=>{const r=await fetch(\"http://127.0.0.1:8807/phase20/status\");const s=await r.json();console.log(JSON.stringify(s));const completed=s.researchJobs?.filter(x=>x.status===\"COMPLETED\")??[];const failed=s.researchJobs?.filter(x=>x.status===\"FAILED\")??[];if(r.status!==200||s.prospects?.length!==1||completed.length!==1||failed.length!==0||s.prospects.some(x=>x.playwrightSourceCount<1||x.sourceCount<1)||(s.aiJobs?.filter(x=>x.status===\"PENDING\").length??0)<1||s.foreignKeyViolations!==0||s.trialResultsModified!==false)process.exit(6);})().catch(e=>{console.error(e);process.exit(7);});" || { rc=$?; cat /tmp/phase20-live.log || true; exit $rc; }
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const keys=[\"wrongIdentity\",\"wrongFact\",\"missingFact\",\"wrongTemplate\",\"badCopy\",\"badImage\",\"visualBug\",\"contactProblem\",\"manualCorrectionRequired\"];t.prospects[0].result={status:\"COMPLETE\",factualCorrectionRequired:false,criticalFactualError:false,correctionCategories:Object.fromEntries(keys.map(k=>[k,false]))};fs.writeFileSync(\"/tmp/p20-good.json\",JSON.stringify(t));"
+        node scripts/phase20-trial-report.mjs --file=/tmp/p20-good.json
       '
     plugins:
       - docker#v5.13.0:
-          image: "python:3.13-bookworm"
+          image: "node:22-bookworm"
           workdir: /workdir
           mount-checkout: true
