@@ -3,7 +3,7 @@ agents:
 
 steps:
   - label: ":mag: Phase 20 prospect 3 JOB stage"
-    key: "phase20-prospect3-job"
+    key: "phase20-prospect3-job-safe"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -27,7 +27,8 @@ steps:
         worker_pid=$!
         trap "kill $worker_pid 2>/dev/null || true" EXIT
 
-        node -e "const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); (async()=>{let ready=false; for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\"); if(r.status===200){ready=true; break;}}catch{} await sleep(1000);} if(!ready) process.exit(2); const payload={candidates:[{id:\"p20-03-akreations-bandra\",businessName:\"A'Kreations Hair & Beyond\",location:\"Bandra West, Mumbai\",sourceUrl:\"https://www.akreations.in/\",officialWebsite:\"https://www.akreations.in/\"}],stopAfter:\"JOB\"}; const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify(payload)}); const body=await r.text(); console.log(\"p3-job\",r.status,body); if(r.status!==201) process.exit(3); const parsed=JSON.parse(body); const row=parsed.created?.[0]; if(parsed.stage!==\"JOB\"||parsed.created?.length!==1||row?.state!==\"IDENTITY_VERIFIED\"||row?.jobId!==\"job_p20-03-akreations-bandra\"||parsed.trialResultsModified!==false) process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; cat /tmp/phase20-p3.log || true; exit $rc; }
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const p=t.prospects.find(x=>x.id===\"p20-03-akreations-bandra\");if(!p)process.exit(11);fs.writeFileSync(\"/tmp/p3.json\",JSON.stringify({candidates:[{id:p.id,businessName:p.businessName,location:p.location,sourceUrl:p.sourceUrl,officialWebsite:p.officialWebsite}],stopAfter:\"JOB\"}));"
+        node -e "const fs=require(\"fs\");const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));(async()=>{let ready=false;for(let i=1;i<=60;i++){try{const r=await fetch(\"http://127.0.0.1:8807/phase20/health\");if(r.status===200){ready=true;break;}}catch{}await sleep(1000);}if(!ready)process.exit(2);const payload=fs.readFileSync(\"/tmp/p3.json\",\"utf8\");const r=await fetch(\"http://127.0.0.1:8807/phase20/setup\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:payload});const body=await r.text();console.log(\"p3-job\",r.status,body);if(r.status!==201)process.exit(3);const parsed=JSON.parse(body);const row=parsed.created?.[0];if(parsed.stage!==\"JOB\"||parsed.created?.length!==1||row?.state!==\"IDENTITY_VERIFIED\"||row?.jobId!==\"job_p20-03-akreations-bandra\"||parsed.trialResultsModified!==false)process.exit(4);})().catch(e=>{console.error(e);process.exit(5);});" || { rc=$?; cat /tmp/phase20-p3.log || true; exit $rc; }
       '
     plugins:
       - docker#v5.13.0:
