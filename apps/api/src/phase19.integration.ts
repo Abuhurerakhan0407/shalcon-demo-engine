@@ -31,6 +31,13 @@ import {
 } from './visual-qa';
 
 interface Env { DB: D1DatabaseLike }
+
+interface MutableDemoConfig {
+  business?: Record<string, unknown>;
+  hero?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 const app = new Hono<{ Bindings: Env }>();
 app.get('/healthz', (c) => c.json({ ok: true }));
 
@@ -250,11 +257,11 @@ async function passVisualQa(
 async function mutateDemoConfig(
   db: D1DatabaseLike,
   demoId: string,
-  mutate: (config: Record<string, any>) => void,
+  mutate: (config: MutableDemoConfig) => void,
 ) {
   const row = await db.prepare('SELECT config_json FROM demos WHERE id = ?').bind(demoId).first<{ config_json: string }>();
   if (!row) throw new Error('Demo config missing.');
-  const config = JSON.parse(row.config_json) as Record<string, any>;
+  const config = JSON.parse(row.config_json) as MutableDemoConfig;
   mutate(config);
   await db.prepare('UPDATE demos SET config_json = ?, updated_at = ? WHERE id = ?')
     .bind(JSON.stringify(config), iso(900), demoId).run();
