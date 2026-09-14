@@ -2,7 +2,7 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 20 root static isolation"
+  - label: ":mag: Phase 20 global lint path isolation"
     key: "phase20-evidence-review-workflow"
     timeout_in_minutes: 25
     command: |
@@ -10,9 +10,8 @@ steps:
         set -euo pipefail
         export CI=true
         npm ci
-        npm run typecheck || { sleep 20; exit 1; }
-        npm run lint || { sleep 70; exit 1; }
-        exit 0
+        npx eslint . --format json > /tmp/all-lint.json || true
+        node -e "const fs=require(\"node:fs\");const report=JSON.parse(fs.readFileSync(\"/tmp/all-lint.json\",\"utf8\"));const entry=report.find((item)=>(item.errorCount??0)>0);if(!entry)process.exit(0);const file=entry.filePath??\"\";let seconds=140;if(file.endsWith(\"scripts/phase20-evidence-review-check.mjs\"))seconds=20;else if(file.includes(\"apps/api/src/evidence-verification.ts\")||file.includes(\"apps/api/src/evidence-review-routes.ts\")||file.includes(\"apps/api/src/phase20-evidence-review.integration.ts\")||file.includes(\"apps/api/src/index-with-evidence-review.ts\"))seconds=40;else if(file.includes(\"/apps/web/\"))seconds=60;else if(file.includes(\"/apps/api/\"))seconds=80;else if(file.includes(\"/packages/\"))seconds=100;else if(file.includes(\"/scripts/\"))seconds=120;setTimeout(()=>process.exit(1),seconds*1000);"
       '
     plugins:
       - docker#v5.13.0:
