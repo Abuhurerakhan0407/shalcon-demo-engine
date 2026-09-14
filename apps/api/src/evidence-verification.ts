@@ -242,7 +242,7 @@ export async function reviewEvidenceCandidate(
   let writes;
   try {
     writes = await db.batch(statements);
-  } catch (error) {
+  } catch {
     throw new EvidenceReviewError(
       'EVIDENCE_REVIEW_CONFLICT',
       'Evidence review changed concurrently and was not applied.',
