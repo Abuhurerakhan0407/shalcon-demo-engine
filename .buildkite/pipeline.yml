@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":electric_plug: Phase 20 pilot worker boot"
-    key: "phase20-pilot-worker-boot"
+  - label: ":identification_card: Phase 20 identity setup isolation"
+    key: "phase20-pilot-identity-setup"
     timeout_in_minutes: 25
     command: |
       bash -lc '
@@ -13,7 +13,7 @@ steps:
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpgkey \
           | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
         echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
           > /etc/apt/sources.list.d/nodesource.list
@@ -21,6 +21,7 @@ steps:
         apt-get install -y --no-install-recommends nodejs
 
         npm ci
+        node -e "const fs=require(\"fs\");const t=JSON.parse(fs.readFileSync(\"docs/phase20-salon-accuracy-trial.json\",\"utf8\"));const candidates=t.prospects.filter(p=>p.sourceClass===\"OFFICIAL_WEBSITE\").slice(0,3).map(({id,businessName,location,sourceUrl,officialWebsite})=>({id,businessName,location,sourceUrl,officialWebsite}));fs.writeFileSync(\"/tmp/phase20-setup.json\",JSON.stringify({candidates}));"
         rm -rf .wrangler/phase20-research-pilot
         cd apps/api
         npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-research-pilot
@@ -29,7 +30,7 @@ steps:
         trap "kill $worker_pid 2>/dev/null || true" EXIT
         ready=0
         for _ in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8807/phase20/health > /tmp/phase20-health.json; then
+          if curl -fsS http://127.0.0.1:8807/phase20/health >/dev/null; then
             ready=1
             break
           fi
@@ -39,7 +40,12 @@ steps:
           cat /tmp/phase20-pilot-worker.log
           exit 1
         fi
-        cat /tmp/phase20-health.json
+        setup_status="$(curl -sS -o /tmp/phase20-setup-response.json -w "%{http_code}" -H "Content-Type: application/json" --data-binary @/tmp/phase20-setup.json http://127.0.0.1:8807/phase20/setup)"
+        cat /tmp/phase20-setup-response.json
+        if [ "$setup_status" != "201" ]; then
+          cat /tmp/phase20-pilot-worker.log
+          exit 1
+        fi
       '
     plugins:
       - docker#v5.13.0:
