@@ -2,13 +2,14 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":mag: Phase 19 architecture audit"
-    key: "phase19-audit"
-    timeout_in_minutes: 20
+  - label: ":white_check_mark: Phase 19 strict regression"
+    key: "phase19-strict-regression"
+    timeout_in_minutes: 65
     command: |
       bash -lc '
         set -euo pipefail
         export CI=true
+
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl gnupg
         mkdir -p /etc/apt/keyrings
@@ -18,8 +19,18 @@ steps:
           > /etc/apt/sources.list.d/nodesource.list
         apt-get update
         apt-get install -y --no-install-recommends nodejs
+
         npm ci
-        node scripts/phase19-audit.mjs
+        python -m pip install -e "apps/local-runner[dev]"
+        npx playwright install --with-deps chromium
+        python -m playwright install --with-deps --only-shell chromium
+
+        npm run typecheck
+        npm run lint
+        npm run test:unit
+        npm run test:e2e
+        npm run test:python
+        npm run build
       '
     plugins:
       - docker#v5.13.0:
