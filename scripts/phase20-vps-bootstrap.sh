@@ -22,7 +22,7 @@ fi
 
 log "Installing base packages"
 $SUDO apt-get update
-$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y \
+$SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y \
   ca-certificates curl git build-essential python3 python3-venv python3-pip
 
 need_node=1
@@ -35,8 +35,12 @@ fi
 
 if [[ "$need_node" -eq 1 ]]; then
   log "Installing Node.js 22"
-  curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO -E bash -
-  $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+  if [[ -n "$SUDO" ]]; then
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  else
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  fi
+  $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 fi
 
 log "Installing JavaScript dependencies"
