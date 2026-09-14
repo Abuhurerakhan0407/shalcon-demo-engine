@@ -2,8 +2,8 @@ agents:
   queue: "linux-small"
 
 steps:
-  - label: ":chromium: Phase 20 Shanuzz browser engine"
-    key: "phase20-shanuzz-browser-engine"
+  - label: ":link: Phase 20 Shanuzz final URL uniqueness"
+    key: "phase20-shanuzz-final-url-uniqueness"
     timeout_in_minutes: 40
     command: |
       bash -lc '
@@ -11,7 +11,7 @@ steps:
         export CI=true
         python -m pip install -e apps/local-runner
         python -m playwright install --with-deps chromium
-        PYTHONPATH=apps/local-runner/src python -c "from shalcon_runner.research import BrowserResearchEngine; r=BrowserResearchEngine().research(job_id=\"job_shanuzz_probe\",prospect_id=\"pro_shanuzz_probe\",raw_url=\"https://shanuzz.com/\",max_pages=4); assert r[\"pageCount\"]>=1; assert r[\"pages\"][0][\"requestedUrl\"]==\"https://shanuzz.com/\"; print({\"pageCount\":r[\"pageCount\"],\"finalUrls\":[p[\"finalUrl\"] for p in r[\"pages\"]],\"navigationErrors\":[p[\"navigationError\"] for p in r[\"pages\"]]})"
+        PYTHONPATH=apps/local-runner/src python -c "from shalcon_runner.research import BrowserResearchEngine; r=BrowserResearchEngine().research(job_id=\"job_shanuzz_probe\",prospect_id=\"pro_shanuzz_probe\",raw_url=\"https://shanuzz.com/\",max_pages=4); finals=[p[\"finalUrl\"] for p in r[\"pages\"]]; print(finals); assert len(finals)==len(set(finals)), finals"
       '
     plugins:
       - docker#v5.13.0:
