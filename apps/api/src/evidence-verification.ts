@@ -11,8 +11,8 @@ export type EvidenceReviewDecision = 'VERIFY' | 'REJECT';
 
 export interface EvidenceReviewInput {
   decision: EvidenceReviewDecision;
-  promoteToFact?: boolean;
-  note?: string;
+  promoteToFact?: boolean | undefined;
+  note?: string | undefined;
 }
 
 export interface EvidenceVerificationEvent {
