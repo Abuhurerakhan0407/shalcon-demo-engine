@@ -49,6 +49,10 @@ else
   log "Reusing existing $ENV_FILE"
 fi
 
+log "Stopping any previous Phase 20 services before touching the local D1"
+$SUDO systemctl stop shalcon-phase20-runner.service >/dev/null 2>&1 || true
+$SUDO systemctl stop shalcon-phase20-api.service >/dev/null 2>&1 || true
+
 log "Applying local D1 migrations without deleting existing Phase 20 state"
 (
   cd "$ROOT_DIR/apps/api"
