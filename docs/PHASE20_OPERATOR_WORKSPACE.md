@@ -47,15 +47,20 @@ The seeder refuses a non-empty operator D1 and refuses a trial file whose result
 
 ## 4. Run Ollama and the local runner
 
-Use the already-proven Phase 20 model path (`qwen3:0.6b`) and keep the runner pointed at the local operator API:
+Use the current Phase 20 structured-extraction model and the exact environment variable names consumed by the runner:
 
 ```bash
 export SHALCON_API_BASE_URL=http://127.0.0.1:8787
 export SHALCON_RUNNER_TOKEN='replace-with-the-same-long-local-token'
-export OLLAMA_BASE_URL=http://127.0.0.1:11434
-export OLLAMA_MODEL=qwen3:0.6b
-npm run dev:runner
+export SHALCON_OLLAMA_URL=http://127.0.0.1:11434
+export SHALCON_OLLAMA_MODEL=qwen3:4b
+export SHALCON_OLLAMA_TIMEOUT_SECONDS=120
+export PYTHONPATH="$PWD/apps/local-runner/src"
+python3 -m shalcon_runner ai-smoke
+python3 -m shalcon_runner run
 ```
+
+`qwen3:4b` structured generation is sent with Qwen thinking disabled so the model returns only schema-constrained JSON. Real Phase 20 extraction uses a bounded Ollama timeout of 120 seconds by default; `SHALCON_OLLAMA_TIMEOUT_SECONDS` may be set between 1 and 120 seconds. The runner renews its job lease while local inference is running.
 
 The runner must remain online until the queued Playwright and local-AI jobs finish.
 

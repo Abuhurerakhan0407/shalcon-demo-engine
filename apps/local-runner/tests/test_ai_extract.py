@@ -139,6 +139,7 @@ def test_ollama_structured_generate_sends_schema_and_validates_response() -> Non
     request = opener.requests[0][0]
     body = json.loads(request.data.decode("utf-8"))
     assert body["stream"] is False
+    assert body["think"] is False
     assert body["format"] == BUSINESS_EXTRACTION_SCHEMA
     assert body["options"]["temperature"] == 0
 
@@ -158,6 +159,20 @@ def test_ollama_offline_error_is_safe() -> None:
         provider.generate_structured("qwen3:4b", "extract")
     assert caught.value.code == "OLLAMA_UNAVAILABLE"
     assert "secret local socket detail" not in caught.value.safe_message
+
+
+def test_ollama_timeout_configuration_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SHALCON_OLLAMA_TIMEOUT_SECONDS", raising=False)
+    assert ai_extract._configured_ollama_timeout_seconds() == 120.0
+
+    monkeypatch.setenv("SHALCON_OLLAMA_TIMEOUT_SECONDS", "75")
+    assert ai_extract._configured_ollama_timeout_seconds() == 75.0
+
+    for invalid in ["0", "121", "not-a-number"]:
+        monkeypatch.setenv("SHALCON_OLLAMA_TIMEOUT_SECONDS", invalid)
+        with pytest.raises(AiExtractionError) as caught:
+            ai_extract._configured_ollama_timeout_seconds()
+        assert caught.value.code == "OLLAMA_CONFIG_INVALID"
 
 
 def test_scrapegraph_adapter_is_optional_and_output_stays_schema_validated() -> None:
@@ -193,8 +208,9 @@ def test_scrapegraph_adapter_is_optional_and_output_stays_schema_validated() -> 
 
 def test_ai_job_preserves_provenance_and_never_marks_output_verified(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeProvider:
-        def __init__(self, base_url: str) -> None:
+        def __init__(self, base_url: str, *, timeout_seconds: float) -> None:
             assert base_url == ai_extract.DEFAULT_OLLAMA_URL
+            assert timeout_seconds == 120.0
 
         def health(self, model: str) -> OllamaHealth:
             return OllamaHealth(ok=True, model_available=True, models=(model,))
@@ -207,6 +223,7 @@ def test_ai_job_preserves_provenance_and_never_marks_output_verified(monkeypatch
     monkeypatch.setattr(ai_extract, "OllamaProvider", FakeProvider)
     monkeypatch.delenv("SHALCON_SCRAPEGRAPH_ENABLED", raising=False)
     monkeypatch.delenv("SHALCON_OLLAMA_URL", raising=False)
+    monkeypatch.delenv("SHALCON_OLLAMA_TIMEOUT_SECONDS", raising=False)
 
     job = ClaimedJob(
         id="job_ai",
