@@ -13,7 +13,9 @@ async function request(path, init, expectedStatus = 200) {
     body = { raw: text };
   }
   if (response.status !== expectedStatus) {
-    throw new Error(`${path} expected HTTP ${expectedStatus}, received ${response.status}: ${text}`);
+    throw new Error(
+      `${path} expected HTTP ${expectedStatus}, received ${response.status}: ${text}`,
+    );
   }
   return body;
 }
@@ -30,7 +32,9 @@ async function waitForWorker(timeoutMs = 60_000) {
     }
     await sleep(500);
   }
-  throw lastError instanceof Error ? lastError : new Error('Phase 20 operator shell did not become healthy.');
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Phase 20 operator shell did not become healthy.');
 }
 
 function setupBody(id, businessName, sourceUrl, officialWebsite) {
@@ -76,9 +80,22 @@ if (!Array.isArray(prospects.prospects) || prospects.prospects.length !== 2) {
 }
 
 const prospectId = first.created[0]?.prospectId;
-if (typeof prospectId !== 'string') throw new Error('First operator setup did not return a prospect id.');
+if (typeof prospectId !== 'string')
+  throw new Error('First operator setup did not return a prospect id.');
+const researchNotReady = await request(
+  `/api/v1/research/prospects/${prospectId}/runs`,
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
+  409,
+);
+if (researchNotReady.error?.code !== 'RESEARCH_NOT_READY') {
+  throw new Error('Local operator research rerun route is unavailable or did not fail closed.');
+}
 const bundle = await request(`/api/v1/prospects/${prospectId}/evidence-bundle`);
-if (bundle.prospect?.id !== prospectId || !Array.isArray(bundle.evidence) || !Array.isArray(bundle.conflicts)) {
+if (
+  bundle.prospect?.id !== prospectId ||
+  !Array.isArray(bundle.evidence) ||
+  !Array.isArray(bundle.conflicts)
+) {
   throw new Error('Local operator evidence bundle route is unavailable.');
 }
 
