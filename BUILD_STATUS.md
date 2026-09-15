@@ -156,6 +156,8 @@ Current cohort status:
 - **13** are official-website-led identities and **7** are public-listing-led identities;
 - listing-provider domains are not promoted into business identity domains;
 - all **20/20** prospects have passed the live research boundary without mutating trial results;
+- fresh hosted recovery proved all 20 research jobs can complete and every prospect can reach source/evidence coverage without active/dead-letter research or AI jobs;
+- the recovery implementation is merged to `main` at commit `864c320c63a311bc57691ffec1c18edaf2c333d4`;
 - the locked trial ledger still has `result: null` for every prospect pending genuine end-to-end demo QA.
 
 Phase-20 operator/review infrastructure now proven:
@@ -168,23 +170,28 @@ Phase-20 operator/review infrastructure now proven:
 - locked-20 seeder that refuses non-empty/dirty trial workspaces;
 - portable review-packet export containing unresolved evidence, conflicts, canonical facts and review history;
 - separate local D1 workspaces used for evidence-review runtime, operator integration and full 20-prospect seed proof;
+- Qwen3 structured generation now runs with reasoning disabled (`think: false`) while preserving the strict extraction schema, source-only provenance and `verified: false`;
+- real extraction uses a bounded 120-second Ollama timeout and keeps lease renewal intact during local inference;
 - Buildkite **#516 ✅** — operator workspace end-to-end proof;
 - Buildkite **#519 ✅** — operator workspace + review-packet export proof;
 - Buildkite **#522 ✅** — Evidence Review note UX + full operator regression;
-- Buildkite **#524 ✅** — strongest Phase-20 operator gate: evidence-review runtime/note persistence + operator shell + web build + locked-20 seed + review-packet export + FK/trial immutability;
-- latest Phase-20 operator proof commit: `0e35c7be730382e9f3262ae7c8dce069dc840585`.
+- Buildkite **#524 ✅** — operator shell + web build + locked-20 seed + review-packet export + FK/trial immutability;
+- Buildkite **#540 ✅** — real `qwen3:4b` structured-output recovery smoke with extraction regressions;
+- Buildkite **#541 ✅** — fresh D1 migrations + locked 20-prospect seed + Playwright research + local `qwen3:4b` extraction to terminal state, zero active/dead-letter research or AI jobs, zero FK violations and `trialResultsModified: false`;
+- Buildkite **#544 ✅** — final recovery-branch verification before merge;
+- Buildkite **#545 ✅** — post-merge `main` verification for recovery commit `864c320c63a311bc57691ffec1c18edaf2c333d4`.
 
 ## Current CI condition
 
 Phase 19 is closed. Buildkite #374 remains the authoritative Phase 0–19 baseline and Phase 20 does not alter that historical result.
 
-Phase-20 operator infrastructure is green through Buildkite #524. Feature-scoped TypeScript/lint/web-build gates, local D1 migrations, evidence-review runtime and note persistence, operator API integration, locked cohort seeding, FK integrity, trial immutability and review-packet export are proven.
+Phase-20 recovery is now merged to `main` and green through Buildkite #545. The fresh hosted recovery run in Buildkite #541 proved the locked cohort can be rebuilt from a clean D1 workspace, researched with Playwright, extracted with real local `qwen3:4b`, and exported for review while preserving FK integrity and trial immutability.
 
-Phase 20 itself is **not closed**. Closure still requires actual evidence review, demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
+Phase 20 itself is **not closed**. Closure still requires genuine human evidence review, downstream demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
 
 ## Blocked
 
-No engineering blocker is known. Phase-20 closure is intentionally waiting on genuine human evidence verification and actual demo inspection; those decisions must not be fabricated by CI or inferred from model output.
+The engineering recovery blocker is cleared. The remaining gate is intentionally human: verified evidence decisions and actual demo inspection. Those decisions must not be fabricated by CI, copied from the lost laptop workspace, or inferred from model output.
 
 ## Last fully verified implementation commit
 
@@ -192,6 +199,8 @@ Phase-19 baseline: `c307e326a0ae8a3e994457ca30b525d202cf1907` — authoritative 
 
 Phase-20 operator infrastructure proof: `0e35c7be730382e9f3262ae7c8dce069dc840585` — Buildkite #524 SUCCESS.
 
+Phase-20 recovery implementation: `864c320c63a311bc57691ffec1c18edaf2c333d4` — merged to `main`, Buildkite #545 SUCCESS. Buildkite #541 is the fresh locked-cohort research/AI recovery proof.
+
 ## Next action
 
-Run the durable local Phase-20 workspace, let Playwright + Ollama populate the locked cohort, export the review packet, perform human evidence decisions, then run every prospect through audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA. Record all nine correction categories only after each actual demo is inspected, then evaluate the 18/20 factual-accuracy gate before starting Phase 21.
+Attach a persistent authorized machine/VPS to the recovered `main` branch, run the Phase-20 VPS bootstrap/initializer, export the fresh review packet, perform genuine human evidence decisions, then run every prospect through audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA. Record all nine correction categories only after each actual demo is inspected, then evaluate the 18/20 factual-accuracy gate before starting Phase 21.
