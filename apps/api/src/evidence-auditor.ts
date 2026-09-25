@@ -27,10 +27,14 @@ export interface EvidenceAuditRecommendation {
     | 'MALFORMED_TEXT'
     | 'LOCKED_IDENTITY_CONFLICT'
     | 'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN'
+    | 'BUSINESS_IDENTITY_UNANCHORED'
+    | 'FIELD_VALIDATION_REQUIRED'
     | 'MATCHES_LOCKED_IDENTITY'
     | 'MATCHES_VERIFIED_FACT'
     | 'MATCHES_VERIFIED_EVIDENCE'
     | 'MULTI_SOURCE_CORROBORATION'
+    | 'OFFICIAL_DOMAIN_CORROBORATION'
+    | 'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED'
     | 'CRITICAL_CONFLICT_REQUIRES_HUMAN'
     | 'INSUFFICIENT_CORROBORATION';
   supportCount: number;
@@ -60,6 +64,14 @@ export interface EvidenceAuditApplyResult extends EvidenceAuditPreview {
 
 const REVIEWABLE = new Set(['PROBABLE', 'UNVERIFIED']);
 const CRITICAL_FIELDS = new Set(['businessname', 'phone', 'address']);
+const AUTO_VERIFY_CORROBORATED_FIELDS = new Set([
+  'email',
+  'openinghours',
+  'service',
+  'services',
+  'sociallink',
+  'sociallinks',
+]);
 
 function fieldKey(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
@@ -99,6 +111,13 @@ function looksMalformed(field: string, value: string): boolean {
   if (!cleaned) return true;
   if (/[\uFFFD]/u.test(cleaned)) return true;
   if (/\b\d+\s+points?\s+away\s+from\s+level\s+\d+\b/iu.test(cleaned)) return true;
+  if (
+    /^(?:error establishing a database connection|internal server error|service unavailable|access denied|forbidden|(?:404\s*)?not found)[.!]?$/iu.test(
+      cleaned,
+    )
+  ) {
+    return true;
+  }
 
   if (normalizedField === 'description') {
     const lower = cleaned.toLocaleLowerCase('en-IN');
@@ -110,7 +129,99 @@ function looksMalformed(field: string, value: string): boolean {
     if (/\b(?:directions|nearby|send to phone|share)\b/iu.test(cleaned)) return true;
   }
 
+  if (
+    normalizedField === 'sociallink' &&
+    /^(?:fb|in|youtube|pinterest|instagram|facebook|linkedin|twitter|x|tiktok)$/iu.test(cleaned)
+  ) {
+    return true;
+  }
+
   return false;
+}
+
+function isAutoVerifyValueValid(field: string, value: string): boolean {
+  if (looksMalformed(field, value)) return false;
+  const normalizedField = fieldKey(field);
+  const cleaned = cleanValue(value);
+
+  if (normalizedField === 'email') {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(cleaned);
+  }
+
+  if (normalizedField === 'sociallink' || normalizedField === 'sociallinks') {
+    try {
+      const url = new URL(cleaned);
+      return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  if (normalizedField === 'openinghours') {
+    return /\b(?:open|closed|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/iu.test(
+      cleaned,
+    );
+  }
+
+  if (normalizedField === 'service' || normalizedField === 'services') {
+    return cleaned.length >= 2 && cleaned.length <= 120 && !/^https?:\/\//iu.test(cleaned);
+  }
+
+  return true;
+}
+
+function normalizedHost(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value.includes('://') ? value : `https://${value}`);
+    return url.hostname.toLocaleLowerCase('en-US').replace(/^www\./u, '');
+  } catch {
+    return null;
+  }
+}
+
+function sourceMatchesLockedDomain(prospect: ProspectRecord, sourceUrl: string): boolean {
+  const lockedHost = normalizedHost(prospect.domain);
+  const sourceHost = normalizedHost(sourceUrl);
+  if (!lockedHost || !sourceHost) return false;
+  return sourceHost === lockedHost || sourceHost.endsWith(`.${lockedHost}`);
+}
+
+function hasAnchoredBusinessIdentity(
+  prospect: ProspectRecord,
+  evidence: EvidenceRecord[],
+  facts: ProspectFactRecord[],
+): boolean {
+  const lockedName = normalizeBusinessName(prospect.canonicalName);
+  const activeNames = evidence.filter(
+    (item) => fieldKey(item.field) === 'businessname' && item.verificationStatus !== 'REJECTED',
+  );
+  const activeKeys = new Set(activeNames.map((item) => valueKey(item.field, item.value)));
+  const verifiedLockedName =
+    activeNames.some(
+      (item) =>
+        item.verificationStatus === 'VERIFIED' &&
+        valueKey(item.field, item.value) === lockedName,
+    ) ||
+    facts.some(
+      (item) =>
+        fieldKey(item.field) === 'businessname' &&
+        item.verificationStatus === 'VERIFIED' &&
+        valueKey(item.field, item.value) === lockedName,
+    );
+  const trustedLockedCandidate = activeNames.some(
+    (item) =>
+      valueKey(item.field, item.value) === lockedName &&
+      item.confidence >= 0.78 &&
+      item.sourceQuality >= 0.65,
+  );
+
+  if (activeKeys.size === 0) return verifiedLockedName;
+  return (
+    activeKeys.size === 1 &&
+    activeKeys.has(lockedName) &&
+    (verifiedLockedName || trustedLockedCandidate)
+  );
 }
 
 function verifiedValueKeys(evidence: EvidenceRecord[], field: string): Set<string> {
@@ -202,6 +313,7 @@ export async function planProspectEvidenceAudit(
   const facts = await new ProspectFactRepository(db).listForProspect(prospect.id);
   const pending = evidence.filter((item) => REVIEWABLE.has(item.verificationStatus));
   const fields = [...new Set(evidence.map((item) => item.field))];
+  const businessIdentityAnchored = hasAnchoredBusinessIdentity(prospect, evidence, facts);
 
   const recommendations = new Map<string, EvidenceAuditRecommendation>();
 
@@ -225,6 +337,25 @@ export async function planProspectEvidenceAudit(
     const identityGroup = identity ? activeGroups.find((group) => group.key === identity) : undefined;
     const verifiedGroups = activeGroups.filter((group) => group.containsVerified);
     const verifiedFact = verifiedFactValue(facts, field);
+
+    if (normalizedField !== 'businessname' && !businessIdentityAnchored) {
+      for (const group of activeGroups) {
+        for (const item of group.items) {
+          if (!REVIEWABLE.has(item.verificationStatus) || recommendations.has(item.id)) continue;
+          recommendations.set(
+            item.id,
+            recommendation(
+              prospect.id,
+              item,
+              'HUMAN_REQUIRED',
+              'BUSINESS_IDENTITY_UNANCHORED',
+              group.sourceIds.size,
+            ),
+          );
+        }
+      }
+      continue;
+    }
 
     if (
       critical &&
@@ -332,6 +463,22 @@ export async function planProspectEvidenceAudit(
       );
       if (!unresolved.length) continue;
 
+      if (!isAutoVerifyValueValid(field, group.items[0]?.value ?? '')) {
+        for (const item of unresolved) {
+          recommendations.set(
+            item.id,
+            recommendation(
+              prospect.id,
+              item,
+              'HUMAN_REQUIRED',
+              'FIELD_VALIDATION_REQUIRED',
+              group.sourceIds.size,
+            ),
+          );
+        }
+        continue;
+      }
+
       if (verifiedFact === group.key) {
         for (const item of unresolved) {
           recommendations.set(
@@ -365,13 +512,26 @@ export async function planProspectEvidenceAudit(
         continue;
       }
 
+      const officialItems = group.items.filter((item) =>
+        sourceMatchesLockedDomain(prospect, item.sourceUrl),
+      );
+      const officialSourceIds = new Set(officialItems.map((item) => item.sourceRecordId));
+      const officialBestConfidence = officialItems.reduce(
+        (best, item) => Math.max(best, item.confidence),
+        0,
+      );
+      const officialBestSourceQuality = officialItems.reduce(
+        (best, item) => Math.max(best, item.sourceQuality),
+        0,
+      );
+
       if (
         !critical &&
-        group.sourceIds.size >= 2 &&
-        group.bestConfidence >= 0.9 &&
-        group.bestSourceQuality >= 0.9
+        AUTO_VERIFY_CORROBORATED_FIELDS.has(normalizedField) &&
+        officialSourceIds.size >= 2 &&
+        officialBestConfidence >= 0.9 &&
+        officialBestSourceQuality >= 0.9
       ) {
-        const promotable = critical ? pickFactEvidence(unresolved) : null;
         for (const item of unresolved) {
           recommendations.set(
             item.id,
@@ -379,9 +539,8 @@ export async function planProspectEvidenceAudit(
               prospect.id,
               item,
               'AUTO_VERIFY',
-              'MULTI_SOURCE_CORROBORATION',
-              group.sourceIds.size,
-              promotable?.id === item.id && verifiedFact !== group.key,
+              'OFFICIAL_DOMAIN_CORROBORATION',
+              officialSourceIds.size,
             ),
           );
         }
@@ -395,9 +554,11 @@ export async function planProspectEvidenceAudit(
             prospect.id,
             item,
             'HUMAN_REQUIRED',
-            critical && activeGroups.length > 1
-              ? 'CRITICAL_CONFLICT_REQUIRES_HUMAN'
-              : 'INSUFFICIENT_CORROBORATION',
+            !critical && AUTO_VERIFY_CORROBORATED_FIELDS.has(normalizedField)
+              ? 'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED'
+              : critical && activeGroups.length > 1
+                ? 'CRITICAL_CONFLICT_REQUIRES_HUMAN'
+                : 'INSUFFICIENT_CORROBORATION',
             group.sourceIds.size,
           ),
         );
