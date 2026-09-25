@@ -14,11 +14,15 @@ steps:
         npx eslint \
           apps/api/src/evidence-verification.ts \
           apps/api/src/evidence-review-routes.ts \
+          apps/api/src/evidence-auditor.ts \
+          apps/api/src/evidence-auditor-routes.ts \
           apps/api/src/phase20-evidence-review.integration.ts \
+          apps/api/src/phase20-evidence-auditor.integration.ts \
           apps/api/src/phase20-live-research.integration.ts \
           apps/api/src/phase20-operator.integration.ts \
           apps/api/src/index-with-evidence-review.ts \
           scripts/phase20-evidence-review-check.mjs \
+          scripts/phase20-evidence-auditor-check.mjs \
           scripts/phase20-operator-shell-check.mjs \
           scripts/phase20-operator-seed.mjs \
           scripts/phase20-export-review-packet.mjs \
@@ -38,6 +42,18 @@ steps:
         node scripts/phase20-evidence-review-check.mjs || { rc=$?; cat /tmp/phase20-evidence-review.log || true; exit $rc; }
         kill "$review_pid" 2>/dev/null || true
         wait "$review_pid" 2>/dev/null || true
+        trap - EXIT
+
+        rm -rf .wrangler/phase20-evidence-auditor-ci
+        cd apps/api
+        npx wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/phase20-evidence-auditor-ci
+        npx wrangler dev src/phase20-evidence-auditor.integration.ts --local --port 8811 --persist-to ../../.wrangler/phase20-evidence-auditor-ci > /tmp/phase20-evidence-auditor.log 2>&1 &
+        auditor_pid=$!
+        cd ../..
+        trap "kill $auditor_pid 2>/dev/null || true" EXIT
+        node scripts/phase20-evidence-auditor-check.mjs || { rc=$?; cat /tmp/phase20-evidence-auditor.log || true; exit $rc; }
+        kill "$auditor_pid" 2>/dev/null || true
+        wait "$auditor_pid" 2>/dev/null || true
         trap - EXIT
 
         rm -rf .wrangler/phase20-operator-shell-ci
