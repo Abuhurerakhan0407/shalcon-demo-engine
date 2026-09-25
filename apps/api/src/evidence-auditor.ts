@@ -226,6 +226,30 @@ export async function planProspectEvidenceAudit(
     const verifiedGroups = activeGroups.filter((group) => group.containsVerified);
     const verifiedFact = verifiedFactValue(facts, field);
 
+    if (
+      critical &&
+      normalizedField === 'businessname' &&
+      identityGroup &&
+      activeGroups.length > 1
+    ) {
+      for (const group of activeGroups) {
+        for (const item of group.items) {
+          if (!REVIEWABLE.has(item.verificationStatus) || recommendations.has(item.id)) continue;
+          recommendations.set(
+            item.id,
+            recommendation(
+              prospect.id,
+              item,
+              'HUMAN_REQUIRED',
+              'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN',
+              group.sourceIds.size,
+            ),
+          );
+        }
+      }
+      continue;
+    }
+
     if (critical && identityGroup) {
       const verifiedConflict = verifiedGroups.some((group) => group.key !== identityGroup.key);
 
