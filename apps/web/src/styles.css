@@ -473,7 +473,7 @@ a:focus-visible {
   .mobile-scrim {
     display: block;
     position: fixed;
-    inset: 0;
+    inset: 0 0 0 min(300px, 86vw);
     z-index: 25;
     border: 0;
     background: rgb(0 0 0 / 58%);
