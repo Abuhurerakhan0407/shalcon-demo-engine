@@ -44,7 +44,7 @@ if (
   preview.safeActionCount !== 9 ||
   preview.autoRejectCount !== 3 ||
   preview.autoVerifyCount !== 6 ||
-  preview.humanRequiredCount !== 2
+  preview.humanRequiredCount !== 3
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
@@ -66,8 +66,11 @@ if (
 ) {
   throw new Error('Evidence auditor classified a fixture outside the intended safety policy.');
 }
-if (uncertainPlan.recommendations[0]?.action !== 'HUMAN_REQUIRED') {
-  throw new Error('Single-source critical evidence was auto-decided without identity corroboration.');
+if (
+  uncertainPlan.recommendations.length !== 2 ||
+  uncertainPlan.recommendations.some((item) => item.action !== 'HUMAN_REQUIRED')
+) {
+  throw new Error('Critical evidence was auto-decided from multi-source corroboration without identity support.');
 }
 
 const applied = await request(
@@ -83,7 +86,7 @@ if (
   applied.appliedCount !== 9 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 2
+  applied.humanRequiredCount !== 3
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -97,7 +100,7 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 2) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 3) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
@@ -114,7 +117,8 @@ if (
   status.get('ev_service_home') !== 'VERIFIED' ||
   status.get('ev_service_contact') !== 'VERIFIED' ||
   status.get('ev_email_single') !== 'PROBABLE' ||
-  summary.uncertainEvidence?.[0]?.verificationStatus !== 'PROBABLE' ||
+  summary.uncertainEvidence?.length !== 2 ||
+  summary.uncertainEvidence.some((item) => item.verificationStatus !== 'PROBABLE') ||
   summary.auditProspectState !== 'RESEARCHED' ||
   summary.uncertainProspectState !== 'RESEARCH_PENDING' ||
   summary.facts?.length !== 3 ||
@@ -137,9 +141,9 @@ console.log(
     ok: true,
     phase: 20,
     safeActionsApplied: 9,
-    remainingHumanExceptions: 2,
+    remainingHumanExceptions: 3,
     lockedIdentityGuard: true,
-    singleSourceCriticalGuard: true,
+    criticalCorroborationGuard: true,
     idempotent: true,
     foreignKeyViolations: 0,
   }),
