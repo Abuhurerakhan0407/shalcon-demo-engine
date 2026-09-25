@@ -183,9 +183,9 @@ export function EvidenceReviewPage() {
           </p>
         </div>
         <div className="review-hero-metric">
-          <span>Pending</span>
+          <span>Selected queue</span>
           <strong>{pending.length}</strong>
-          <small>{bundle?.prospect.currentState ?? 'Select a prospect'}</small>
+          <small>{bundle ? `${bundle.prospect.currentState} · decisions left` : 'Select a prospect'}</small>
         </div>
       </header>
 
