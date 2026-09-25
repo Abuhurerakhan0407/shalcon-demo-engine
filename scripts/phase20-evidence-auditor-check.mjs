@@ -41,10 +41,10 @@ await request('/phase20/fixture', { method: 'POST' }, 201);
 const preview = await request('/api/v1/evidence-auditor/preview', undefined, 200);
 if (
   preview.prospectCount !== 3 ||
-  preview.safeActionCount !== 16 ||
+  preview.safeActionCount !== 17 ||
   preview.autoRejectCount !== 5 ||
-  preview.autoVerifyCount !== 11 ||
-  preview.humanRequiredCount !== 13
+  preview.autoVerifyCount !== 12 ||
+  preview.humanRequiredCount !== 15
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
@@ -78,7 +78,8 @@ if (
   cleanById.get('ev_clean_name')?.action !== 'AUTO_VERIFY' ||
   cleanById.get('ev_clean_name')?.promoteToFact !== true ||
   cleanById.get('ev_clean_phone')?.action !== 'AUTO_VERIFY' ||
-  cleanById.get('ev_clean_phone')?.promoteToFact !== true ||
+  cleanById.get('ev_clean_phone_alt')?.action !== 'AUTO_VERIFY' ||
+  ![cleanById.get('ev_clean_phone')?.promoteToFact, cleanById.get('ev_clean_phone_alt')?.promoteToFact].includes(true) ||
   cleanById.get('ev_clean_address')?.action !== 'AUTO_VERIFY' ||
   cleanById.get('ev_clean_address')?.promoteToFact !== true ||
   cleanById.get('ev_clean_service_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
@@ -93,11 +94,17 @@ if (
 ) {
   throw new Error('Official-domain or field-validation auditor guards failed.');
 }
+const uncertainById = new Map(
+  uncertainPlan.recommendations.map((item) => [item.evidenceId, item]),
+);
 if (
-  uncertainPlan.recommendations.length !== 2 ||
-  uncertainPlan.recommendations.some((item) => item.action !== 'HUMAN_REQUIRED')
+  uncertainPlan.recommendations.length !== 4 ||
+  uncertainPlan.recommendations.some((item) => item.action !== 'HUMAN_REQUIRED') ||
+  uncertainById.get('ev_uncertain_name')?.reasonCode !==
+    'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED' ||
+  uncertainById.get('ev_uncertain_phone')?.reasonCode !== 'BUSINESS_IDENTITY_UNANCHORED'
 ) {
-  throw new Error('Critical evidence was auto-decided from multi-source corroboration without identity support.');
+  throw new Error('Listing-led identity escaped the human-only provenance boundary.');
 }
 
 const applied = await request(
@@ -110,10 +117,10 @@ const applied = await request(
   200,
 );
 if (
-  applied.appliedCount !== 16 ||
+  applied.appliedCount !== 17 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 13
+  applied.humanRequiredCount !== 15
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -127,7 +134,7 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 13) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 15) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
@@ -151,6 +158,7 @@ if (
   summary.uncertainEvidence.some((item) => item.verificationStatus !== 'PROBABLE') ||
   cleanStatus.get('ev_clean_name') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_phone') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_phone_alt') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_address') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_service_home') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_service_contact') !== 'VERIFIED' ||
@@ -171,7 +179,7 @@ if (
   summary.cleanProspectState !== 'RESEARCH_PENDING' ||
   summary.facts?.length !== 0 ||
   summary.cleanFacts?.length !== 3 ||
-  summary.events?.length !== 16 ||
+  summary.events?.length !== 17 ||
   summary.foreignKeyViolations !== 0
 ) {
   throw new Error('Evidence auditor persistence invariants failed.');
@@ -189,8 +197,8 @@ console.log(
   JSON.stringify({
     ok: true,
     phase: 20,
-    safeActionsApplied: 16,
-    remainingHumanExceptions: 13,
+    safeActionsApplied: 17,
+    remainingHumanExceptions: 15,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
     businessIdentityAnchorGuard: true,

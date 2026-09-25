@@ -69,7 +69,7 @@ app.post('/phase20/fixture', async (c) => {
     sourceFirstSeen: 'PHASE20_AUDITOR_FIXTURE',
     currentState: 'RESEARCH_PENDING',
     domain: null,
-    phoneNormalized: null,
+    phoneNormalized: '+919222222222',
     city: 'mumbai',
     addressNormalized: null,
     createdAt: now,
@@ -221,6 +221,22 @@ app.post('/phase20/fixture', async (c) => {
     'hello@audit-salon.example',
   );
   await create(
+    'ev_uncertain_name',
+    'p20_uncertain',
+    'src_uncertain',
+    'https://directory.example/uncertain-salon',
+    'businessName',
+    'Uncertain Salon',
+  );
+  await create(
+    'ev_uncertain_phone',
+    'p20_uncertain',
+    'src_uncertain',
+    'https://directory.example/uncertain-salon',
+    'phone',
+    '+91 92222 22222',
+  );
+  await create(
     'ev_uncertain_address',
     'p20_uncertain',
     'src_uncertain',
@@ -256,6 +272,14 @@ app.post('/phase20/fixture', async (c) => {
     'https://www.clean-salon.example/contact',
     'phone',
     '+91 91111 11111',
+  );
+  await create(
+    'ev_clean_phone_alt',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'phone',
+    '+919111111111',
   );
   await create(
     'ev_clean_address',

@@ -7,6 +7,7 @@ import {
   type ProspectFactRecord,
   type ProspectRecord,
 } from '@shalcon/db';
+import { normalizeAddress, normalizeBusinessName } from '@shalcon/evidence';
 
 export type EvidenceReviewDecision = 'VERIFY' | 'REJECT';
 
@@ -84,29 +85,41 @@ export class EvidenceReviewError extends Error {
   }
 }
 
+const ACTIVE_CONFLICT_STATUSES = new Set([
+  'VERIFIED',
+  'PROBABLE',
+  'CONFLICTED',
+  'UNVERIFIED',
+]);
+
+function normalizedValue(value: string): string {
+  return value.trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-IN');
+}
+
+function normalizedCriticalValue(field: string, value: string): string {
+  const key = normalizedField(field);
+  if (key === 'businessname') return normalizeBusinessName(value);
+  if (key === 'phone') return value.replace(/\D/gu, '');
+  if (key === 'address') return normalizeAddress(value) ?? normalizedValue(value);
+  return normalizedValue(value);
+}
+
 async function activeCriticalConflict(
   db: D1DatabaseLike,
   candidate: EvidenceRecord,
 ): Promise<boolean> {
-  if (!CRITICAL_SCALAR_FIELDS.has(normalizedField(candidate.field))) return false;
-  const row = await db
-    .prepare(`
-      SELECT id
-      FROM evidence
-      WHERE prospect_id = ?
-        AND field = ?
-        AND id <> ?
-        AND verification_status IN ('VERIFIED', 'PROBABLE', 'CONFLICTED', 'UNVERIFIED')
-        AND LOWER(TRIM(value)) <> LOWER(TRIM(?))
-      LIMIT 1
-    `)
-    .bind(candidate.prospectId, candidate.field, candidate.id, candidate.value)
-    .first<{ id: string }>();
-  return row !== null;
-}
+  const field = normalizedField(candidate.field);
+  if (!CRITICAL_SCALAR_FIELDS.has(field)) return false;
 
-function normalizedValue(value: string): string {
-  return value.trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-IN');
+  const candidateValue = normalizedCriticalValue(candidate.field, candidate.value);
+  const evidence = await new EvidenceRepository(db).listForProspect(candidate.prospectId);
+  return evidence.some(
+    (item) =>
+      item.id !== candidate.id &&
+      normalizedField(item.field) === field &&
+      ACTIVE_CONFLICT_STATUSES.has(item.verificationStatus) &&
+      normalizedCriticalValue(item.field, item.value) !== candidateValue,
+  );
 }
 
 async function shouldUnblockBlockedResearch(
@@ -138,7 +151,7 @@ async function shouldUnblockBlockedResearch(
     const field = normalizedField(item.field);
     if (!CRITICAL_SCALAR_FIELDS.has(field)) continue;
     const values = activeValues.get(field) ?? new Set<string>();
-    values.add(normalizedValue(item.value));
+    values.add(normalizedCriticalValue(item.field, item.value));
     activeValues.set(field, values);
   }
   return [...activeValues.values()].every((values) => values.size <= 1);
