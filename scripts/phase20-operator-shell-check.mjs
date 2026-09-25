@@ -124,11 +124,38 @@ if (!Array.isArray(reviewQueue.issues)) {
   throw new Error('Local operator Phase 19 QA route is unavailable.');
 }
 
+const runnerStatus = await request('/api/v1/runner/operator/status');
+if (!Array.isArray(runnerStatus.runners) || runnerStatus.d1Canonical !== true) {
+  throw new Error('Local operator runner controls are unavailable.');
+}
+
+const secondProspectId = second.created[0]?.prospectId;
+if (typeof secondProspectId !== 'string') {
+  throw new Error('Second operator setup did not return a prospect id.');
+}
+const suppressed = await request(
+  `/api/v1/prospects/${secondProspectId}/suppress`,
+  { method: 'POST' },
+);
+if (suppressed.prospect?.currentState !== 'SUPPRESSED') {
+  throw new Error('Audit-preserving prospect suppression failed.');
+}
+const activeProspects = await request('/api/v1/prospects');
+const allProspects = await request('/api/v1/prospects?includeSuppressed=true');
+if (
+  activeProspects.prospects?.length !== 1 ||
+  activeProspects.suppressedCount !== 1 ||
+  allProspects.prospects?.length !== 2
+) {
+  throw new Error('Suppressed prospect filtering failed.');
+}
+
 const status = await request('/phase20/status');
 if (
   status.trialResultsModified !== false ||
   status.foreignKeyViolations !== 0 ||
-  status.prospects?.length !== 2
+  status.prospects?.length !== 1 ||
+  status.suppressedProspects?.length !== 1
 ) {
   throw new Error('Local operator status failed its persistence or trial-safety invariants.');
 }
@@ -136,8 +163,10 @@ if (
 console.log(JSON.stringify({
   ok: true,
   phase: 20,
-  prospects: 2,
+  prospects: 1,
+  suppressedProspects: 1,
   operatorModulesMounted: true,
+  runnerControlsMounted: true,
   downstreamDemoEligible: true,
   trialResultsModified: false,
 }));
