@@ -81,6 +81,7 @@ app.post('/phase20/fixture', async (c) => {
     ['src_audit_home', 'p20_audit', 'https://audit-salon.example/'],
     ['src_audit_contact', 'p20_audit', 'https://audit-salon.example/contact'],
     ['src_uncertain', 'p20_uncertain', 'https://directory.example/uncertain-salon'],
+    ['src_uncertain_two', 'p20_uncertain', 'https://directory-two.example/uncertain-salon'],
   ] as const) {
     await sources.create({
       id,
@@ -208,6 +209,16 @@ app.post('/phase20/fixture', async (c) => {
     '22 Unknown Road, Mumbai',
     0.9,
     0.8,
+  );
+  await create(
+    'ev_uncertain_address_two',
+    'p20_uncertain',
+    'src_uncertain_two',
+    'https://directory-two.example/uncertain-salon',
+    'address',
+    '22 Unknown Road, Mumbai',
+    0.9,
+    0.95,
   );
 
   await db
