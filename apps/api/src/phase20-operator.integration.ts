@@ -6,6 +6,7 @@ import { automatedDemoRoutes } from './automated-demo-routes';
 import { brandTemplateRoutes } from './brand-template-routes';
 import type { Bindings } from './context';
 import { demoAdminRoutes } from './demo-admin-routes';
+import { evidenceAuditorRoutes } from './evidence-auditor-routes';
 import { evidenceReviewRoutes } from './evidence-review-routes';
 import liveResearchApp from './phase20-live-research.integration';
 import { prospectRoutes } from './prospect-routes';
@@ -60,6 +61,12 @@ app.use('/api/v1/prospects/*', async (c, next) => {
 });
 app.route('/api/v1/prospects', prospectRoutes);
 app.route('/api/v1/prospects', evidenceReviewRoutes);
+
+app.use('/api/v1/evidence-auditor/*', async (c, next) => {
+  c.set('authUser', OPERATOR);
+  await next();
+});
+app.route('/api/v1/evidence-auditor', evidenceAuditorRoutes);
 
 app.use('/api/v1/research/*', async (c, next) => {
   c.set('authUser', OPERATOR);
