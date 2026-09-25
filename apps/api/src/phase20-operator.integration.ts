@@ -2,11 +2,16 @@ import type { UserRecord } from '@shalcon/db';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import { automatedDemoRoutes } from './automated-demo-routes';
+import { brandTemplateRoutes } from './brand-template-routes';
 import type { Bindings } from './context';
+import { demoAdminRoutes } from './demo-admin-routes';
 import { evidenceReviewRoutes } from './evidence-review-routes';
 import liveResearchApp from './phase20-live-research.integration';
 import { prospectRoutes } from './prospect-routes';
 import { researchAgentRoutes } from './research-agent-routes';
+import { scoringRoutes } from './scoring-routes';
+import { websiteAuditRoutes } from './website-audit-routes';
 
 const OPERATOR: UserRecord = {
   id: 'phase20-live-research-user',
@@ -61,6 +66,25 @@ app.use('/api/v1/research/*', async (c, next) => {
   await next();
 });
 app.route('/api/v1/research', researchAgentRoutes);
+
+for (const prefix of [
+  '/api/v1/audits/*',
+  '/api/v1/scoring/*',
+  '/api/v1/brand-template/*',
+  '/api/v1/demo-admin/*',
+  '/api/v1/automated-demo/*',
+]) {
+  app.use(prefix, async (c, next) => {
+    c.set('authUser', OPERATOR);
+    await next();
+  });
+}
+
+app.route('/api/v1/audits/website', websiteAuditRoutes);
+app.route('/api/v1/scoring', scoringRoutes);
+app.route('/api/v1/brand-template', brandTemplateRoutes);
+app.route('/api/v1/demo-admin', demoAdminRoutes);
+app.route('/api/v1/automated-demo', automatedDemoRoutes);
 
 app.get('/phase20/operator-health', (c) =>
   c.json({ ok: true, phase: 20, mode: 'LOCAL_OPERATOR', productionAllowed: false }),
