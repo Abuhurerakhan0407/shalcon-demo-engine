@@ -6,6 +6,7 @@ import {
   buildManualSalonDemoConfig,
   defaultManualDemoBuilderInput,
   deriveManualDemoToken,
+  isManualDemoEligibleState,
 } from './manual-demo-builder';
 
 const prospect: ProspectRecord = {
@@ -43,6 +44,27 @@ function fact(
 }
 
 describe('manual Phase 7 demo builder', () => {
+  it('keeps the verified-identity gate open through active downstream states', () => {
+    for (const state of [
+      'IDENTITY_VERIFIED',
+      'RESEARCH_PENDING',
+      'RESEARCHED',
+      'AUDIT_PENDING',
+      'AUDITED',
+      'SCORED',
+      'DEMO_QUALIFIED',
+      'TEMPLATE_MATCHED',
+      'FACT_QA_PENDING',
+      'DEMO_READY',
+    ] as const) {
+      expect(isManualDemoEligibleState(state)).toBe(true);
+    }
+
+    for (const state of ['DISCOVERED', 'NORMALIZED', 'IDENTITY_PENDING', 'DUPLICATE', 'REJECTED'] as const) {
+      expect(isManualDemoEligibleState(state)).toBe(false);
+    }
+  });
+
   it('builds a valid config from verified facts without copying unverified facts', () => {
     const result = buildManualSalonDemoConfig(
       prospect,

@@ -183,7 +183,7 @@ export function EvidenceReviewPage() {
           </p>
         </div>
         <div className="review-hero-metric">
-          <span>Pending</span>
+          <span>Decisions left</span>
           <strong>{pending.length}</strong>
           <small>{bundle?.prospect.currentState ?? 'Select a prospect'}</small>
         </div>
