@@ -44,7 +44,7 @@ if (
   preview.safeActionCount !== 17 ||
   preview.autoRejectCount !== 5 ||
   preview.autoVerifyCount !== 12 ||
-  preview.humanRequiredCount !== 13
+  preview.humanRequiredCount !== 15
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
@@ -94,11 +94,17 @@ if (
 ) {
   throw new Error('Official-domain or field-validation auditor guards failed.');
 }
+const uncertainById = new Map(
+  uncertainPlan.recommendations.map((item) => [item.evidenceId, item]),
+);
 if (
-  uncertainPlan.recommendations.length !== 2 ||
-  uncertainPlan.recommendations.some((item) => item.action !== 'HUMAN_REQUIRED')
+  uncertainPlan.recommendations.length !== 4 ||
+  uncertainPlan.recommendations.some((item) => item.action !== 'HUMAN_REQUIRED') ||
+  uncertainById.get('ev_uncertain_name')?.reasonCode !==
+    'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED' ||
+  uncertainById.get('ev_uncertain_phone')?.reasonCode !== 'BUSINESS_IDENTITY_UNANCHORED'
 ) {
-  throw new Error('Critical evidence was auto-decided from multi-source corroboration without identity support.');
+  throw new Error('Listing-led identity escaped the human-only provenance boundary.');
 }
 
 const applied = await request(
@@ -114,7 +120,7 @@ if (
   applied.appliedCount !== 17 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 13
+  applied.humanRequiredCount !== 15
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -128,7 +134,7 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 13) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 15) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
@@ -192,7 +198,7 @@ console.log(
     ok: true,
     phase: 20,
     safeActionsApplied: 17,
-    remainingHumanExceptions: 13,
+    remainingHumanExceptions: 15,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
     businessIdentityAnchorGuard: true,
