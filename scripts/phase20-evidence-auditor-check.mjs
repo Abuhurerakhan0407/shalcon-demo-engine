@@ -41,9 +41,9 @@ await request('/phase20/fixture', { method: 'POST' }, 201);
 const preview = await request('/api/v1/evidence-auditor/preview', undefined, 200);
 if (
   preview.prospectCount !== 3 ||
-  preview.safeActionCount !== 16 ||
+  preview.safeActionCount !== 17 ||
   preview.autoRejectCount !== 5 ||
-  preview.autoVerifyCount !== 11 ||
+  preview.autoVerifyCount !== 12 ||
   preview.humanRequiredCount !== 13
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
@@ -78,7 +78,8 @@ if (
   cleanById.get('ev_clean_name')?.action !== 'AUTO_VERIFY' ||
   cleanById.get('ev_clean_name')?.promoteToFact !== true ||
   cleanById.get('ev_clean_phone')?.action !== 'AUTO_VERIFY' ||
-  cleanById.get('ev_clean_phone')?.promoteToFact !== true ||
+  cleanById.get('ev_clean_phone_alt')?.action !== 'AUTO_VERIFY' ||
+  ![cleanById.get('ev_clean_phone')?.promoteToFact, cleanById.get('ev_clean_phone_alt')?.promoteToFact].includes(true) ||
   cleanById.get('ev_clean_address')?.action !== 'AUTO_VERIFY' ||
   cleanById.get('ev_clean_address')?.promoteToFact !== true ||
   cleanById.get('ev_clean_service_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
@@ -110,7 +111,7 @@ const applied = await request(
   200,
 );
 if (
-  applied.appliedCount !== 16 ||
+  applied.appliedCount !== 17 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
   applied.humanRequiredCount !== 13
@@ -151,6 +152,7 @@ if (
   summary.uncertainEvidence.some((item) => item.verificationStatus !== 'PROBABLE') ||
   cleanStatus.get('ev_clean_name') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_phone') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_phone_alt') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_address') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_service_home') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_service_contact') !== 'VERIFIED' ||
@@ -171,7 +173,7 @@ if (
   summary.cleanProspectState !== 'RESEARCH_PENDING' ||
   summary.facts?.length !== 0 ||
   summary.cleanFacts?.length !== 3 ||
-  summary.events?.length !== 16 ||
+  summary.events?.length !== 17 ||
   summary.foreignKeyViolations !== 0
 ) {
   throw new Error('Evidence auditor persistence invariants failed.');
@@ -189,7 +191,7 @@ console.log(
   JSON.stringify({
     ok: true,
     phase: 20,
-    safeActionsApplied: 16,
+    safeActionsApplied: 17,
     remainingHumanExceptions: 13,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
