@@ -18,6 +18,7 @@ import {
   buildManualSalonDemoConfig,
   defaultManualDemoBuilderInput,
   deriveManualDemoToken,
+  isManualDemoEligibleState,
   phase7Expiry,
 } from './manual-demo-builder';
 
@@ -116,7 +117,7 @@ demoAdminRoutes.get('/prospects/:prospectId', async (c) => {
 
   return c.json({
     prospect,
-    eligible: prospect.currentState === 'IDENTITY_VERIFIED',
+    eligible: isManualDemoEligibleState(prospect.currentState),
     verifiedFacts: facts.filter((fact) => fact.verificationStatus === 'VERIFIED' && fact.evidenceId),
     evidence,
     demos: demos.map(demoSummary),
@@ -139,12 +140,12 @@ demoAdminRoutes.post('/prospects/:prospectId/demos', async (c) => {
   if (!prospect) {
     return c.json({ error: { code: 'PROSPECT_NOT_FOUND', message: 'Prospect not found.' } }, 404);
   }
-  if (prospect.currentState !== 'IDENTITY_VERIFIED') {
+  if (!isManualDemoEligibleState(prospect.currentState)) {
     return c.json(
       {
         error: {
           code: 'IDENTITY_NOT_VERIFIED',
-          message: 'Resolve business identity before generating a demo.',
+          message: `Manual demo generation is unavailable from prospect state ${prospect.currentState}.`,
         },
       },
       409,
@@ -224,9 +225,16 @@ demoAdminRoutes.put('/demos/:demoId', async (c) => {
     return c.json({ error: { code: 'DEMO_NOT_FOUND', message: 'Demo not found.' } }, 404);
   }
   const prospect = await ownedProspect(db, demo.prospectId, user.id);
-  if (!prospect || prospect.currentState !== 'IDENTITY_VERIFIED') {
+  if (!prospect || !isManualDemoEligibleState(prospect.currentState)) {
     return c.json(
-      { error: { code: 'IDENTITY_NOT_VERIFIED', message: 'Business identity is not verified.' } },
+      {
+        error: {
+          code: 'IDENTITY_NOT_VERIFIED',
+          message: prospect
+            ? `Manual demo regeneration is unavailable from prospect state ${prospect.currentState}.`
+            : 'Business identity is unavailable.',
+        },
+      },
       409,
     );
   }
