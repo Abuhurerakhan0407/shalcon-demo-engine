@@ -99,6 +99,7 @@ app.post('/phase20/fixture', async (c) => {
     ['src_uncertain', 'p20_uncertain', 'https://directory.example/uncertain-salon'],
     ['src_uncertain_two', 'p20_uncertain', 'https://directory-two.example/uncertain-salon'],
     ['src_clean_home', 'p20_clean', 'https://clean-salon.example/'],
+    ['src_clean_home_repeat', 'p20_clean', 'https://clean-salon.example/?ref=repeat'],
     ['src_clean_contact', 'p20_clean', 'https://www.clean-salon.example/contact'],
     ['src_clean_directory', 'p20_clean', 'https://directory.example/clean-salon'],
     ['src_clean_directory_two', 'p20_clean', 'https://directory-two.example/clean-salon'],
@@ -304,6 +305,22 @@ app.post('/phase20/fixture', async (c) => {
     'https://www.clean-salon.example/contact',
     'service',
     'Haircut',
+  );
+  await create(
+    'ev_clean_repeat_service_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'service',
+    'Blow Dry',
+  );
+  await create(
+    'ev_clean_repeat_service_same_page',
+    'p20_clean',
+    'src_clean_home_repeat',
+    'https://clean-salon.example/?ref=repeat',
+    'service',
+    'Blow Dry',
   );
   await create(
     'ev_clean_email_home',
