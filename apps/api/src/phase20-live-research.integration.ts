@@ -212,7 +212,9 @@ app.post('/phase20/audit-score', async (c) => {
 
 app.get('/phase20/status', async (c) => {
   const db = requireDb(c.env.DB);
-  const prospects = await new ProspectRepository(db).listForUser(USER_ID);
+  const allProspects = await new ProspectRepository(db).listForUser(USER_ID);
+  const prospects = allProspects.filter((prospect) => prospect.currentState !== 'SUPPRESSED');
+  const activeProspectIds = new Set(prospects.map((prospect) => prospect.id));
   const sources = new SourceRecordRepository(db);
   const prospectStatus = await Promise.all(
     prospects.map(async (prospect) => {
@@ -280,11 +282,18 @@ app.get('/phase20/status', async (c) => {
 
   return c.json({
     prospects: prospectStatus,
-    researchJobs: jobs.results.filter((job) => job.job_type === 'PLAYWRIGHT_RESEARCH'),
-    aiJobs: jobs.results.filter((job) => job.job_type === 'LOCAL_AI_EXTRACT'),
-    researchRuns: researchRuns.results,
-    auditRuns: auditRuns.results,
-    scoreRuns: scoreRuns.results,
+    suppressedProspects: allProspects
+      .filter((prospect) => prospect.currentState === 'SUPPRESSED')
+      .map((prospect) => ({ id: prospect.id, canonicalName: prospect.canonicalName })),
+    researchJobs: jobs.results.filter(
+      (job) => job.job_type === 'PLAYWRIGHT_RESEARCH' && activeProspectIds.has(job.entity_id),
+    ),
+    aiJobs: jobs.results.filter(
+      (job) => job.job_type === 'LOCAL_AI_EXTRACT' && activeProspectIds.has(job.entity_id),
+    ),
+    researchRuns: researchRuns.results.filter((run) => activeProspectIds.has(run.prospect_id)),
+    auditRuns: auditRuns.results.filter((run) => activeProspectIds.has(String(run.prospect_id))),
+    scoreRuns: scoreRuns.results.filter((run) => activeProspectIds.has(String(run.prospect_id))),
     foreignKeyViolations: foreignKeyViolations.results.length,
     trialResultsModified: false,
   });
