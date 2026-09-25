@@ -187,6 +187,19 @@ function sourceMatchesLockedDomain(prospect: ProspectRecord, sourceUrl: string):
   return sourceHost === lockedHost || sourceHost.endsWith(`.${lockedHost}`);
 }
 
+function normalizedSourceUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    url.search = '';
+    const host = url.hostname.toLocaleLowerCase('en-US').replace(/^www\./u, '');
+    const path = url.pathname.replace(/\/+$/u, '') || '/';
+    return `${url.protocol}//${host}${path}`;
+  } catch {
+    return null;
+  }
+}
+
 function hasAnchoredBusinessIdentity(
   prospect: ProspectRecord,
   evidence: EvidenceRecord[],
@@ -538,7 +551,11 @@ export async function planProspectEvidenceAudit(
       const officialItems = group.items.filter((item) =>
         sourceMatchesLockedDomain(prospect, item.sourceUrl),
       );
-      const officialSourceIds = new Set(officialItems.map((item) => item.sourceRecordId));
+      const officialSourceUrls = new Set(
+        officialItems
+          .map((item) => normalizedSourceUrl(item.sourceUrl))
+          .filter((value): value is string => value !== null),
+      );
       const officialBestConfidence = officialItems.reduce(
         (best, item) => Math.max(best, item.confidence),
         0,
@@ -551,7 +568,7 @@ export async function planProspectEvidenceAudit(
       if (
         !critical &&
         AUTO_VERIFY_CORROBORATED_FIELDS.has(normalizedField) &&
-        officialSourceIds.size >= 2 &&
+        officialSourceUrls.size >= 2 &&
         officialBestConfidence >= 0.9 &&
         officialBestSourceQuality >= 0.9
       ) {
@@ -563,7 +580,7 @@ export async function planProspectEvidenceAudit(
               item,
               'AUTO_VERIFY',
               'OFFICIAL_DOMAIN_CORROBORATION',
-              officialSourceIds.size,
+              officialSourceUrls.size,
             ),
           );
         }
