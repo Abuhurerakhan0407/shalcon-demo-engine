@@ -44,7 +44,7 @@ if (
   preview.safeActionCount !== 17 ||
   preview.autoRejectCount !== 5 ||
   preview.autoVerifyCount !== 12 ||
-  preview.humanRequiredCount !== 15
+  preview.humanRequiredCount !== 17
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
@@ -89,6 +89,10 @@ if (
   cleanById.get('ev_clean_offdomain_service')?.action !== 'HUMAN_REQUIRED' ||
   cleanById.get('ev_clean_offdomain_service')?.reasonCode !==
     'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED' ||
+  cleanById.get('ev_clean_repeat_service_home')?.action !== 'HUMAN_REQUIRED' ||
+  cleanById.get('ev_clean_repeat_service_home')?.reasonCode !==
+    'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED' ||
+  cleanById.get('ev_clean_repeat_service_same_page')?.action !== 'HUMAN_REQUIRED' ||
   cleanById.get('ev_clean_error_email_home')?.action !== 'AUTO_REJECT' ||
   cleanById.get('ev_clean_social_label_home')?.action !== 'AUTO_REJECT'
 ) {
@@ -120,7 +124,7 @@ if (
   applied.appliedCount !== 17 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 15
+  applied.humanRequiredCount !== 17
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -134,7 +138,7 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 15) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 17) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
@@ -170,6 +174,8 @@ if (
   cleanStatus.get('ev_clean_hours_contact') !== 'VERIFIED' ||
   cleanStatus.get('ev_clean_offdomain_service') !== 'PROBABLE' ||
   cleanStatus.get('ev_clean_offdomain_service_two') !== 'PROBABLE' ||
+  cleanStatus.get('ev_clean_repeat_service_home') !== 'PROBABLE' ||
+  cleanStatus.get('ev_clean_repeat_service_same_page') !== 'PROBABLE' ||
   cleanStatus.get('ev_clean_error_email_home') !== 'REJECTED' ||
   cleanStatus.get('ev_clean_error_email_contact') !== 'REJECTED' ||
   cleanStatus.get('ev_clean_social_label_home') !== 'REJECTED' ||
@@ -198,7 +204,7 @@ console.log(
     ok: true,
     phase: 20,
     safeActionsApplied: 17,
-    remainingHumanExceptions: 15,
+    remainingHumanExceptions: 17,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
     businessIdentityAnchorGuard: true,
