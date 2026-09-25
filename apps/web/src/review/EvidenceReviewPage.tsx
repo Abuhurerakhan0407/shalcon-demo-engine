@@ -62,6 +62,19 @@ interface ReviewResponse {
   event: ReviewEvent;
 }
 
+interface AuditorPreview {
+  prospectCount: number;
+  safeActionCount: number;
+  autoRejectCount: number;
+  autoVerifyCount: number;
+  humanRequiredCount: number;
+}
+
+interface AuditorApplyResult extends AuditorPreview {
+  appliedCount: number;
+  skippedCount: number;
+}
+
 async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -110,6 +123,32 @@ export function EvidenceReviewPage() {
     queryKey: ['evidence-review-events', selectedId],
     queryFn: () => apiJson<{ events: ReviewEvent[] }>(`/api/v1/prospects/${selectedId}/evidence/reviews`),
     enabled: Boolean(selectedId),
+  });
+  const auditorPreviewQuery = useQuery({
+    queryKey: ['evidence-auditor-preview'],
+    queryFn: () => apiJson<AuditorPreview>('/api/v1/evidence-auditor/preview'),
+  });
+
+  const auditorMutation = useMutation({
+    mutationFn: () =>
+      apiJson<AuditorApplyResult>('/api/v1/evidence-auditor/apply-safe', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+    onMutate: () => setNotice(null),
+    onSuccess: async (result) => {
+      setNotice(
+        `AI auditor applied ${result.appliedCount} safe decisions. ${result.humanRequiredCount} evidence exceptions still need judgment.`,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['prospects'] }),
+        queryClient.invalidateQueries({ queryKey: ['evidence-review-bundle'] }),
+        queryClient.invalidateQueries({ queryKey: ['evidence-review-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['prospect-evidence'] }),
+        queryClient.invalidateQueries({ queryKey: ['evidence-auditor-preview'] }),
+      ]);
+    },
+    onError: (error: Error) => setNotice(error.message),
   });
 
   const reviewMutation = useMutation({
@@ -175,11 +214,11 @@ export function EvidenceReviewPage() {
     <div className="review-page">
       <header className="review-hero">
         <div>
-          <p className="eyebrow">HUMAN EVIDENCE GATE</p>
-          <h2>Verify the source, not the model.</h2>
+          <p className="eyebrow">AI + HUMAN EVIDENCE GATE</p>
+          <h2>AI clears safe evidence. You inspect exceptions.</h2>
           <p>
-            AI candidates remain non-factual until you review the exact excerpt and public source.
-            Every decision is written to an immutable review trail.
+            Locked identity, corroborated sources, and contamination rules handle routine evidence automatically.
+            Ambiguous critical facts stay blocked for human judgment, with every decision preserved in the review trail.
           </p>
         </div>
         <div className="review-hero-metric">
@@ -188,6 +227,27 @@ export function EvidenceReviewPage() {
           <small>{bundle?.prospect.currentState ?? 'Select a prospect'}</small>
         </div>
       </header>
+
+      <section className="review-auditor" aria-label="AI evidence auditor">
+        <div>
+          <span>SAFE AI AUDITOR</span>
+          <strong>
+            {auditorPreviewQuery.isPending
+              ? 'Checking evidence safety…'
+              : `${auditorPreviewQuery.data?.safeActionCount ?? 0} automatic decisions ready · ${auditorPreviewQuery.data?.humanRequiredCount ?? 0} exceptions`}
+          </strong>
+          <small>
+            Auto-verify requires locked-identity or multi-source corroboration. Critical contradictions never get guessed.
+          </small>
+        </div>
+        <button
+          type="button"
+          disabled={auditorMutation.isPending || (auditorPreviewQuery.data?.safeActionCount ?? 0) === 0}
+          onClick={() => auditorMutation.mutate()}
+        >
+          {auditorMutation.isPending ? 'Auditing…' : 'Run safe AI audit'}
+        </button>
+      </section>
 
       {notice ? <div className="review-notice" role="status">{notice}</div> : null}
 
