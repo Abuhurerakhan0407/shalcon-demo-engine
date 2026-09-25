@@ -76,12 +76,32 @@ app.post('/phase20/fixture', async (c) => {
     updatedAt: now,
   });
 
+  await prospects.create({
+    id: 'p20_clean',
+    campaignId: campaign.id,
+    canonicalName: 'Clean Salon',
+    normalizedName: 'clean salon',
+    niche: 'SALON_SPA',
+    sourceFirstSeen: 'PHASE20_AUDITOR_FIXTURE',
+    currentState: 'RESEARCH_PENDING',
+    domain: 'clean-salon.example',
+    phoneNormalized: '+919111111111',
+    city: 'mumbai',
+    addressNormalized: '5 clean lane, mumbai',
+    createdAt: now,
+    updatedAt: now,
+  });
+
   const sources = new SourceRecordRepository(db);
   for (const [id, prospectId, url] of [
     ['src_audit_home', 'p20_audit', 'https://audit-salon.example/'],
     ['src_audit_contact', 'p20_audit', 'https://audit-salon.example/contact'],
     ['src_uncertain', 'p20_uncertain', 'https://directory.example/uncertain-salon'],
     ['src_uncertain_two', 'p20_uncertain', 'https://directory-two.example/uncertain-salon'],
+    ['src_clean_home', 'p20_clean', 'https://clean-salon.example/'],
+    ['src_clean_contact', 'p20_clean', 'https://www.clean-salon.example/contact'],
+    ['src_clean_directory', 'p20_clean', 'https://directory.example/clean-salon'],
+    ['src_clean_directory_two', 'p20_clean', 'https://directory-two.example/clean-salon'],
   ] as const) {
     await sources.create({
       id,
@@ -221,6 +241,143 @@ app.post('/phase20/fixture', async (c) => {
     0.95,
   );
 
+  await create(
+    'ev_clean_name',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'businessName',
+    'Clean Salon',
+  );
+  await create(
+    'ev_clean_phone',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'phone',
+    '+91 91111 11111',
+  );
+  await create(
+    'ev_clean_address',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'address',
+    '5 Clean Lane, Mumbai',
+  );
+  await create(
+    'ev_clean_service_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'service',
+    'Haircut',
+  );
+  await create(
+    'ev_clean_service_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'service',
+    'Haircut',
+  );
+  await create(
+    'ev_clean_email_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'email',
+    'hello@clean-salon.example',
+  );
+  await create(
+    'ev_clean_email_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'email',
+    'hello@clean-salon.example',
+  );
+  await create(
+    'ev_clean_social_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'socialLink',
+    'https://instagram.com/clean.salon',
+  );
+  await create(
+    'ev_clean_social_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'socialLink',
+    'https://instagram.com/clean.salon',
+  );
+  await create(
+    'ev_clean_hours_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'openingHours',
+    'Monday - Sunday 10:00 AM - 9:00 PM',
+  );
+  await create(
+    'ev_clean_hours_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'openingHours',
+    'Monday - Sunday 10:00 AM - 9:00 PM',
+  );
+  await create(
+    'ev_clean_offdomain_service',
+    'p20_clean',
+    'src_clean_directory',
+    'https://directory.example/clean-salon',
+    'service',
+    'Massage',
+  );
+  await create(
+    'ev_clean_offdomain_service_two',
+    'p20_clean',
+    'src_clean_directory_two',
+    'https://directory-two.example/clean-salon',
+    'service',
+    'Massage',
+  );
+  await create(
+    'ev_clean_error_email_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'email',
+    'Error establishing a database connection',
+  );
+  await create(
+    'ev_clean_error_email_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'email',
+    'Error establishing a database connection',
+  );
+  await create(
+    'ev_clean_social_label_home',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'socialLink',
+    'FB',
+  );
+  await create(
+    'ev_clean_social_label_contact',
+    'p20_clean',
+    'src_clean_contact',
+    'https://www.clean-salon.example/contact',
+    'socialLink',
+    'FB',
+  );
+
   await db
     .prepare(`
       INSERT INTO research_runs(
@@ -258,9 +415,12 @@ app.get('/phase20/summary', async (c) => {
   const db = requireDb(c.env.DB);
   const evidence = await new EvidenceRepository(db).listForProspect('p20_audit');
   const uncertainEvidence = await new EvidenceRepository(db).listForProspect('p20_uncertain');
+  const cleanEvidence = await new EvidenceRepository(db).listForProspect('p20_clean');
   const facts = await new ProspectFactRepository(db).listForProspect('p20_audit');
+  const cleanFacts = await new ProspectFactRepository(db).listForProspect('p20_clean');
   const auditProspect = await new ProspectRepository(db).getByIdForUser('p20_audit', USER.id);
   const uncertainProspect = await new ProspectRepository(db).getByIdForUser('p20_uncertain', USER.id);
+  const cleanProspect = await new ProspectRepository(db).getByIdForUser('p20_clean', USER.id);
   const events = await db
     .prepare(`
       SELECT evidence_id, decision, promoted_to_fact, note
@@ -274,9 +434,12 @@ app.get('/phase20/summary', async (c) => {
   return c.json({
     evidence,
     uncertainEvidence,
+    cleanEvidence,
     facts,
+    cleanFacts,
     auditProspectState: auditProspect?.currentState ?? null,
     uncertainProspectState: uncertainProspect?.currentState ?? null,
+    cleanProspectState: cleanProspect?.currentState ?? null,
     events: events.results,
     foreignKeyViolations: foreignKeys.results.length,
   });
