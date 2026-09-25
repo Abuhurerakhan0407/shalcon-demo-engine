@@ -339,6 +339,7 @@ export async function planProspectEvidenceAudit(
       }
 
       if (
+        !critical &&
         group.sourceIds.size >= 2 &&
         group.bestConfidence >= 0.9 &&
         group.bestSourceQuality >= 0.9
