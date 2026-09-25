@@ -258,6 +258,14 @@ app.post('/phase20/fixture', async (c) => {
     '+91 91111 11111',
   );
   await create(
+    'ev_clean_phone_alt',
+    'p20_clean',
+    'src_clean_home',
+    'https://clean-salon.example/',
+    'phone',
+    '+919111111111',
+  );
+  await create(
     'ev_clean_address',
     'p20_clean',
     'src_clean_home',
