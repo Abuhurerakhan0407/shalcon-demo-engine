@@ -107,8 +107,12 @@ export const prospectRoutes = new Hono<Bindings>();
 
 prospectRoutes.get('/', async (c) => {
   const db = requireDb(c.env.DB);
-  const prospects = await new ProspectRepository(db).listForUser(c.get('authUser').id);
-  return c.json({ prospects });
+  const allProspects = await new ProspectRepository(db).listForUser(c.get('authUser').id);
+  const includeSuppressed = c.req.query('includeSuppressed') === 'true';
+  const prospects = includeSuppressed
+    ? allProspects
+    : allProspects.filter((prospect) => prospect.currentState !== 'SUPPRESSED');
+  return c.json({ prospects, suppressedCount: allProspects.length - prospects.length });
 });
 
 prospectRoutes.post('/', async (c) => {
@@ -238,6 +242,30 @@ prospectRoutes.patch('/:id', async (c) => {
     new Date().toISOString(),
   );
   return c.json({ prospect: updated });
+});
+
+prospectRoutes.post('/:id/suppress', async (c) => {
+  const prospect = await ownedProspect(c);
+  if (!prospect) return c.json({ error: { code: 'NOT_FOUND', message: 'Prospect not found.' } }, 404);
+  if (prospect.currentState === 'SUPPRESSED') return c.json({ prospect });
+  try {
+    const updated = await new ProspectRepository(requireDb(c.env.DB)).transition(
+      prospect.id,
+      'SUPPRESSED',
+      new Date().toISOString(),
+    );
+    return c.json({ prospect: updated });
+  } catch {
+    return c.json(
+      {
+        error: {
+          code: 'SUPPRESSION_NOT_ALLOWED',
+          message: `Prospect cannot be suppressed from state ${prospect.currentState}.`,
+        },
+      },
+      409,
+    );
+  }
 });
 
 prospectRoutes.delete('/:id', async (c) => {
