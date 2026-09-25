@@ -213,7 +213,8 @@ function hasAnchoredBusinessIdentity(
     (item) =>
       valueKey(item.field, item.value) === lockedName &&
       item.confidence >= 0.78 &&
-      item.sourceQuality >= 0.65,
+      item.sourceQuality >= 0.65 &&
+      sourceMatchesLockedDomain(prospect, item.sourceUrl),
   );
 
   if (activeKeys.size === 0) return verifiedLockedName;
@@ -404,9 +405,15 @@ export async function planProspectEvidenceAudit(
           }
         }
 
-        const promotable = pickFactEvidence(
-          identityGroup.items.filter((item) => REVIEWABLE.has(item.verificationStatus)),
+        const reviewableIdentityItems = identityGroup.items.filter((item) =>
+          REVIEWABLE.has(item.verificationStatus),
         );
+        const trustedIdentityItems = reviewableIdentityItems.filter(
+          (item) =>
+            verifiedFact === identityGroup.key ||
+            sourceMatchesLockedDomain(prospect, item.sourceUrl),
+        );
+        const promotable = pickFactEvidence(trustedIdentityItems);
         for (const item of identityGroup.items) {
           if (!REVIEWABLE.has(item.verificationStatus) || recommendations.has(item.id)) continue;
           if (item.sourceQuality < 0.65 || item.confidence < 0.78) {
@@ -417,6 +424,22 @@ export async function planProspectEvidenceAudit(
                 item,
                 'HUMAN_REQUIRED',
                 'INSUFFICIENT_CORROBORATION',
+                identityGroup.sourceIds.size,
+              ),
+            );
+            continue;
+          }
+          if (
+            verifiedFact !== identityGroup.key &&
+            !sourceMatchesLockedDomain(prospect, item.sourceUrl)
+          ) {
+            recommendations.set(
+              item.id,
+              recommendation(
+                prospect.id,
+                item,
+                'HUMAN_REQUIRED',
+                'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED',
                 identityGroup.sourceIds.size,
               ),
             );
