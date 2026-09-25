@@ -72,6 +72,22 @@ app.post('/phase20/fixture', async (c) => {
     updatedAt: now,
   });
 
+  await prospects.create({
+    id: 'p20_blocked',
+    campaignId: campaign.id,
+    canonicalName: 'Blocked Review Salon',
+    normalizedName: 'blocked review salon',
+    niche: 'SALON_SPA',
+    sourceFirstSeen: 'PHASE20_REVIEW_FIXTURE',
+    currentState: 'RESEARCH_PENDING',
+    domain: 'phase20-blocked.example',
+    phoneNormalized: null,
+    city: 'mumbai',
+    addressNormalized: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
   const sources = new SourceRecordRepository(db);
   await sources.create({
     id: 'src_p20_review',
@@ -79,6 +95,16 @@ app.post('/phase20/fixture', async (c) => {
     provider: 'PLAYWRIGHT',
     sourceType: 'WEBSITE_PAGE',
     sourceUrl: 'https://phase20-review.example/',
+    rawJson: '{}',
+    capturedAt: now,
+  });
+
+  await sources.create({
+    id: 'src_p20_blocked',
+    prospectId: 'p20_blocked',
+    provider: 'PLAYWRIGHT',
+    sourceType: 'WEBSITE_PAGE',
+    sourceUrl: 'https://phase20-blocked.example/',
     rawJson: '{}',
     capturedAt: now,
   });
@@ -110,6 +136,51 @@ app.post('/phase20/fixture', async (c) => {
   await createEvidence('ev_p20_address_a', 'address', '10 Review Road, Mumbai', 'PROBABLE');
   await createEvidence('ev_p20_address_b', 'address', '99 Conflict Road, Mumbai', 'PROBABLE');
 
+  await evidence.create({
+    id: 'ev_p20_blocked_address_a',
+    prospectId: 'p20_blocked',
+    field: 'address',
+    value: '10 Blocked Road, Mumbai',
+    sourceRecordId: 'src_p20_blocked',
+    sourceUrl: 'https://phase20-blocked.example/',
+    sourceQuality: 1,
+    confidence: 0.9,
+    verificationStatus: 'PROBABLE',
+    excerpt: '10 Blocked Road, Mumbai',
+    capturedAt: now,
+  });
+  await evidence.create({
+    id: 'ev_p20_blocked_address_b',
+    prospectId: 'p20_blocked',
+    field: 'address',
+    value: '99 Wrong Road, Mumbai',
+    sourceRecordId: 'src_p20_blocked',
+    sourceUrl: 'https://phase20-blocked.example/',
+    sourceQuality: 1,
+    confidence: 0.8,
+    verificationStatus: 'PROBABLE',
+    excerpt: '99 Wrong Road, Mumbai',
+    capturedAt: now,
+  });
+  await db
+    .prepare(`
+      INSERT INTO research_runs(
+        id, prospect_id, user_id, status, selected_sources_json, conflicts_json,
+        model, started_at, completed_at, created_at, updated_at
+      ) VALUES (?, ?, ?, 'BLOCKED', '[]', ?, NULL, ?, ?, ?, ?)
+    `)
+    .bind(
+      'run_p20_blocked',
+      'p20_blocked',
+      USER.id,
+      JSON.stringify([{ field: 'address', values: ['10 blocked road, mumbai', '99 wrong road, mumbai'], critical: true }]),
+      now,
+      now,
+      now,
+      now,
+    )
+    .run();
+
   return c.json({ ok: true }, 201);
 });
 
@@ -126,8 +197,17 @@ app.get('/phase20/summary', async (c) => {
     `)
     .bind('p20_review')
     .all<Record<string, unknown>>();
+  const blockedProspect = await new ProspectRepository(db).getByIdForUser('p20_blocked', USER.id);
+  const blockedStateEvents = await new ProspectRepository(db).listStateEvents('p20_blocked');
   const foreignKeys = await db.prepare('PRAGMA foreign_key_check').all<Record<string, unknown>>();
-  return c.json({ evidence, facts, events: events.results, foreignKeyViolations: foreignKeys.results.length });
+  return c.json({
+    evidence,
+    facts,
+    events: events.results,
+    blockedProspectState: blockedProspect?.currentState ?? null,
+    blockedStateEvents,
+    foreignKeyViolations: foreignKeys.results.length,
+  });
 });
 
 export default app;

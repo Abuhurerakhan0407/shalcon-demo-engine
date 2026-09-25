@@ -114,6 +114,32 @@ if (conflict.error?.code !== 'CRITICAL_EVIDENCE_CONFLICT') {
   throw new Error('Conflicting critical evidence was not blocked.');
 }
 
+const blockedConflict = await request(
+  '/api/v1/prospects/p20_blocked/evidence/ev_p20_blocked_address_a/review',
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'VERIFY', promoteToFact: true }),
+  },
+  409,
+);
+if (blockedConflict.error?.code !== 'CRITICAL_EVIDENCE_CONFLICT') {
+  throw new Error('Blocked research prospect did not preserve its critical conflict guard.');
+}
+
+const blockedReject = await request(
+  '/api/v1/prospects/p20_blocked/evidence/ev_p20_blocked_address_b/review',
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'REJECT', note: 'Fixture operator rejected the conflicting address.' }),
+  },
+  200,
+);
+if (blockedReject.evidence?.verificationStatus !== 'REJECTED') {
+  throw new Error('Blocked research conflict rejection did not persist.');
+}
+
 const replay = await request(
   '/api/v1/prospects/p20_review/evidence/ev_p20_phone/review',
   {
@@ -162,7 +188,19 @@ if (
   summary.facts[0]?.field !== 'phone' ||
   summary.facts[0]?.evidenceId !== 'ev_p20_phone' ||
   summary.events?.length !== 3 ||
+  summary.blockedProspectState !== 'RESEARCHED' ||
+  !Array.isArray(summary.blockedStateEvents) ||
+  summary.blockedStateEvents.at(-1)?.toState !== 'RESEARCHED' ||
   summary.foreignKeyViolations !== 0
 ) throw new Error('Evidence review integration summary failed its persistence invariants.');
 
-console.log(JSON.stringify({ ok: true, phase: 20, reviewed: 3, notesPersisted: true, foreignKeyViolations: 0 }));
+console.log(
+  JSON.stringify({
+    ok: true,
+    phase: 20,
+    reviewed: 4,
+    notesPersisted: true,
+    blockedResearchUnblocked: true,
+    foreignKeyViolations: 0,
+  }),
+);
