@@ -73,6 +73,7 @@ for (const prefix of [
   '/api/v1/brand-template/*',
   '/api/v1/demo-admin/*',
   '/api/v1/automated-demo/*',
+  '/api/v1/runner/operator/*',
 ]) {
   app.use(prefix, async (c, next) => {
     c.set('authUser', OPERATOR);
