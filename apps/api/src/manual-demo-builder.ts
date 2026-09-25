@@ -58,32 +58,6 @@ export function isManualDemoEligibleState(state: ProspectRecord['currentState'])
   return MANUAL_DEMO_ELIGIBLE_STATES.has(state);
 }
 
-const MANUAL_DEMO_ELIGIBLE_STATES = new Set<ProspectRecord['currentState']>([
-  'IDENTITY_VERIFIED',
-  'RESEARCH_PENDING',
-  'RESEARCHED',
-  'AUDIT_PENDING',
-  'AUDITED',
-  'SCORED',
-  'RESEARCH_MORE',
-  'DEMO_QUALIFIED',
-  'TEMPLATE_PENDING',
-  'TEMPLATE_MATCHED',
-  'CONTENT_PENDING',
-  'DEMO_CONFIGURED',
-  'RENDER_PENDING',
-  'RENDERED',
-  'VISUAL_QA_PENDING',
-  'FACT_QA_PENDING',
-  'SALES_QA_PENDING',
-  'QA_FAILED',
-  'DEMO_READY',
-]);
-
-export function isManualDemoEligibleState(state: ProspectRecord['currentState']): boolean {
-  return MANUAL_DEMO_ELIGIBLE_STATES.has(state);
-}
-
 export interface VisibleVerifiedField {
   field: string;
   value: string;
