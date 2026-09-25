@@ -41,10 +41,10 @@ await request('/phase20/fixture', { method: 'POST' }, 201);
 const preview = await request('/api/v1/evidence-auditor/preview', undefined, 200);
 if (
   preview.prospectCount !== 2 ||
-  preview.safeActionCount !== 8 ||
+  preview.safeActionCount !== 6 ||
   preview.autoRejectCount !== 2 ||
-  preview.autoVerifyCount !== 6 ||
-  preview.humanRequiredCount !== 4
+  preview.autoVerifyCount !== 4 ||
+  preview.humanRequiredCount !== 6
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
@@ -57,6 +57,8 @@ const byId = new Map(auditPlan.recommendations.map((item) => [item.evidenceId, i
 if (
   byId.get('ev_name_bad')?.action !== 'HUMAN_REQUIRED' ||
   byId.get('ev_name_bad')?.reasonCode !== 'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN' ||
+  byId.get('ev_name_good_home')?.action !== 'HUMAN_REQUIRED' ||
+  byId.get('ev_name_good_contact')?.action !== 'HUMAN_REQUIRED' ||
   byId.get('ev_address_bad')?.action !== 'AUTO_REJECT' ||
   byId.get('ev_noise')?.reasonCode !== 'MALFORMED_TEXT' ||
   byId.get('ev_phone_good')?.action !== 'AUTO_VERIFY' ||
@@ -83,10 +85,10 @@ const applied = await request(
   200,
 );
 if (
-  applied.appliedCount !== 8 ||
+  applied.appliedCount !== 6 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 4
+  applied.humanRequiredCount !== 6
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -100,15 +102,15 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 4) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 6) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
 const summary = await request('/phase20/summary', undefined, 200);
 const status = new Map((summary.evidence ?? []).map((item) => [item.id, item.verificationStatus]));
 if (
-  status.get('ev_name_good_home') !== 'VERIFIED' ||
-  status.get('ev_name_good_contact') !== 'VERIFIED' ||
+  status.get('ev_name_good_home') !== 'PROBABLE' ||
+  status.get('ev_name_good_contact') !== 'PROBABLE' ||
   status.get('ev_name_bad') !== 'PROBABLE' ||
   status.get('ev_phone_good') !== 'VERIFIED' ||
   status.get('ev_address_good') !== 'VERIFIED' ||
@@ -119,10 +121,10 @@ if (
   status.get('ev_email_single') !== 'PROBABLE' ||
   summary.uncertainEvidence?.length !== 2 ||
   summary.uncertainEvidence.some((item) => item.verificationStatus !== 'PROBABLE') ||
-  summary.auditProspectState !== 'RESEARCHED' ||
+  summary.auditProspectState !== 'RESEARCH_PENDING' ||
   summary.uncertainProspectState !== 'RESEARCH_PENDING' ||
-  summary.facts?.length !== 3 ||
-  summary.events?.length !== 8 ||
+  summary.facts?.length !== 2 ||
+  summary.events?.length !== 6 ||
   summary.foreignKeyViolations !== 0
 ) {
   throw new Error('Evidence auditor persistence invariants failed.');
@@ -140,8 +142,8 @@ console.log(
   JSON.stringify({
     ok: true,
     phase: 20,
-    safeActionsApplied: 8,
-    remainingHumanExceptions: 4,
+    safeActionsApplied: 6,
+    remainingHumanExceptions: 6,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
     idempotent: true,
