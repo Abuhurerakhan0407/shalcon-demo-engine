@@ -5,6 +5,7 @@ import {
   type D1DatabaseLike,
   type EvidenceRecord,
   type ProspectFactRecord,
+  type ProspectRecord,
 } from '@shalcon/db';
 
 export type EvidenceReviewDecision = 'VERIFY' | 'REJECT';
@@ -104,6 +105,45 @@ async function activeCriticalConflict(
   return row !== null;
 }
 
+function normalizedValue(value: string): string {
+  return value.trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-IN');
+}
+
+async function shouldUnblockBlockedResearch(
+  db: D1DatabaseLike,
+  evidenceRepository: EvidenceRepository,
+  userId: string,
+  prospect: ProspectRecord,
+  candidate: EvidenceRecord,
+  toStatus: 'VERIFIED' | 'REJECTED',
+): Promise<boolean> {
+  if (prospect.currentState !== 'RESEARCH_PENDING') return false;
+
+  const latestRun = await db
+    .prepare(`
+      SELECT status
+      FROM research_runs
+      WHERE prospect_id = ? AND user_id = ?
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `)
+    .bind(prospect.id, userId)
+    .first<{ status: string }>();
+  if (latestRun?.status !== 'BLOCKED') return false;
+
+  const activeValues = new Map<string, Set<string>>();
+  for (const item of await evidenceRepository.listForProspect(prospect.id)) {
+    const status = item.id === candidate.id ? toStatus : item.verificationStatus;
+    if (status === 'REJECTED') continue;
+    const field = normalizedField(item.field);
+    if (!CRITICAL_SCALAR_FIELDS.has(field)) continue;
+    const values = activeValues.get(field) ?? new Set<string>();
+    values.add(normalizedValue(item.value));
+    activeValues.set(field, values);
+  }
+  return [...activeValues.values()].every((values) => values.size <= 1);
+}
+
 export async function listEvidenceVerificationEvents(
   db: D1DatabaseLike,
   userId: string,
@@ -179,6 +219,14 @@ export async function reviewEvidenceCandidate(
 
   const fromStatus = candidate.verificationStatus as 'PROBABLE' | 'UNVERIFIED';
   const toStatus = input.decision === 'VERIFY' ? 'VERIFIED' : 'REJECTED';
+  const shouldUnblockResearch = await shouldUnblockBlockedResearch(
+    db,
+    evidenceRepository,
+    userId,
+    prospect,
+    candidate,
+    toStatus,
+  );
   const id = eventId();
   const note = input.note?.trim() || null;
   const statements = [
@@ -236,6 +284,18 @@ export async function reviewEvidenceCandidate(
           now,
           now,
         ),
+    );
+  }
+
+  if (shouldUnblockResearch) {
+    statements.push(
+      db
+        .prepare(`
+          UPDATE prospects
+          SET current_state = 'RESEARCHED', updated_at = ?
+          WHERE id = ? AND current_state = 'RESEARCH_PENDING'
+        `)
+        .bind(now, prospect.id),
     );
   }
 
