@@ -26,6 +26,7 @@ export interface EvidenceAuditRecommendation {
   reasonCode:
     | 'MALFORMED_TEXT'
     | 'LOCKED_IDENTITY_CONFLICT'
+    | 'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN'
     | 'MATCHES_LOCKED_IDENTITY'
     | 'MATCHES_VERIFIED_FACT'
     | 'MATCHES_VERIFIED_EVIDENCE'
@@ -238,8 +239,10 @@ export async function planProspectEvidenceAudit(
               recommendation(
                 prospect.id,
                 item,
-                'AUTO_REJECT',
-                'LOCKED_IDENTITY_CONFLICT',
+                normalizedField === 'businessname' ? 'HUMAN_REQUIRED' : 'AUTO_REJECT',
+                normalizedField === 'businessname'
+                  ? 'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN'
+                  : 'LOCKED_IDENTITY_CONFLICT',
                 group.sourceIds.size,
               ),
             );
