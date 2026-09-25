@@ -59,7 +59,6 @@ export interface EvidenceAuditApplyResult extends EvidenceAuditPreview {
 
 const REVIEWABLE = new Set(['PROBABLE', 'UNVERIFIED']);
 const CRITICAL_FIELDS = new Set(['businessname', 'phone', 'address']);
-const MULTI_VALUE_FIELDS = new Set(['service', 'services', 'openinghours', 'sociallink', 'sociallinks']);
 
 function fieldKey(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
@@ -461,10 +460,7 @@ export async function applySafeEvidenceAudit(
   const preview = await previewEvidenceAudit(db, userId, prospectIds);
   const safe = preview.plans
     .flatMap((plan) => plan.recommendations)
-    .filter(
-      (item): item is EvidenceAuditRecommendation =>
-        item.action === 'AUTO_REJECT' || item.action === 'AUTO_VERIFY',
-    )
+    .filter((item) => item.action === 'AUTO_REJECT' || item.action === 'AUTO_VERIFY')
     .sort((left, right) => {
       const rank = (item: EvidenceAuditRecommendation) => (item.action === 'AUTO_REJECT' ? 0 : 1);
       return rank(left) - rank(right) || left.evidenceId.localeCompare(right.evidenceId);
