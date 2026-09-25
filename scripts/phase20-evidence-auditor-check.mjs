@@ -40,18 +40,21 @@ await request('/phase20/fixture', { method: 'POST' }, 201);
 
 const preview = await request('/api/v1/evidence-auditor/preview', undefined, 200);
 if (
-  preview.prospectCount !== 2 ||
-  preview.safeActionCount !== 6 ||
-  preview.autoRejectCount !== 2 ||
-  preview.autoVerifyCount !== 4 ||
-  preview.humanRequiredCount !== 6
+  preview.prospectCount !== 3 ||
+  preview.safeActionCount !== 16 ||
+  preview.autoRejectCount !== 5 ||
+  preview.autoVerifyCount !== 11 ||
+  preview.humanRequiredCount !== 13
 ) {
   throw new Error('Evidence auditor preview did not preserve the safe-action boundary.');
 }
 
 const auditPlan = preview.plans.find((plan) => plan.prospect.id === 'p20_audit');
 const uncertainPlan = preview.plans.find((plan) => plan.prospect.id === 'p20_uncertain');
-if (!auditPlan || !uncertainPlan) throw new Error('Evidence auditor plans are incomplete.');
+const cleanPlan = preview.plans.find((plan) => plan.prospect.id === 'p20_clean');
+if (!auditPlan || !uncertainPlan || !cleanPlan) {
+  throw new Error('Evidence auditor plans are incomplete.');
+}
 
 const byId = new Map(auditPlan.recommendations.map((item) => [item.evidenceId, item]));
 if (
@@ -59,14 +62,36 @@ if (
   byId.get('ev_name_bad')?.reasonCode !== 'BUSINESS_NAME_VARIANT_REQUIRES_HUMAN' ||
   byId.get('ev_name_good_home')?.action !== 'HUMAN_REQUIRED' ||
   byId.get('ev_name_good_contact')?.action !== 'HUMAN_REQUIRED' ||
-  byId.get('ev_address_bad')?.action !== 'AUTO_REJECT' ||
+  byId.get('ev_address_bad')?.action !== 'HUMAN_REQUIRED' ||
+  byId.get('ev_address_bad')?.reasonCode !== 'BUSINESS_IDENTITY_UNANCHORED' ||
+  byId.get('ev_noise')?.action !== 'AUTO_REJECT' ||
   byId.get('ev_noise')?.reasonCode !== 'MALFORMED_TEXT' ||
-  byId.get('ev_phone_good')?.action !== 'AUTO_VERIFY' ||
-  byId.get('ev_address_good')?.promoteToFact !== true ||
-  byId.get('ev_service_home')?.reasonCode !== 'MULTI_SOURCE_CORROBORATION' ||
+  byId.get('ev_phone_good')?.action !== 'HUMAN_REQUIRED' ||
+  byId.get('ev_service_home')?.action !== 'HUMAN_REQUIRED' ||
   byId.get('ev_email_single')?.action !== 'HUMAN_REQUIRED'
 ) {
-  throw new Error('Evidence auditor classified a fixture outside the intended safety policy.');
+  throw new Error('Unanchored identity evidence escaped the human-only boundary.');
+}
+
+const cleanById = new Map(cleanPlan.recommendations.map((item) => [item.evidenceId, item]));
+if (
+  cleanById.get('ev_clean_name')?.action !== 'AUTO_VERIFY' ||
+  cleanById.get('ev_clean_name')?.promoteToFact !== true ||
+  cleanById.get('ev_clean_phone')?.action !== 'AUTO_VERIFY' ||
+  cleanById.get('ev_clean_phone')?.promoteToFact !== true ||
+  cleanById.get('ev_clean_address')?.action !== 'AUTO_VERIFY' ||
+  cleanById.get('ev_clean_address')?.promoteToFact !== true ||
+  cleanById.get('ev_clean_service_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
+  cleanById.get('ev_clean_email_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
+  cleanById.get('ev_clean_social_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
+  cleanById.get('ev_clean_hours_home')?.reasonCode !== 'OFFICIAL_DOMAIN_CORROBORATION' ||
+  cleanById.get('ev_clean_offdomain_service')?.action !== 'HUMAN_REQUIRED' ||
+  cleanById.get('ev_clean_offdomain_service')?.reasonCode !==
+    'OFFICIAL_DOMAIN_CORROBORATION_REQUIRED' ||
+  cleanById.get('ev_clean_error_email_home')?.action !== 'AUTO_REJECT' ||
+  cleanById.get('ev_clean_social_label_home')?.action !== 'AUTO_REJECT'
+) {
+  throw new Error('Official-domain or field-validation auditor guards failed.');
 }
 if (
   uncertainPlan.recommendations.length !== 2 ||
@@ -85,10 +110,10 @@ const applied = await request(
   200,
 );
 if (
-  applied.appliedCount !== 6 ||
+  applied.appliedCount !== 16 ||
   applied.skippedCount !== 0 ||
   applied.safeActionCount !== 0 ||
-  applied.humanRequiredCount !== 6
+  applied.humanRequiredCount !== 13
 ) {
   throw new Error('Evidence auditor safe application did not converge to the expected exception queue.');
 }
@@ -102,29 +127,51 @@ const replay = await request(
   },
   200,
 );
-if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 6) {
+if (replay.appliedCount !== 0 || replay.safeActionCount !== 0 || replay.humanRequiredCount !== 13) {
   throw new Error('Evidence auditor replay was not idempotent.');
 }
 
 const summary = await request('/phase20/summary', undefined, 200);
 const status = new Map((summary.evidence ?? []).map((item) => [item.id, item.verificationStatus]));
+const cleanStatus = new Map(
+  (summary.cleanEvidence ?? []).map((item) => [item.id, item.verificationStatus]),
+);
 if (
   status.get('ev_name_good_home') !== 'PROBABLE' ||
   status.get('ev_name_good_contact') !== 'PROBABLE' ||
   status.get('ev_name_bad') !== 'PROBABLE' ||
-  status.get('ev_phone_good') !== 'VERIFIED' ||
-  status.get('ev_address_good') !== 'VERIFIED' ||
-  status.get('ev_address_bad') !== 'REJECTED' ||
+  status.get('ev_phone_good') !== 'PROBABLE' ||
+  status.get('ev_address_good') !== 'PROBABLE' ||
+  status.get('ev_address_bad') !== 'PROBABLE' ||
   status.get('ev_noise') !== 'REJECTED' ||
-  status.get('ev_service_home') !== 'VERIFIED' ||
-  status.get('ev_service_contact') !== 'VERIFIED' ||
+  status.get('ev_service_home') !== 'PROBABLE' ||
+  status.get('ev_service_contact') !== 'PROBABLE' ||
   status.get('ev_email_single') !== 'PROBABLE' ||
   summary.uncertainEvidence?.length !== 2 ||
   summary.uncertainEvidence.some((item) => item.verificationStatus !== 'PROBABLE') ||
+  cleanStatus.get('ev_clean_name') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_phone') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_address') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_service_home') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_service_contact') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_email_home') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_email_contact') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_social_home') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_social_contact') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_hours_home') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_hours_contact') !== 'VERIFIED' ||
+  cleanStatus.get('ev_clean_offdomain_service') !== 'PROBABLE' ||
+  cleanStatus.get('ev_clean_offdomain_service_two') !== 'PROBABLE' ||
+  cleanStatus.get('ev_clean_error_email_home') !== 'REJECTED' ||
+  cleanStatus.get('ev_clean_error_email_contact') !== 'REJECTED' ||
+  cleanStatus.get('ev_clean_social_label_home') !== 'REJECTED' ||
+  cleanStatus.get('ev_clean_social_label_contact') !== 'REJECTED' ||
   summary.auditProspectState !== 'RESEARCH_PENDING' ||
   summary.uncertainProspectState !== 'RESEARCH_PENDING' ||
-  summary.facts?.length !== 2 ||
-  summary.events?.length !== 6 ||
+  summary.cleanProspectState !== 'RESEARCH_PENDING' ||
+  summary.facts?.length !== 0 ||
+  summary.cleanFacts?.length !== 3 ||
+  summary.events?.length !== 16 ||
   summary.foreignKeyViolations !== 0
 ) {
   throw new Error('Evidence auditor persistence invariants failed.');
@@ -142,10 +189,13 @@ console.log(
   JSON.stringify({
     ok: true,
     phase: 20,
-    safeActionsApplied: 6,
-    remainingHumanExceptions: 6,
+    safeActionsApplied: 16,
+    remainingHumanExceptions: 13,
     lockedIdentityGuard: true,
     criticalCorroborationGuard: true,
+    businessIdentityAnchorGuard: true,
+    officialDomainGuard: true,
+    fieldValidationGuard: true,
     idempotent: true,
     foreignKeyViolations: 0,
   }),
