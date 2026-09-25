@@ -179,19 +179,29 @@ Phase-20 operator/review infrastructure now proven:
 - Buildkite **#540 ✅** — real `qwen3:4b` structured-output recovery smoke with extraction regressions;
 - Buildkite **#541 ✅** — fresh D1 migrations + locked 20-prospect seed + Playwright research + local `qwen3:4b` extraction to terminal state, zero active/dead-letter research or AI jobs, zero FK violations and `trialResultsModified: false`;
 - Buildkite **#544 ✅** — final recovery-branch verification before merge;
-- Buildkite **#545 ✅** — post-merge `main` verification for recovery commit `864c320c63a311bc57691ffec1c18edaf2c333d4`.
+- Buildkite **#545 ✅** — post-merge `main` verification for recovery commit `864c320c63a311bc57691ffec1c18edaf2c333d4`;
+- safe AI Evidence Auditor now auto-rejects deterministic contamination/malformed evidence and auto-verifies only evidence backed by locked identity, prior verified evidence/facts, or strong non-critical corroboration;
+- business name, phone and address cannot auto-verify from multi-page corroboration alone; unresolved critical facts stay human-gated;
+- every automatic decision is written through the existing immutable evidence-review trail with an `AI Evidence Auditor` audit note;
+- Evidence Review now exposes a one-click cohort-wide safe audit with a remaining human-exception count;
+- Buildkite **#587 ✅** — adversarial real-D1 auditor acceptance after lint correction;
+- Buildkite **#588 ✅** — post-merge `main` verification for safe auditor commit `262c30792a6f95ffbb838de38a8d3850993c08f0`;
+- Buildkite **#592 ✅** — adversarial critical multi-source guard proving two independent directory captures still cannot auto-verify a critical fact without identity support;
+- Buildkite **#593 ✅** — post-merge `main` verification for critical-fact hardening commit `9904d406dd29a8b119e55f14f23e393aa0fa7c11`.
 
 ## Current CI condition
 
 Phase 19 is closed. Buildkite #374 remains the authoritative Phase 0–19 baseline and Phase 20 does not alter that historical result.
 
-Phase-20 recovery is now merged to `main` and green through Buildkite #545. The fresh hosted recovery run in Buildkite #541 proved the locked cohort can be rebuilt from a clean D1 workspace, researched with Playwright, extracted with real local `qwen3:4b`, and exported for review while preserving FK integrity and trial immutability.
+Phase-20 recovery and the safe AI Evidence Auditor are merged to `main`. Recovery remains proven by Buildkite #541/#545; auditor safety is proven by Buildkite #587/#588 and the strengthened critical-fact guard by #592/#593. The auditor reduces manual review to an exception queue without treating model output as self-verifying evidence.
 
-Phase 20 itself is **not closed**. Closure still requires genuine human evidence review, downstream demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
+The last verified live VPS checkpoint before auditor rollout retained the locked 20-prospect cohort, 20/20 completed Playwright research jobs, zero FK violations and `trialResultsModified: false`. Live auditor preview/apply is intentionally still pending an authorized-device reconnection and must run against a fresh D1 backup before any automatic evidence mutation.
+
+Phase 20 itself is **not closed**. Closure still requires the live safe-auditor pass, genuine human review of remaining exceptions, downstream demo generation/visual/fact/sales QA, and 20 recorded real-market outcomes.
 
 ## Blocked
 
-The engineering recovery blocker is cleared. The remaining gate is intentionally human: verified evidence decisions and actual demo inspection. Those decisions must not be fabricated by CI, copied from the lost laptop workspace, or inferred from model output.
+The research recovery blocker is cleared. Routine evidence review is no longer intentionally all-manual: the safe auditor may apply deterministic, provenance-backed decisions, while ambiguous critical evidence remains human-only. Current operational blocker is live VPS rollout of the merged auditor while the authorized Remote Desktop device is disconnected. Actual demo inspection and unresolved critical exceptions must still be genuine; they must not be fabricated by CI or inferred from unsupported model output.
 
 ## Last fully verified implementation commit
 
@@ -201,6 +211,8 @@ Phase-20 operator infrastructure proof: `0e35c7be730382e9f3262ae7c8dce069dc84058
 
 Phase-20 recovery implementation: `864c320c63a311bc57691ffec1c18edaf2c333d4` — merged to `main`, Buildkite #545 SUCCESS. Buildkite #541 is the fresh locked-cohort research/AI recovery proof.
 
+Phase-20 safe Evidence Auditor: `262c30792a6f95ffbb838de38a8d3850993c08f0` — Buildkite #588 SUCCESS. Critical-fact hardening: `9904d406dd29a8b119e55f14f23e393aa0fa7c11` — Buildkite #593 SUCCESS.
+
 ## Next action
 
-Attach a persistent authorized machine/VPS to the recovered `main` branch, run the Phase-20 VPS bootstrap/initializer, export the fresh review packet, perform genuine human evidence decisions, then run every prospect through audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA. Record all nine correction categories only after each actual demo is inspected, then evaluate the 18/20 factual-accuracy gate before starting Phase 21.
+Reconnect the authorized VPS session, verify the live repository and locked-20 invariants, take a fresh D1 backup, deploy `main`, and run `GET /api/v1/evidence-auditor/preview` before any mutation. Inspect the proposed critical decisions, then run the safe cohort audit once and export a fresh review packet. Human-review only the remaining exceptions, then run every eligible prospect through audit → scoring → brand/template → content/assets → automated demo → visual QA → Fact QA → human Sales QA. Record all nine correction categories only after each actual demo is inspected, then evaluate the 18/20 factual-accuracy gate before starting Phase 21.
