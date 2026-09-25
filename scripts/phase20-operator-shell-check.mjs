@@ -99,6 +99,31 @@ if (
   throw new Error('Local operator evidence bundle route is unavailable.');
 }
 
+const auditHistory = await request(`/api/v1/audits/website/prospects/${prospectId}/runs`);
+if (!Array.isArray(auditHistory.runs)) {
+  throw new Error('Local operator website-audit route is unavailable.');
+}
+
+const scoreHistory = await request(`/api/v1/scoring/prospects/${prospectId}/runs`);
+if (!Array.isArray(scoreHistory.runs)) {
+  throw new Error('Local operator scoring route is unavailable.');
+}
+
+const registry = await request('/api/v1/brand-template/registry');
+if (!Array.isArray(registry.templates) || registry.templates.length === 0) {
+  throw new Error('Local operator template registry route is unavailable.');
+}
+
+const demoWorkspace = await request(`/api/v1/demo-admin/prospects/${prospectId}`);
+if (demoWorkspace.prospect?.id !== prospectId || demoWorkspace.eligible !== true) {
+  throw new Error('Local operator demo-admin route did not preserve downstream identity eligibility.');
+}
+
+const reviewQueue = await request('/api/v1/automated-demo/phase19/review-queue');
+if (!Array.isArray(reviewQueue.issues)) {
+  throw new Error('Local operator Phase 19 QA route is unavailable.');
+}
+
 const status = await request('/phase20/status');
 if (
   status.trialResultsModified !== false ||
@@ -108,4 +133,11 @@ if (
   throw new Error('Local operator status failed its persistence or trial-safety invariants.');
 }
 
-console.log(JSON.stringify({ ok: true, phase: 20, prospects: 2, trialResultsModified: false }));
+console.log(JSON.stringify({
+  ok: true,
+  phase: 20,
+  prospects: 2,
+  operatorModulesMounted: true,
+  downstreamDemoEligible: true,
+  trialResultsModified: false,
+}));
