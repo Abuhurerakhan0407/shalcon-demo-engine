@@ -140,6 +140,42 @@ if (blockedReject.evidence?.verificationStatus !== 'REJECTED') {
   throw new Error('Blocked research conflict rejection did not persist.');
 }
 
+const afterReject = await request('/phase20/summary', undefined, 200);
+if (afterReject.blockedProspectState !== 'RESEARCH_PENDING') {
+  throw new Error('Rejecting conflicting critical evidence unblocked research before verified support existed.');
+}
+
+const blockedAddress = await request(
+  '/api/v1/prospects/p20_blocked/evidence/ev_p20_blocked_address_a/review',
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'VERIFY', promoteToFact: true }),
+  },
+  200,
+);
+if (blockedAddress.evidence?.verificationStatus !== 'VERIFIED') {
+  throw new Error('Resolved blocked address did not verify.');
+}
+
+const afterAddress = await request('/phase20/summary', undefined, 200);
+if (afterAddress.blockedProspectState !== 'RESEARCH_PENDING') {
+  throw new Error('Research unblocked while another active critical field lacked verified support.');
+}
+
+const blockedPhone = await request(
+  '/api/v1/prospects/p20_blocked/evidence/ev_p20_blocked_phone/review',
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'VERIFY', promoteToFact: true }),
+  },
+  200,
+);
+if (blockedPhone.evidence?.verificationStatus !== 'VERIFIED') {
+  throw new Error('Blocked prospect phone did not verify.');
+}
+
 const replay = await request(
   '/api/v1/prospects/p20_review/evidence/ev_p20_phone/review',
   {
@@ -198,9 +234,9 @@ console.log(
   JSON.stringify({
     ok: true,
     phase: 20,
-    reviewed: 4,
+    reviewed: 6,
     notesPersisted: true,
-    blockedResearchUnblocked: true,
+    blockedResearchUnblockedOnlyAfterVerifiedCriticalSupport: true,
     foreignKeyViolations: 0,
   }),
 );
