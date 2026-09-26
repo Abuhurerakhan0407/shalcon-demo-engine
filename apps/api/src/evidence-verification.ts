@@ -131,6 +131,8 @@ async function shouldUnblockBlockedResearch(
   toStatus: 'VERIFIED' | 'REJECTED',
 ): Promise<boolean> {
   if (prospect.currentState !== 'RESEARCH_PENDING') return false;
+  if (toStatus !== 'VERIFIED') return false;
+  if (!CRITICAL_SCALAR_FIELDS.has(normalizedField(candidate.field))) return false;
 
   const latestRun = await db
     .prepare(`
@@ -144,17 +146,22 @@ async function shouldUnblockBlockedResearch(
     .first<{ status: string }>();
   if (latestRun?.status !== 'BLOCKED') return false;
 
-  const activeValues = new Map<string, Set<string>>();
+  const activeValues = new Map<string, Map<string, boolean>>();
   for (const item of await evidenceRepository.listForProspect(prospect.id)) {
     const status = item.id === candidate.id ? toStatus : item.verificationStatus;
     if (status === 'REJECTED') continue;
     const field = normalizedField(item.field);
     if (!CRITICAL_SCALAR_FIELDS.has(field)) continue;
-    const values = activeValues.get(field) ?? new Set<string>();
-    values.add(normalizedCriticalValue(item.field, item.value));
+    const values = activeValues.get(field) ?? new Map<string, boolean>();
+    const value = normalizedCriticalValue(item.field, item.value);
+    values.set(value, (values.get(value) ?? false) || status === 'VERIFIED');
     activeValues.set(field, values);
   }
-  return [...activeValues.values()].every((values) => values.size <= 1);
+
+  if (activeValues.size === 0) return false;
+  return [...activeValues.values()].every(
+    (values) => values.size === 1 && [...values.values()].every(Boolean),
+  );
 }
 
 export async function listEvidenceVerificationEvents(
