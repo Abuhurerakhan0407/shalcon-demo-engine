@@ -162,6 +162,19 @@ app.post('/phase20/fixture', async (c) => {
     excerpt: '99 Wrong Road, Mumbai',
     capturedAt: now,
   });
+  await evidence.create({
+    id: 'ev_p20_blocked_phone',
+    prospectId: 'p20_blocked',
+    field: 'phone',
+    value: '+91 90000 00000',
+    sourceRecordId: 'src_p20_blocked',
+    sourceUrl: 'https://phase20-blocked.example/',
+    sourceQuality: 1,
+    confidence: 0.9,
+    verificationStatus: 'PROBABLE',
+    excerpt: '+91 90000 00000',
+    capturedAt: now,
+  });
   await db
     .prepare(`
       INSERT INTO research_runs(
