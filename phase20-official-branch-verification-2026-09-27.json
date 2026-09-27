@@ -1,0 +1,133 @@
+{
+  "phase": 20,
+  "generatedAt": "2026-09-27",
+  "purpose": "Official-source verification of the 12 prospects that remained RESEARCH_PENDING after the independently verified listing-led batch. This manifest is evidence for targeted correction; it is not permission to bulk-verify or overwrite live D1 without evidence-ID and state guards.",
+  "rules": [
+    "Prefer the exact official branch page over generic contact or locator pages.",
+    "Do not treat a head-office phone/address as branch evidence.",
+    "Do not reject legitimate alternate phone numbers merely to satisfy a scalar conflict model.",
+    "When a prospect name is brand-level and official sources expose multiple branches, require branch-scope resolution before fact promotion."
+  ],
+  "prospects": [
+    {
+      "prospectName": "Color Cafe - Salon",
+      "classification": "TARGETED_ADDRESS_CAPTURE_REQUIRED",
+      "officialDomain": "colorcafe.co.in",
+      "displayName": "Color Cafe",
+      "address": "Ground Floor, Kailash Building, Next to China Gate, 156 Waterfield Road, Bandra (W), Mumbai-400050",
+      "phones": ["022 26-5151-81", "+91 8080 12 6688"],
+      "sourceUrl": "https://colorcafe.co.in/",
+      "note": "Existing D1 has usable name/phone evidence but no critical address evidence; capture the official Bandra address rather than unblocking on incomplete branch facts."
+    },
+    {
+      "prospectName": "Envi Salons and Aesthetics - Juhu",
+      "classification": "TARGETED_BRANCH_RERUN_REQUIRED",
+      "officialDomain": "envi.in",
+      "displayName": "Envi Salon - Juhu",
+      "address": "Ground floor, Gold Crest Building, N.S. Road No 10, Juhu, Mumbai 400049",
+      "phones": ["080-69270030"],
+      "sourceUrl": "https://envi.in/find-us/juhu/",
+      "note": "Current D1 critical address/phone evidence points to Malad/general Envi contacts, not the locked Juhu branch."
+    },
+    {
+      "prospectName": "Lemon Salons Bandra Branch",
+      "classification": "TARGETED_BRANCH_RERUN_REQUIRED",
+      "officialDomain": "lemonsalons.com",
+      "displayName": "Lemon Salons - Bandra",
+      "address": "Gr. Flr, Sunrise Co. Hsg. Soc, Shop No. 4, Waterfield Road, opp. Wellness Forever, Khar, Bandra West, Mumbai, Maharashtra 400050",
+      "phones": ["+91 77389 15206"],
+      "sourceUrl": "https://lemonsalons.com/pages/contact",
+      "note": "Current D1 phone/address evidence is the Oshiwara office, not Bandra. Do not promote it for this prospect."
+    },
+    {
+      "prospectName": "Savio John Pereira Salon",
+      "classification": "EXISTING_EVIDENCE_CAN_RESOLVE_PALI_HILL",
+      "officialDomain": "saviojohnpereira.com",
+      "displayName": "Savio John Pereira - The Salon",
+      "address": "Anand Villa, 1st Floor, 30 Pali Mala Road, Bandra West, Mumbai 400050",
+      "phones": ["+91 9870719161", "+91 9870419161"],
+      "sourceUrl": "https://www.saviojohnpereira.com/contact.html",
+      "note": "Official page clearly separates Pali Hill salon from Sofitel BKC, Willingdon, Taj Santacruz and Thane. Existing D1 contains Pali Hill values plus other page/academy variants; resolve only the Pali Hill branch."
+    },
+    {
+      "prospectName": "Dessange Salon & Spa (Bandra)",
+      "classification": "TARGETED_FULL_ADDRESS_CAPTURE_REQUIRED",
+      "officialDomain": "dessangemumbai.com",
+      "displayName": "DESSANGE",
+      "address": "190, Savanna Court, Turner Rd, Near Rolex Showroom, Bandra West, Mumbai - 400050",
+      "phones": ["022-26408696", "26515144", "7304308957", "9152244214"],
+      "sourceUrl": "https://www.dessangemumbai.com/pdf/DESSAGE-service-menu.pdf",
+      "note": "Current D1 has the correct 7304308957 phone but only a vague 'Bandra' address. The legal entity string MARK SALON & SPA PRIVATE LIMITED is not the customer-facing brand name."
+    },
+    {
+      "prospectName": "Jean-Claude Biguine Salon & Spa",
+      "classification": "BRANCH_SCOPE_REVIEW_REQUIRED",
+      "officialDomain": "biguineindia.co.in",
+      "displayName": "Jean-Claude Biguine Salon & Spa",
+      "address": null,
+      "phones": [],
+      "sourceUrl": "https://biguineindia.co.in/locations/",
+      "note": "The prospect is brand-level while the official locator contains many Mumbai branches. Existing D1 phone (+91 9930403930) maps specifically to Oberoi Mall, Goregaon. Choose a branch scope before promoting address/phone."
+    },
+    {
+      "prospectName": "BBLUNT Salon - Khar, Mumbai",
+      "classification": "TARGETED_BRANCH_RERUN_REQUIRED",
+      "officialDomain": "bbluntsalons.co.in",
+      "displayName": "BBLUNT Salon, Khar (W)",
+      "address": "Plot No 329, Linking Road, 7th Rd, Khar West, Mumbai, Maharashtra 400052",
+      "phones": ["8657417948", "9820218170"],
+      "sourceUrl": "https://bbluntsalons.co.in/salon-locator/",
+      "note": "Current D1 critical evidence points to Andheri head office and Peddar Road rather than the Khar branch."
+    },
+    {
+      "prospectName": "Glory Salon",
+      "classification": "EXISTING_EVIDENCE_CAN_RESOLVE_WATERFIELD",
+      "officialDomain": "glorysalon.co.in",
+      "displayName": "Glory Hair, Nails & Beauty",
+      "address": "Ground Floor, Muzzafar Manor, Waterfield Road, Next to Stomach Restaurant, Bandra West, Mumbai 400050",
+      "phones": ["+91 98209 62957"],
+      "sourceUrl": "https://www.glorysalon.co.in/",
+      "note": "Remaining non-junk D1 name/phone/address values match the official Waterfield Road branch."
+    },
+    {
+      "prospectName": "VMAT Salon & Spa",
+      "classification": "BRANCH_SCOPE_REVIEW_REQUIRED",
+      "officialDomain": "vmatsalon.com",
+      "displayName": "VMAT Salon",
+      "address": null,
+      "phones": [],
+      "sourceUrl": "https://vmatsalon.com/store-location/",
+      "note": "The locked prospect is brand-level while current D1 mixes Thane, Vikhroli and generic footer contacts. Select a branch scope before fact promotion."
+    },
+    {
+      "prospectName": "A'Kreations Hair & Beyond",
+      "classification": "EXISTING_EVIDENCE_CAN_RESOLVE_WITH_MULTI_PHONE_POLICY",
+      "officialDomain": "akreations.in",
+      "displayName": "A'Kreations Hair & Beyond",
+      "address": "Ground & First Floor, Sagar Fortune, Waterfield Road, Bandra West, Mumbai, Maharashtra, India - 400050",
+      "phones": ["+91 9930-032-232", "+91 9930-052-264", "+91 7208-999-911", "+91 8976-228-999"],
+      "sourceUrl": "https://www.akreations.in/contact-us",
+      "note": "Existing D1 contains the correct Bandra address and more than one valid official phone. Do not reject a valid alternate number solely because phone is modeled as a scalar."
+    },
+    {
+      "prospectName": "Shanuzz Salon Andheri",
+      "classification": "EXISTING_EVIDENCE_CAN_RESOLVE_ANDHERI",
+      "officialDomain": "shanuzz.com",
+      "displayName": "Shanuzz Salon Andheri Mumbai",
+      "address": "Ground Floor, Harshvardhan Chambers, next to Police Station, Oshiwara, Andheri West, Mumbai, Maharashtra 400102",
+      "phones": ["+91 91524 18567"],
+      "sourceUrl": "https://shanuzz.com/contact/",
+      "note": "Existing D1 phone matches the official Andheri salon. Targeted address capture is still desirable because current D1 has no active critical address candidate."
+    },
+    {
+      "prospectName": "Lakme Salon in Hill Road Bandra, Mumbai",
+      "classification": "EXISTING_EVIDENCE_CAN_RESOLVE_HILL_ROAD",
+      "officialDomain": "salons.lakmesalon.in",
+      "displayName": "Lakme Salon in Hill Road Bandra,Mumbai",
+      "address": "No C/5, Libra Tower, Hill Road, Bandra West, Mumbai - 400050",
+      "phones": ["+918879044912"],
+      "sourceUrl": "https://salons.lakmesalon.in/lakme-salon-in-hill-road-bandra-mumbai-beauty-parlour-bandra-west-mumbai-344837/Home",
+      "note": "Official branch page exactly matches one current D1 name/address/phone group; other D1 branch contacts should be rejected only when their source is confirmed to be a different Lakme location."
+    }
+  ]
+}
