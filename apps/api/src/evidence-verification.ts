@@ -9,6 +9,8 @@ import {
 } from '@shalcon/db';
 import { normalizeAddress, normalizeBusinessName } from '@shalcon/evidence';
 
+import { businessNamesEquivalent } from './business-name-equivalence';
+
 export type EvidenceReviewDecision = 'VERIFY' | 'REJECT';
 
 export interface EvidenceReviewInput {
@@ -96,6 +98,11 @@ function normalizedValue(value: string): string {
   return value.trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-IN');
 }
 
+function criticalValuesEquivalent(field: string, left: string, right: string): boolean {
+  if (normalizedField(field) === 'businessname') return businessNamesEquivalent(left, right);
+  return normalizedCriticalValue(field, left) === normalizedCriticalValue(field, right);
+}
+
 function normalizedCriticalValue(field: string, value: string): string {
   const key = normalizedField(field);
   if (key === 'businessname') return normalizeBusinessName(value);
@@ -111,14 +118,13 @@ async function activeCriticalConflict(
   const field = normalizedField(candidate.field);
   if (!CRITICAL_SCALAR_FIELDS.has(field)) return false;
 
-  const candidateValue = normalizedCriticalValue(candidate.field, candidate.value);
   const evidence = await new EvidenceRepository(db).listForProspect(candidate.prospectId);
   return evidence.some(
     (item) =>
       item.id !== candidate.id &&
       normalizedField(item.field) === field &&
       ACTIVE_CONFLICT_STATUSES.has(item.verificationStatus) &&
-      normalizedCriticalValue(item.field, item.value) !== candidateValue,
+      !criticalValuesEquivalent(item.field, item.value, candidate.value),
   );
 }
 
@@ -153,7 +159,14 @@ async function shouldUnblockBlockedResearch(
     const field = normalizedField(item.field);
     if (!CRITICAL_SCALAR_FIELDS.has(field)) continue;
     const values = activeValues.get(field) ?? new Map<string, boolean>();
-    const value = normalizedCriticalValue(item.field, item.value);
+    const normalized = normalizedCriticalValue(item.field, item.value);
+    let value = normalized;
+    if (field === 'businessname') {
+      const equivalent = [...values.keys()].find((existing) =>
+        businessNamesEquivalent(existing, item.value),
+      );
+      if (equivalent) value = equivalent;
+    }
     values.set(value, (values.get(value) ?? false) || status === 'VERIFIED');
     activeValues.set(field, values);
   }
