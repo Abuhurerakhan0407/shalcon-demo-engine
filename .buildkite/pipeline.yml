@@ -34,6 +34,8 @@ steps:
           apps/web/src/review/EvidenceReviewPage.tsx
         npm --workspace @shalcon/web run build
         node scripts/phase20-trial-report.mjs
+        node scripts/phase11-audit.mjs
+        node scripts/verify-phase11-d1.mjs
 
         rm -rf .wrangler/phase20-evidence-review-ci
         cd apps/api
