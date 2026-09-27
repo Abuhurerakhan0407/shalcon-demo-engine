@@ -12,6 +12,7 @@ import liveResearchApp from './phase20-live-research.integration';
 import { prospectRoutes } from './prospect-routes';
 import { researchAgentRoutes } from './research-agent-routes';
 import { scoringRoutes } from './scoring-routes';
+import { createTargetedResearchCaptureRoutes } from './targeted-research-capture-routes';
 import { websiteAuditRoutes } from './website-audit-routes';
 
 const OPERATOR: UserRecord = {
@@ -92,6 +93,7 @@ app.route('/api/v1/scoring', scoringRoutes);
 app.route('/api/v1/brand-template', brandTemplateRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/automated-demo', automatedDemoRoutes);
+app.route('/phase20', createTargetedResearchCaptureRoutes(OPERATOR.id));
 
 app.get('/phase20/operator-health', (c) =>
   c.json({ ok: true, phase: 20, mode: 'LOCAL_OPERATOR', productionAllowed: false }),
