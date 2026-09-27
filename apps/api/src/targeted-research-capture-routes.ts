@@ -8,7 +8,14 @@ import type { Bindings } from './context';
 const targetedCaptureSchema = z
   .object({
     prospectId: z.string().trim().min(1).max(120),
-    url: z.string().trim().url().max(2048),
+    url: z
+      .string()
+      .trim()
+      .url()
+      .max(2048)
+      .refine((value) => new Set(['http:', 'https:']).has(new URL(value).protocol), {
+        message: 'Targeted capture URL must use HTTP or HTTPS.',
+      }),
     maxPages: z.number().int().min(1).max(4).default(1),
   })
   .strict();
