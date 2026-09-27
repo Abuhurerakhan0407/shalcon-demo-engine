@@ -84,6 +84,8 @@ try {
     checks.visibleCandidatesHaveEvidence === true,
     checks.criticalConflictStopsPipeline === true,
     checks.rerunPreservesAuditHistory === true,
+    checks.scopedRerunQueuesOnlyRequestedSource === true,
+    checks.scopedRerunRequiresVerifiedCriticalFacts === true,
     checks.aiDidNotOverwriteCanonicalFacts === true,
     checks.foreignKeyViolations === 0,
   ];

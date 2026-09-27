@@ -27,6 +27,7 @@ const RESEARCH_PAGE_ROLES = new Set<ResearchPageRole>([
   'HOURS',
   'OTHER',
 ]);
+const SCOPED_CRITICAL_FACT_FIELDS = ['businessName', 'phone', 'address'] as const;
 
 export interface Phase11ResearchRun {
   id: string;
@@ -41,6 +42,7 @@ export interface Phase11JobPayload {
   sources: Array<{ sourceId: string; url: string }>;
   model?: string;
   useScrapeGraph?: boolean;
+  scopedRun?: boolean;
   researchRunId: string;
   sourceRecordId: string;
   sourceRole: ResearchPageRole;
@@ -53,6 +55,7 @@ export function isPhase11JobPayload(value: unknown): value is Phase11JobPayload 
   const item = value as Partial<Phase11JobPayload>;
   return (
     item.phase === 11 &&
+    (item.scopedRun === undefined || typeof item.scopedRun === 'boolean') &&
     typeof item.researchRunId === 'string' &&
     item.researchRunId.length > 0 &&
     typeof item.sourceRecordId === 'string' &&
@@ -190,6 +193,7 @@ export async function startPhase11Research(
       sources: [{ sourceId: source.sourceId, url: source.url }],
       ...(options.model ? { model: options.model } : {}),
       ...(options.useScrapeGraph === true ? { useScrapeGraph: true } : {}),
+      ...(scopedSourceIds ? { scopedRun: true } : {}),
       researchRunId: runId,
       sourceRecordId: source.sourceId,
       sourceRole: source.role,
@@ -254,11 +258,28 @@ async function deterministicEvidenceId(jobId: string, field: string, value: stri
   return `ev_ai_${hex.slice(0, 32)}`;
 }
 
+async function hasVerifiedScopedCriticalFacts(
+  db: D1DatabaseLike,
+  prospectId: string,
+): Promise<boolean> {
+  const rows = await db
+    .prepare(`
+      SELECT field FROM prospect_facts
+      WHERE prospect_id = ? AND verification_status = 'VERIFIED'
+        AND field IN ('businessName', 'phone', 'address')
+    `)
+    .bind(prospectId)
+    .all<{ field: string }>();
+  const verified = new Set(rows.results.map((item) => item.field));
+  return SCOPED_CRITICAL_FACT_FIELDS.every((field) => verified.has(field));
+}
+
 async function finalizeRunIfReady(
   db: D1DatabaseLike,
   runId: string,
   prospectId: string,
   now: string,
+  scopedRun: boolean,
 ): Promise<void> {
   const counts = await db
     .prepare(`
@@ -339,8 +360,9 @@ async function finalizeRunIfReady(
   ]);
 
   if (!blocked) {
+    const canAdvance = !scopedRun || (await hasVerifiedScopedCriticalFacts(db, prospectId));
     const prospect = await new ProspectRepository(db).getById(prospectId);
-    if (prospect?.currentState === 'RESEARCH_PENDING') {
+    if (canAdvance && prospect?.currentState === 'RESEARCH_PENDING') {
       await new ProspectRepository(db).transition(prospectId, 'RESEARCHED', now);
     }
   }
@@ -461,7 +483,13 @@ export async function completePhase11ResearchExtraction(
   if (writes.length !== statements.length || writes.some((write) => write.meta?.changes !== 1)) {
     throw new Error('Phase 11 extraction lost its active lease or failed atomic persistence.');
   }
-  await finalizeRunIfReady(db, payload.researchRunId, job.entityId, now);
+  await finalizeRunIfReady(
+    db,
+    payload.researchRunId,
+    job.entityId,
+    now,
+    payload.scopedRun === true,
+  );
 }
 
 export async function getPhase11ResearchHistory(
