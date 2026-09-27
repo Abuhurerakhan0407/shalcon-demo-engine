@@ -282,13 +282,13 @@ app.get('/phase11', async (c) => {
     db,
     userId,
     'p11_b',
-    { model: 'qwen3:0.6b', sourceRecordIds: ['src_p11_contact'] },
+    { model: 'qwen3:0.6b', sourceRecordIds: ['src_p11_contact_b'] },
     iso(29),
   );
   const scopedRerunQueuesOnlyRequestedSource =
     scopedRerun.jobIds.length === 1 &&
     scopedRerun.selectedSources.length === 1 &&
-    scopedRerun.selectedSources[0]?.sourceId === 'src_p11_contact';
+    scopedRerun.selectedSources[0]?.sourceId === 'src_p11_contact_b';
 
   const rerun = await startPhase11Research(db, userId, 'p11_a', { model: 'qwen3:0.6b' }, iso(30));
   const history = await db
