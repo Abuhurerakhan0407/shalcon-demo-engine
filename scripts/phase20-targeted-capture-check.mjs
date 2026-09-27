@@ -39,6 +39,15 @@ await waitForHealth();
 const fixture = await request('/phase20/fixture', { method: 'POST' }, 201);
 if (fixture.trialResultsModified !== false) throw new Error('Fixture touched trial results.');
 
+const invalidScheme = await request(
+  '/phase20/targeted-capture',
+  post({ prospectId: 'p20_target_pending', url: 'ftp://example.com/contact', maxPages: 1 }),
+  400,
+);
+if (invalidScheme.error?.code !== 'VALIDATION_ERROR') {
+  throw new Error('Non-HTTP targeted capture did not fail closed.');
+}
+
 const wrongDomain = await request(
   '/phase20/targeted-capture',
   post({ prospectId: 'p20_target_pending', url: 'https://wrong.example/contact', maxPages: 1 }),
@@ -103,6 +112,7 @@ if (
 
 console.log(JSON.stringify({
   ok: true,
+  schemeGuard: true,
   domainGuard: true,
   stateGuard: true,
   activeJobGuard: true,
