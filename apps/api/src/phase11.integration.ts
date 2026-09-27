@@ -289,8 +289,35 @@ app.get('/phase11', async (c) => {
     scopedRerun.jobIds.length === 1 &&
     scopedRerun.selectedSources.length === 1 &&
     scopedRerun.selectedSources[0]?.sourceId === 'src_p11_contact_b';
+  const scopedJobId = scopedRerun.jobIds[0];
+  if (!scopedJobId) throw new Error('Scoped Phase 11 rerun did not queue its requested source.');
+  await completeRunJob(
+    db,
+    userId,
+    scopedJobId,
+    {
+      businessName: 'Conflict Salon',
+      description: null,
+      phone: '+91 2222222222',
+      email: null,
+      address: null,
+      openingHours: [],
+      services: [],
+      socialLinks: [],
+    },
+    iso(30),
+  );
+  const [scopedRunRow, scopedProspect] = await Promise.all([
+    db
+      .prepare('SELECT status FROM research_runs WHERE id = ?')
+      .bind(scopedRerun.id)
+      .first<{ status: string }>(),
+    new ProspectRepository(db).getById('p11_b'),
+  ]);
+  const scopedRerunRequiresVerifiedCriticalFacts =
+    scopedRunRow?.status === 'COMPLETED' && scopedProspect?.currentState === 'RESEARCH_PENDING';
 
-  const rerun = await startPhase11Research(db, userId, 'p11_a', { model: 'qwen3:0.6b' }, iso(30));
+  const rerun = await startPhase11Research(db, userId, 'p11_a', { model: 'qwen3:0.6b' }, iso(31));
   const history = await db
     .prepare('SELECT id FROM research_runs WHERE prospect_id = ? ORDER BY created_at')
     .bind('p11_a')
@@ -316,6 +343,7 @@ app.get('/phase11', async (c) => {
     criticalConflictStopsPipeline,
     rerunPreservesAuditHistory,
     scopedRerunQueuesOnlyRequestedSource,
+    scopedRerunRequiresVerifiedCriticalFacts,
     aiDidNotOverwriteCanonicalFacts: factsA.results.length === 0,
     foreignKeyViolations: foreignKeys.results.length,
   };
