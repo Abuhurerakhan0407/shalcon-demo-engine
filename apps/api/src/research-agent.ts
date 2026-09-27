@@ -129,7 +129,7 @@ export async function startPhase11Research(
   db: D1DatabaseLike,
   userId: string,
   prospectId: string,
-  options: { model?: string; useScrapeGraph?: boolean } = {},
+  options: { model?: string; useScrapeGraph?: boolean; sourceRecordIds?: string[] } = {},
   now = new Date().toISOString(),
 ): Promise<Phase11ResearchRun> {
   const prospect = await new ProspectRepository(db).getByIdForUser(prospectId, userId);
@@ -139,8 +139,18 @@ export async function startPhase11Research(
   }
 
   const sources = await new SourceRecordRepository(db).listForProspect(prospect.id);
+  const scopedSourceIds = options.sourceRecordIds ? new Set(options.sourceRecordIds) : null;
+  if (scopedSourceIds && scopedSourceIds.size === 0) {
+    throw new Error('Scoped automated research requires at least one source record id.');
+  }
+  const scopedSources = scopedSourceIds
+    ? sources.filter((source) => scopedSourceIds.has(source.id))
+    : sources;
+  if (scopedSourceIds && scopedSources.length !== scopedSourceIds.size) {
+    throw new Error('Scoped automated research source is unavailable to this prospect.');
+  }
   const prioritized = prioritizeResearchSources(
-    sources.map(parsePlaywrightSource).filter((item): item is ResearchSourceInput => item !== null),
+    scopedSources.map(parsePlaywrightSource).filter((item): item is ResearchSourceInput => item !== null),
     6,
   );
   if (prioritized.length === 0) {

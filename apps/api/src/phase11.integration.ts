@@ -278,6 +278,18 @@ app.get('/phase11', async (c) => {
     prospectB?.currentState === 'RESEARCH_PENDING' &&
     conflictPayload.some((item) => item.field === 'phone' && item.critical === true);
 
+  const scopedRerun = await startPhase11Research(
+    db,
+    userId,
+    'p11_b',
+    { model: 'qwen3:0.6b', sourceRecordIds: ['src_p11_contact'] },
+    iso(29),
+  );
+  const scopedRerunQueuesOnlyRequestedSource =
+    scopedRerun.jobIds.length === 1 &&
+    scopedRerun.selectedSources.length === 1 &&
+    scopedRerun.selectedSources[0]?.sourceId === 'src_p11_contact';
+
   const rerun = await startPhase11Research(db, userId, 'p11_a', { model: 'qwen3:0.6b' }, iso(30));
   const history = await db
     .prepare('SELECT id FROM research_runs WHERE prospect_id = ? ORDER BY created_at')
@@ -303,6 +315,7 @@ app.get('/phase11', async (c) => {
     visibleCandidatesHaveEvidence,
     criticalConflictStopsPipeline,
     rerunPreservesAuditHistory,
+    scopedRerunQueuesOnlyRequestedSource,
     aiDidNotOverwriteCanonicalFacts: factsA.results.length === 0,
     foreignKeyViolations: foreignKeys.results.length,
   };

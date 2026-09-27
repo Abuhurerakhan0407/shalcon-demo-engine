@@ -116,7 +116,9 @@ researchRunnerRoutes.post('/jobs/:jobId/complete', async (c) => {
 
     let phase11Run: Awaited<ReturnType<typeof startPhase11Research>> | null = null;
     try {
-      phase11Run = await startPhase11Research(db, runner.userId, job.entityId);
+      phase11Run = await startPhase11Research(db, runner.userId, job.entityId, {
+        sourceRecordIds: completed.sourcePersistence.sourceIds,
+      });
     } catch {
       phase11Run = null;
     }
