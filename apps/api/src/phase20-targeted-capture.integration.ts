@@ -1,6 +1,7 @@
 import {
   CampaignRepository,
   ProspectRepository,
+  SourceRecordRepository,
   UserRepository,
   type D1DatabaseLike,
   type UserRecord,
@@ -62,6 +63,55 @@ app.post('/phase20/fixture', async (c) => {
     createdAt: now,
     updatedAt: now,
   });
+  await prospects.create({
+    id: 'p20_target_rerun',
+    campaignId: campaign.id,
+    canonicalName: 'Rerun Salon',
+    normalizedName: 'rerun salon',
+    niche: 'SALON_SPA',
+    sourceFirstSeen: 'PHASE20_TARGETED_RERUN_FIXTURE',
+    currentState: 'RESEARCH_PENDING',
+    domain: 'rerun.example',
+    phoneNormalized: '+919111111111',
+    city: 'mumbai',
+    addressNormalized: '5 rerun lane, mumbai',
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const sources = new SourceRecordRepository(db);
+  await sources.create({
+    id: 'src_p20_rerun_good',
+    prospectId: 'p20_target_rerun',
+    provider: 'PLAYWRIGHT',
+    sourceType: 'WEBSITE_PAGE',
+    sourceUrl: 'https://www.rerun.example/contact',
+    rawJson: JSON.stringify({
+      page: {
+        title: 'Rerun Salon Contact',
+        text: 'Rerun Salon\nPhone +91 91111 11111\n5 Rerun Lane, Mumbai',
+      },
+    }),
+    capturedAt: now,
+  });
+  await sources.create({
+    id: 'src_p20_rerun_offdomain',
+    prospectId: 'p20_target_rerun',
+    provider: 'PLAYWRIGHT',
+    sourceType: 'WEBSITE_PAGE',
+    sourceUrl: 'https://wrong.example/contact',
+    rawJson: JSON.stringify({ page: { title: 'Wrong', text: 'Wrong source content' } }),
+    capturedAt: now,
+  });
+  await sources.create({
+    id: 'src_p20_done_good',
+    prospectId: 'p20_target_researched',
+    provider: 'PLAYWRIGHT',
+    sourceType: 'WEBSITE_PAGE',
+    sourceUrl: 'https://done.example/contact',
+    rawJson: JSON.stringify({ page: { title: 'Done Salon', text: 'Done Salon contact page' } }),
+    capturedAt: now,
+  });
   return c.json({ ok: true, trialResultsModified: false }, 201);
 });
 
@@ -80,10 +130,20 @@ app.get('/phase20/status', async (c) => {
     `)
     .bind(USER.id)
     .all<Record<string, unknown>>();
+  const runs = await db
+    .prepare(`
+      SELECT id, prospect_id, status, selected_sources_json
+      FROM research_runs
+      WHERE user_id = ?
+      ORDER BY created_at, id
+    `)
+    .bind(USER.id)
+    .all<Record<string, unknown>>();
   const fk = await db.prepare('PRAGMA foreign_key_check').all<Record<string, unknown>>();
   return c.json({
     prospects: prospects.map((prospect) => ({ id: prospect.id, currentState: prospect.currentState })),
     jobs: jobs.results,
+    runs: runs.results,
     foreignKeyViolations: fk.results.length,
     trialResultsModified: false,
   });
