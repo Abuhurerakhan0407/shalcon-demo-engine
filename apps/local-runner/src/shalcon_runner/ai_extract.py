@@ -198,17 +198,49 @@ def _validate_sources(value: Any) -> list[dict[str, str]]:
     return result
 
 
+def _target_branch_scope(source_text: str, target_business_name: str | None) -> str | None:
+    if not target_business_name:
+        return None
+    target = target_business_name.strip()
+    lower = target.casefold()
+    anchor: str | None = None
+    if " - " in target:
+        anchor = target.split(" - ", 1)[1].split(",", 1)[0].strip()
+    elif lower.endswith(" branch"):
+        stem = target[: -len(" branch")].strip()
+        anchor = stem.rsplit(" ", 1)[-1].strip() if stem else None
+    if not anchor or len(anchor) < 3:
+        return None
+    matches = [line.strip() for line in source_text.splitlines() if anchor.casefold() in line.casefold()]
+    if not matches:
+        return None
+    tabular = [line for line in matches if "\t" in line]
+    selected = tabular or matches
+    return "\n".join(selected[:4])
+
+
 def build_extraction_prompt(source_text: str, target_business_name: str | None = None) -> str:
     schema = json.dumps(BUSINESS_EXTRACTION_SCHEMA, separators=(",", ":"), sort_keys=True)
     target_context = ""
+    branch_scope = _target_branch_scope(source_text, target_business_name)
     if target_business_name:
         target_context = (
             "TARGET BUSINESS/BRANCH is selection context only, never evidence. "
             "When SOURCE mentions multiple businesses or branches, extract facts only when explicitly tied to TARGET BUSINESS/BRANCH. "
+            "If SOURCE contains a row, card, section, heading, or block explicitly matching TARGET BUSINESS/BRANCH, treat that matching branch block as authoritative selection scope for branch-specific address, phone, email, and openingHours. "
+            "When such a matching branch block exists, ignore site-wide, header/footer, corporate, default, or another-branch contact details for those branch-specific fields unless the same value is explicitly repeated inside the matching branch block. "
             "Never substitute facts from another branch. If a target-specific fact is absent, return null or [] as appropriate. "
             "Never copy text from TARGET BUSINESS/BRANCH into output unless that value also appears in SOURCE. "
             f"TARGET BUSINESS/BRANCH: {json.dumps(target_business_name, ensure_ascii=False)}. "
         )
+    if branch_scope:
+        target_context += (
+            "A deterministic TARGET BRANCH SCOPE was located in SOURCE. For address, phone, email, and openingHours, "
+            "values outside TARGET BRANCH SCOPE are ineligible whenever the scope contains that field. "
+        )
+    branch_scope_text = (
+        f"\nTARGET BRANCH SCOPE START\n{branch_scope}\nTARGET BRANCH SCOPE END\n" if branch_scope else ""
+    )
     return (
         "Extract only business facts explicitly supported by the SOURCE below. "
         + target_context
@@ -219,7 +251,9 @@ def build_extraction_prompt(source_text: str, target_business_name: str | None =
         + "Never treat appointment-slot choices, booking time dropdowns, isolated selectable times, or time-picker values as opening hours. "
         + "If business operating hours are not explicitly stated, return openingHours as []. "
         + "Return exactly one JSON object matching this schema: "
-        + f"{schema}\n\nSOURCE START\n{source_text}\nSOURCE END"
+        + f"{schema}"
+        + branch_scope_text
+        + f"\nSOURCE START\n{source_text}\nSOURCE END"
     )
 
 
