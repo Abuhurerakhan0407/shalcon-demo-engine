@@ -39,6 +39,7 @@ export interface Phase11ResearchRun {
 
 export interface Phase11JobPayload {
   sourceText: string;
+  targetBusinessName?: string;
   sources: Array<{ sourceId: string; url: string }>;
   model?: string;
   useScrapeGraph?: boolean;
@@ -69,6 +70,10 @@ export function isPhase11JobPayload(value: unknown): value is Phase11JobPayload 
     typeof item.sourceText === 'string' &&
     item.sourceText.length > 0 &&
     item.sourceText.length <= 40_000 &&
+    (item.targetBusinessName === undefined ||
+      (typeof item.targetBusinessName === 'string' &&
+        item.targetBusinessName.trim().length > 0 &&
+        item.targetBusinessName.length <= 300)) &&
     Array.isArray(item.sources) &&
     item.sources.length === 1 &&
     item.sources[0]?.sourceId === item.sourceRecordId
@@ -190,6 +195,7 @@ export async function startPhase11Research(
     jobIds.push(jobId);
     const payload: Phase11JobPayload = {
       sourceText: source.text,
+      targetBusinessName: prospect.canonicalName,
       sources: [{ sourceId: source.sourceId, url: source.url }],
       ...(options.model ? { model: options.model } : {}),
       ...(options.useScrapeGraph === true ? { useScrapeGraph: true } : {}),
