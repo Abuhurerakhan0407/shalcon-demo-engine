@@ -26,7 +26,12 @@ async function waitForWorker(timeoutMs = 60_000) {
   while (Date.now() < deadline) {
     try {
       const body = await request('/phase20/operator-health');
-      if (body?.ok === true && body.phase === 20 && body.productionAllowed === false) return;
+      if (
+        body?.ok === true &&
+        body.phase === 20 &&
+        body.productionAllowed === false &&
+        body.previewSigningConfigured === true
+      ) return;
     } catch (error) {
       lastError = error;
     }
