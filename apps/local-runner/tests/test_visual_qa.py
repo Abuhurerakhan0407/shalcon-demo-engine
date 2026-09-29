@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
-from shalcon_runner.visual_qa import BrowserVisualQaEngine
+from playwright.sync_api import sync_playwright
+
+from shalcon_runner.visual_qa import BrowserVisualQaEngine, _broken_image_count, _settle_images
 
 
 VIEWPORTS = {
@@ -103,3 +106,27 @@ def test_visual_qa_broken_fixture_is_detected_on_desktop_and_mobile(tmp_path: Pa
         assert viewport["placeholderCount"] >= 2
         assert viewport["disclosurePresent"] is False
         assert viewport["noindexPresent"] is False
+
+
+def test_settle_images_loads_offscreen_lazy_images() -> None:
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+    )
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context(viewport={"width": 390, "height": 844})
+        page = context.new_page()
+        page.route(
+            "https://fixture.invalid/lazy.png",
+            lambda route: route.fulfill(status=200, content_type="image/png", body=png),
+        )
+        page.set_content(
+            '<div style="height:20000px"></div><img loading="lazy" src="https://fixture.invalid/lazy.png">',
+            wait_until="domcontentloaded",
+        )
+        page.wait_for_timeout(100)
+        assert _broken_image_count(page) == 1
+        _settle_images(page, 2_000)
+        assert _broken_image_count(page) == 0
+        context.close()
+        browser.close()
