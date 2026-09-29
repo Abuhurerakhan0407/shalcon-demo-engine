@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildPermissionFirstDraft,
+  evaluatePhase21SendReadiness,
   extractVerifiedPhoneCandidates,
   qaPermissionFirstDraft,
 } from './phase21-outreach';
@@ -46,5 +47,41 @@ describe('Phase 21 permission-first outreach', () => {
         address: 'Andheri West',
       }).passed,
     ).toBe(false);
+  });
+
+  it('keeps queueing blocked until approval, channel, public demo, and transport are ready', () => {
+    const result = evaluatePhase21SendReadiness({
+      prospectState: 'READY_FOR_REVIEW',
+      messageQaStatus: 'PASS',
+      messageApprovalStatus: 'PENDING_REVIEW',
+      campaignStatus: 'DRAFT',
+      dailySendLimit: 0,
+      emailAccountId: null,
+      verifiedChannelCount: 0,
+      publicDemoDeliveryAvailable: false,
+    });
+    expect(result.queueEligible).toBe(false);
+    expect(result.blockers).toEqual([
+      'HUMAN_APPROVAL_PENDING',
+      'SEND_CHANNEL_NOT_VERIFIED',
+      'PUBLIC_DEMO_DELIVERY_NOT_CONFIGURED',
+      'CAMPAIGN_NOT_ACTIVE',
+      'DAILY_SEND_LIMIT_ZERO',
+      'EMAIL_TRANSPORT_NOT_CONFIGURED',
+    ]);
+  });
+
+  it('marks queue readiness true only when every hard gate is satisfied', () => {
+    const result = evaluatePhase21SendReadiness({
+      prospectState: 'APPROVED',
+      messageQaStatus: 'PASS',
+      messageApprovalStatus: 'APPROVED',
+      campaignStatus: 'ACTIVE',
+      dailySendLimit: 10,
+      emailAccountId: 'acct_123',
+      verifiedChannelCount: 1,
+      publicDemoDeliveryAvailable: true,
+    });
+    expect(result).toEqual({ queueEligible: true, blockers: [] });
   });
 });
