@@ -114,6 +114,16 @@ if (!Array.isArray(registry.templates) || registry.templates.length === 0) {
   throw new Error('Local operator template registry route is unavailable.');
 }
 
+const contentHistory = await request(`/api/v1/content/prospects/${prospectId}/runs`);
+if (!Array.isArray(contentHistory.runs)) {
+  throw new Error('Local operator content route is unavailable.');
+}
+
+const assetHistory = await request(`/api/v1/assets/prospects/${prospectId}/selections`);
+if (!Array.isArray(assetHistory.runs)) {
+  throw new Error('Local operator asset route is unavailable.');
+}
+
 const demoWorkspace = await request(`/api/v1/demo-admin/prospects/${prospectId}`);
 if (demoWorkspace.prospect?.id !== prospectId || demoWorkspace.eligible !== true) {
   throw new Error('Local operator demo-admin route did not preserve downstream identity eligibility.');

@@ -2,9 +2,11 @@ import { ProspectRepository, type D1DatabaseLike, type UserRecord } from '@shalc
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import { assetRoutes } from './asset-routes';
 import { automatedDemoRoutes } from './automated-demo-routes';
 import { brandTemplateRoutes } from './brand-template-routes';
 import type { Bindings } from './context';
+import { contentRoutes } from './content-routes';
 import { demoAdminRoutes } from './demo-admin-routes';
 import { runDemoWorthinessScoring } from './demo-worthiness';
 import { evidenceAuditorRoutes } from './evidence-auditor-routes';
@@ -110,6 +112,8 @@ for (const prefix of [
   '/api/v1/audits/*',
   '/api/v1/scoring/*',
   '/api/v1/brand-template/*',
+  '/api/v1/content/*',
+  '/api/v1/assets/*',
   '/api/v1/demo-admin/*',
   '/api/v1/automated-demo/*',
 ]) {
@@ -122,6 +126,8 @@ for (const prefix of [
 app.route('/api/v1/audits/website', websiteAuditRoutes);
 app.route('/api/v1/scoring', scoringRoutes);
 app.route('/api/v1/brand-template', brandTemplateRoutes);
+app.route('/api/v1/content', contentRoutes);
+app.route('/api/v1/assets', assetRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/automated-demo', automatedDemoRoutes);
 app.route('/phase20', createTargetedResearchCaptureRoutes(OPERATOR.id));
