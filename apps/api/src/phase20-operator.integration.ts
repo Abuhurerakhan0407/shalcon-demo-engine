@@ -29,6 +29,7 @@ const OPERATOR: UserRecord = {
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const LOCAL_ORIGINS = new Set(['http://127.0.0.1:5173', 'http://localhost:5173']);
 const OPPORTUNITY_STATES = new Set(['RESEARCHED', 'AUDIT_PENDING', 'AUDITED']);
+const LOCAL_OPERATOR_SESSION_SECRET = 'phase20-local-operator-preview-signing-v1';
 
 function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
   if (!db) throw new Error('D1 binding is not configured.');
@@ -73,6 +74,7 @@ app.use('*', async (c, next) => {
       403,
     );
   }
+  c.env.SESSION_SECRET ??= LOCAL_OPERATOR_SESSION_SECRET;
   await next();
 });
 
@@ -176,7 +178,13 @@ app.post('/phase20/opportunity/run', async (c) => {
 });
 
 app.get('/phase20/operator-health', (c) =>
-  c.json({ ok: true, phase: 20, mode: 'LOCAL_OPERATOR', productionAllowed: false }),
+  c.json({
+    ok: true,
+    phase: 20,
+    mode: 'LOCAL_OPERATOR',
+    productionAllowed: false,
+    previewSigningConfigured: Boolean(c.env.SESSION_SECRET),
+  }),
 );
 app.route('/', liveResearchApp);
 
