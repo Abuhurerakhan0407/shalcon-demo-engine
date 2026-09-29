@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 from .client import ClaimedJob, RunnerApiClient
 
@@ -23,6 +23,7 @@ class VisualQaJobError(RuntimeError):
 class VisualQaLimits:
     navigation_timeout_ms: int = 20_000
     settle_ms: int = 350
+    image_settle_timeout_ms: int = 10_000
     max_errors: int = 100
     max_document_height: int = 100_000
 
@@ -115,6 +116,20 @@ def _broken_image_count(page: Page) -> int:
     return max(0, int(result))
 
 
+def _settle_images(page: Page, timeout_ms: int) -> None:
+    page.locator("img").evaluate_all(
+        'els => els.forEach(img => { img.loading = \"eager\"; })'
+    )
+    try:
+        page.wait_for_function(
+            "() => Array.from(document.images).every(img => img.complete)",
+            timeout=timeout_ms,
+        )
+    except PlaywrightTimeoutError:
+        # Timed-out images remain incomplete and are counted as broken below.
+        pass
+
+
 def _noindex_present(page: Page) -> bool:
     try:
         content = page.locator("meta[name='robots']").first.get_attribute("content") or ""
@@ -187,6 +202,7 @@ class BrowserVisualQaEngine:
                 timeout=self.limits.navigation_timeout_ms,
             )
             page.emulate_media(reduced_motion="reduce")
+            _settle_images(page, self.limits.image_settle_timeout_ms)
             page.wait_for_timeout(self.limits.settle_ms)
             body_text = page.locator("body").inner_text(timeout=3_000)
             metrics = _page_metrics(page)
