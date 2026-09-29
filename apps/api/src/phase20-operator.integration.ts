@@ -12,6 +12,7 @@ import { runDemoWorthinessScoring } from './demo-worthiness';
 import { evidenceAuditorRoutes } from './evidence-auditor-routes';
 import { evidenceReviewRoutes } from './evidence-review-routes';
 import liveResearchApp from './phase20-live-research.integration';
+import { phase21OutreachRoutes } from './phase21-outreach-routes';
 import { prospectRoutes } from './prospect-routes';
 import { researchAgentRoutes } from './research-agent-routes';
 import { scoringRoutes } from './scoring-routes';
@@ -41,7 +42,9 @@ async function runOpportunityPipeline(db: D1DatabaseLike, prospectId: string) {
   let prospect = await prospects.getByIdForUser(prospectId, OPERATOR.id);
   if (!prospect) throw new Error('Prospect not found.');
   if (!OPPORTUNITY_STATES.has(prospect.currentState)) {
-    throw new Error(`Opportunity pipeline requires RESEARCHED, AUDIT_PENDING, or AUDITED state; found ${prospect.currentState}.`);
+    throw new Error(
+      `Opportunity pipeline requires RESEARCHED, AUDIT_PENDING, or AUDITED state; found ${prospect.currentState}.`,
+    );
   }
 
   let audit = null;
@@ -118,6 +121,7 @@ for (const prefix of [
   '/api/v1/assets/*',
   '/api/v1/demo-admin/*',
   '/api/v1/automated-demo/*',
+  '/api/v1/outreach/*',
 ]) {
   app.use(prefix, async (c, next) => {
     c.set('authUser', OPERATOR);
@@ -132,6 +136,7 @@ app.route('/api/v1/content', contentRoutes);
 app.route('/api/v1/assets', assetRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/automated-demo', automatedDemoRoutes);
+app.route('/api/v1/outreach', phase21OutreachRoutes);
 app.route('/phase20', createTargetedResearchCaptureRoutes(OPERATOR.id));
 
 app.post('/phase20/opportunity/prospects/:id/run', async (c) => {
@@ -141,7 +146,10 @@ app.post('/phase20/opportunity/prospects/:id/run', async (c) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Opportunity pipeline failed.';
     const status = message === 'Prospect not found.' ? 404 : 409;
-    return c.json({ error: { code: status === 404 ? 'NOT_FOUND' : 'OPPORTUNITY_PIPELINE_NOT_READY', message } }, status);
+    return c.json(
+      { error: { code: status === 404 ? 'NOT_FOUND' : 'OPPORTUNITY_PIPELINE_NOT_READY', message } },
+      status,
+    );
   }
 });
 

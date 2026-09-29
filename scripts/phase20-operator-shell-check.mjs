@@ -31,7 +31,8 @@ async function waitForWorker(timeoutMs = 60_000) {
         body.phase === 20 &&
         body.productionAllowed === false &&
         body.previewSigningConfigured === true
-      ) return;
+      )
+        return;
     } catch (error) {
       lastError = error;
     }
@@ -131,12 +132,25 @@ if (!Array.isArray(assetHistory.runs)) {
 
 const demoWorkspace = await request(`/api/v1/demo-admin/prospects/${prospectId}`);
 if (demoWorkspace.prospect?.id !== prospectId || demoWorkspace.eligible !== true) {
-  throw new Error('Local operator demo-admin route did not preserve downstream identity eligibility.');
+  throw new Error(
+    'Local operator demo-admin route did not preserve downstream identity eligibility.',
+  );
 }
 
 const reviewQueue = await request('/api/v1/automated-demo/phase19/review-queue');
 if (!Array.isArray(reviewQueue.issues)) {
   throw new Error('Local operator Phase 19 QA route is unavailable.');
+}
+
+const outreachReview = await request('/api/v1/outreach/review');
+if (
+  !Array.isArray(outreachReview.items) ||
+  outreachReview.sendingAvailable !== false ||
+  outreachReview.permissionFirst !== true
+) {
+  throw new Error(
+    'Local operator Phase 21 outreach preparation route is unavailable or did not fail closed for sending.',
+  );
 }
 
 const status = await request('/phase20/status');
@@ -148,11 +162,13 @@ if (
   throw new Error('Local operator status failed its persistence or trial-safety invariants.');
 }
 
-console.log(JSON.stringify({
-  ok: true,
-  phase: 20,
-  prospects: 2,
-  operatorModulesMounted: true,
-  downstreamDemoEligible: true,
-  trialResultsModified: false,
-}));
+console.log(
+  JSON.stringify({
+    ok: true,
+    phase: 20,
+    prospects: 2,
+    operatorModulesMounted: true,
+    downstreamDemoEligible: true,
+    trialResultsModified: false,
+  }),
+);
