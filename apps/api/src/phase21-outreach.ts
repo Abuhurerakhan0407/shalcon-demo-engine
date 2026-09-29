@@ -461,3 +461,158 @@ export async function getPhase21ReviewQueue(db: D1DatabaseLike, userId: string) 
   }
   return items;
 }
+
+export const PHASE21_APPROVAL_CONFIRMATION = 'I_APPROVE_THIS_EXACT_OUTREACH_COPY' as const;
+
+export interface Phase21SendReadinessInput {
+  prospectState: string;
+  messageQaStatus: string | null;
+  messageApprovalStatus: string | null;
+  campaignStatus: string;
+  dailySendLimit: number;
+  emailAccountId: string | null;
+  verifiedChannelCount: number;
+  publicDemoDeliveryAvailable: boolean;
+}
+
+export function evaluatePhase21SendReadiness(input: Phase21SendReadinessInput) {
+  const blockers: string[] = [];
+  if (!['READY_FOR_REVIEW', 'APPROVED'].includes(input.prospectState))
+    blockers.push('PROSPECT_NOT_REVIEW_READY');
+  if (input.messageQaStatus !== 'PASS') blockers.push('COPY_QA_NOT_PASSED');
+  if (input.messageApprovalStatus !== 'APPROVED') blockers.push('HUMAN_APPROVAL_PENDING');
+  if (input.verifiedChannelCount <= 0) blockers.push('SEND_CHANNEL_NOT_VERIFIED');
+  if (!input.publicDemoDeliveryAvailable) blockers.push('PUBLIC_DEMO_DELIVERY_NOT_CONFIGURED');
+  if (input.campaignStatus !== 'ACTIVE') blockers.push('CAMPAIGN_NOT_ACTIVE');
+  if (input.dailySendLimit <= 0) blockers.push('DAILY_SEND_LIMIT_ZERO');
+  if (!input.emailAccountId) blockers.push('EMAIL_TRANSPORT_NOT_CONFIGURED');
+  return { queueEligible: blockers.length === 0, blockers };
+}
+
+export async function getPhase21ApprovalReadiness(
+  db: D1DatabaseLike,
+  userId: string,
+  prospectId: string,
+) {
+  const prospects = new ProspectRepository(db);
+  const prospect = await prospects.getByIdForUser(prospectId, userId);
+  if (!prospect) throw new Error('Prospect not found.');
+  const campaign = await campaignForProspect(db, prospect.id, userId);
+  const demos = await new DemoRepository(db).listForProspectForUser(prospect.id, userId);
+  const demo = demos.find(
+    (item) =>
+      item.status === 'READY' &&
+      item.visualQaStatus === 'PASS' &&
+      item.factQaStatus === 'PASS' &&
+      item.salesQaStatus === 'PASS',
+  );
+  const message = demo ? await latestMessage(db, prospect.id, demo.id) : null;
+  const contacts = await contactsForProspect(db, prospect.id);
+  const verifiedChannelCount = contacts.filter((item) =>
+    ['WHATSAPP_VERIFIED', 'EMAIL_VERIFIED'].includes(item.verification_status),
+  ).length;
+  const readiness = evaluatePhase21SendReadiness({
+    prospectState: prospect.currentState,
+    messageQaStatus: message?.qa_status ?? null,
+    messageApprovalStatus: message?.approval_status ?? null,
+    campaignStatus: campaign.status,
+    dailySendLimit: campaign.daily_send_limit,
+    emailAccountId: campaign.email_account_id,
+    verifiedChannelCount,
+    publicDemoDeliveryAvailable: false,
+  });
+  return {
+    prospect: {
+      id: prospect.id,
+      businessName: prospect.canonicalName,
+      state: prospect.currentState,
+    },
+    demo: demo ? { id: demo.id, status: demo.status, expiresAt: demo.expiresAt } : null,
+    message: message
+      ? { id: message.id, qaStatus: message.qa_status, approvalStatus: message.approval_status }
+      : null,
+    contacts: contacts.map((item) => ({
+      id: item.id,
+      phone: item.phone,
+      verificationStatus: item.verification_status,
+    })),
+    ...readiness,
+  };
+}
+
+export async function approvePhase21Outreach(
+  db: D1DatabaseLike,
+  userId: string,
+  prospectId: string,
+  confirmation: string,
+) {
+  if (confirmation !== PHASE21_APPROVAL_CONFIRMATION)
+    throw new Error('Exact human approval confirmation is required.');
+
+  const prospects = new ProspectRepository(db);
+  const prospect = await prospects.getByIdForUser(prospectId, userId);
+  if (!prospect) throw new Error('Prospect not found.');
+  const campaign = await campaignForProspect(db, prospect.id, userId);
+  if (campaign.approval_mode !== 'MANUAL') throw new Error('Manual approval mode is required.');
+  if (await isSuppressed(db, prospect.id, prospect.domain))
+    throw new Error('Prospect is suppressed; approval is blocked.');
+
+  const demos = await new DemoRepository(db).listForProspectForUser(prospect.id, userId);
+  const demo = demos.find(
+    (item) =>
+      item.status === 'READY' &&
+      item.visualQaStatus === 'PASS' &&
+      item.factQaStatus === 'PASS' &&
+      item.salesQaStatus === 'PASS',
+  );
+  if (!demo) throw new Error('A fully QA-passed READY demo is required for approval.');
+  const message = await latestMessage(db, prospect.id, demo.id);
+  if (!message || message.qa_status !== 'PASS')
+    throw new Error('A QA-passed outreach message is required for approval.');
+
+  if (prospect.currentState === 'APPROVED' && message.approval_status === 'APPROVED') {
+    return { prospect, message, reused: true, queueCreated: false };
+  }
+  if (prospect.currentState !== 'READY_FOR_REVIEW')
+    throw new Error(`Approval requires READY_FOR_REVIEW state; found ${prospect.currentState}.`);
+  if (message.approval_status !== 'PENDING_REVIEW')
+    throw new Error(`Approval requires PENDING_REVIEW copy; found ${message.approval_status}.`);
+  assertProspectTransition('READY_FOR_REVIEW', 'APPROVED');
+
+  const now = new Date().toISOString();
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE messages SET approval_status = 'APPROVED'
+         WHERE id = ? AND prospect_id = ? AND qa_status = 'PASS' AND approval_status = 'PENDING_REVIEW'`,
+      )
+      .bind(message.id, prospect.id),
+    db
+      .prepare(
+        `UPDATE prospects SET current_state = 'APPROVED', updated_at = ?
+         WHERE id = ? AND current_state = 'READY_FOR_REVIEW'
+           AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = ? AND approval_mode = 'MANUAL')
+           AND EXISTS (SELECT 1 FROM messages WHERE id = ? AND prospect_id = ? AND approval_status = 'APPROVED')`,
+      )
+      .bind(now, prospect.id, userId, message.id, prospect.id),
+  ]);
+
+  const approvedProspect = await prospects.getByIdForUser(prospect.id, userId);
+  const approvedMessage = await latestMessage(db, prospect.id, demo.id);
+  if (!approvedProspect || approvedProspect.currentState !== 'APPROVED')
+    throw new Error('Approval state transition did not persist.');
+  if (!approvedMessage || approvedMessage.approval_status !== 'APPROVED')
+    throw new Error('Message approval did not persist.');
+  const queued = await db
+    .prepare('SELECT COUNT(*) AS count FROM send_queue WHERE message_id = ?')
+    .bind(approvedMessage.id)
+    .first<{ count: number }>();
+  if (Number(queued?.count ?? 0) !== 0)
+    throw new Error('Human approval must not create queue rows.');
+  return {
+    prospect: approvedProspect,
+    message: approvedMessage,
+    reused: false,
+    queueCreated: false,
+  };
+}

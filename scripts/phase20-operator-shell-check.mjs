@@ -153,6 +153,29 @@ if (
   );
 }
 
+const outreachReadiness = await request(`/api/v1/outreach/prospects/${prospectId}/readiness`);
+if (
+  outreachReadiness.sendingAvailable !== false ||
+  outreachReadiness.readiness?.queueEligible !== false ||
+  !Array.isArray(outreachReadiness.readiness?.blockers)
+) {
+  throw new Error('Local operator Phase 21 readiness route is unavailable or did not fail closed.');
+}
+const invalidApproval = await request(
+  `/api/v1/outreach/prospects/${prospectId}/approve`,
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'APPROVE', confirmation: 'not-explicit-approval' }),
+  },
+  400,
+);
+if (invalidApproval.error?.code !== 'EXPLICIT_APPROVAL_REQUIRED') {
+  throw new Error(
+    'Local operator Phase 21 approval route did not reject missing explicit confirmation.',
+  );
+}
+
 const status = await request('/phase20/status');
 if (
   status.trialResultsModified !== false ||
