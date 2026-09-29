@@ -1,4 +1,5 @@
-import type { UserRecord } from '@shalcon/db';
+import type { D1DatabaseLike, UserRecord } from '@shalcon/db';
+import { ProspectRepository } from '@shalcon/db';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
@@ -6,6 +7,7 @@ import { automatedDemoRoutes } from './automated-demo-routes';
 import { brandTemplateRoutes } from './brand-template-routes';
 import type { Bindings } from './context';
 import { demoAdminRoutes } from './demo-admin-routes';
+import { runDemoWorthinessScoring } from './demo-worthiness';
 import { evidenceAuditorRoutes } from './evidence-auditor-routes';
 import { evidenceReviewRoutes } from './evidence-review-routes';
 import liveResearchApp from './phase20-live-research.integration';
@@ -14,6 +16,7 @@ import { researchAgentRoutes } from './research-agent-routes';
 import { scoringRoutes } from './scoring-routes';
 import { createTargetedResearchCaptureRoutes } from './targeted-research-capture-routes';
 import { websiteAuditRoutes } from './website-audit-routes';
+import { runWebsiteOpportunityAudit } from './website-audit';
 
 const OPERATOR: UserRecord = {
   id: 'phase20-live-research-user',
@@ -24,6 +27,35 @@ const OPERATOR: UserRecord = {
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const LOCAL_ORIGINS = new Set(['http://127.0.0.1:5173', 'http://localhost:5173']);
+const OPPORTUNITY_STATES = new Set(['RESEARCHED', 'AUDIT_PENDING', 'AUDITED']);
+
+function requireDb(db: D1DatabaseLike | undefined): D1DatabaseLike {
+  if (!db) throw new Error('D1 binding is not configured.');
+  return db;
+}
+
+async function runOpportunityPipeline(db: D1DatabaseLike, prospectId: string) {
+  const prospects = new ProspectRepository(db);
+  let prospect = await prospects.getByIdForUser(prospectId, OPERATOR.id);
+  if (!prospect) throw new Error('Prospect not found.');
+  if (!OPPORTUNITY_STATES.has(prospect.currentState)) {
+    throw new Error(`Opportunity pipeline requires RESEARCHED, AUDIT_PENDING, or AUDITED state; found ${prospect.currentState}.`);
+  }
+
+  let audit = null;
+  if (prospect.currentState === 'RESEARCHED') {
+    prospect = await prospects.transition(prospect.id, 'AUDIT_PENDING', new Date().toISOString());
+  }
+  if (prospect.currentState === 'AUDIT_PENDING') {
+    audit = await runWebsiteOpportunityAudit(db, OPERATOR.id, prospect.id);
+    prospect = await prospects.transition(prospect.id, 'AUDITED', new Date().toISOString());
+  }
+
+  const score = await runDemoWorthinessScoring(db, OPERATOR.id, prospect.id);
+  const finalProspect = await prospects.getByIdForUser(prospect.id, OPERATOR.id);
+  if (!finalProspect) throw new Error('Prospect disappeared after opportunity pipeline execution.');
+  return { prospect: finalProspect, audit, score };
+}
 
 const app = new Hono<Bindings>();
 
@@ -94,6 +126,49 @@ app.route('/api/v1/brand-template', brandTemplateRoutes);
 app.route('/api/v1/demo-admin', demoAdminRoutes);
 app.route('/api/v1/automated-demo', automatedDemoRoutes);
 app.route('/phase20', createTargetedResearchCaptureRoutes(OPERATOR.id));
+
+app.post('/phase20/opportunity/prospects/:id/run', async (c) => {
+  try {
+    const result = await runOpportunityPipeline(requireDb(c.env.DB), c.req.param('id'));
+    return c.json({ result, stateMachineEnforced: true, trialResultUntouched: true }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Opportunity pipeline failed.';
+    const status = message === 'Prospect not found.' ? 404 : 409;
+    return c.json({ error: { code: status === 404 ? 'NOT_FOUND' : 'OPPORTUNITY_PIPELINE_NOT_READY', message } }, status);
+  }
+});
+
+app.post('/phase20/opportunity/run', async (c) => {
+  const db = requireDb(c.env.DB);
+  const prospects = await new ProspectRepository(db).listForUser(OPERATOR.id, 200);
+  const eligible = prospects.filter((prospect) => OPPORTUNITY_STATES.has(prospect.currentState));
+  const completed = [];
+  const failed = [];
+  for (const prospect of eligible) {
+    try {
+      const result = await runOpportunityPipeline(db, prospect.id);
+      completed.push({
+        prospectId: prospect.id,
+        businessName: prospect.canonicalName,
+        score: result.score.score.total,
+        decision: result.score.score.decision,
+      });
+    } catch (error) {
+      failed.push({
+        prospectId: prospect.id,
+        businessName: prospect.canonicalName,
+        error: error instanceof Error ? error.message : 'Opportunity pipeline failed.',
+      });
+    }
+  }
+  return c.json({
+    attempted: eligible.length,
+    completed,
+    failed,
+    stateMachineEnforced: true,
+    trialResultUntouched: true,
+  });
+});
 
 app.get('/phase20/operator-health', (c) =>
   c.json({ ok: true, phase: 20, mode: 'LOCAL_OPERATOR', productionAllowed: false }),
