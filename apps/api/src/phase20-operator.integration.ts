@@ -1,5 +1,4 @@
-import type { D1DatabaseLike, UserRecord } from '@shalcon/db';
-import { ProspectRepository } from '@shalcon/db';
+import { ProspectRepository, type D1DatabaseLike, type UserRecord } from '@shalcon/db';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
