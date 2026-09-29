@@ -3,11 +3,17 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { URL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
-const sourcePath = new URL('../packages/templates/source/elane-v8/original.html.gz.b64', import.meta.url);
+const sourcePath = new URL(
+  '../packages/templates/source/elane-v8/original.html.gz.b64',
+  import.meta.url,
+);
 const outputDirectory = new URL('../packages/templates/generated/elane-v8/', import.meta.url);
 const outputPath = new URL('index.html', outputDirectory);
 const expectedHash = 'ed9e8d651e0d24a759968f10febdb43d8ea7d036e53727d3cee8521ad7886dbf';
-const runtimeSourcePath = new URL('../packages/template-runtime/source/elane-runtime-v8.ts.gz.b64', import.meta.url);
+const runtimeSourcePath = new URL(
+  '../packages/template-runtime/source/elane-runtime-v8.ts.gz.b64',
+  import.meta.url,
+);
 const runtimeOutputPath = new URL('../packages/template-runtime/src/index.ts', import.meta.url);
 const expectedRuntimeHash = 'e414630a70a73147b7867f2fc91d3d9237a3b878456fcfe979cc3b16264ae639';
 
@@ -42,8 +48,8 @@ adapted = replaceExactlyOnce(
 );
 adapted = replaceExactlyOnce(
   adapted,
-  '<script>\n(()=>{\'use strict\';',
-  '<!-- SHALCON_RUNTIME_CONFIG -->\n<script>\n(()=>{\'use strict\';',
+  "<script>\n(()=>{'use strict';",
+  "<!-- SHALCON_RUNTIME_CONFIG -->\n<script>\n(()=>{'use strict';",
   'runtime insertion marker',
 );
 adapted = replaceExactlyOnce(
@@ -64,6 +70,12 @@ adapted = replaceExactlyOnce(
   'Concept demo — booking remains inactive until the business approves a production connection.',
   'booking disclosure',
 );
+adapted = replaceExactlyOnce(
+  adapted,
+  '@media(prefers-reduced-motion:reduce){',
+  '@media(prefers-reduced-motion:reduce){html:not(.force-motion) .belief-portrait,html:not(.force-motion) .belief-note,html:not(.force-motion) .interlude-lines p,html:not(.force-motion) .process-step,html:not(.force-motion) details,html:not(.force-motion) .book-copy,html:not(.force-motion) .book form{opacity:1!important;transform:none!important}html:not(.force-motion) .process-step{position:relative!important}html:not(.force-motion) .step-wrap{height:auto!important}',
+  'reduced-motion final-state visibility',
+);
 
 const runtimeCompressedBase64 = (await readFile(runtimeSourcePath, 'utf8')).trim();
 const runtimeSource = gunzipSync(Buffer.from(runtimeCompressedBase64, 'base64')).toString('utf8');
@@ -77,4 +89,6 @@ const generatedRuntime = `${runtimeSource}\n\nexport const ELANE_V8_DOCUMENT_SOU
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputPath, adapted, 'utf8');
 await writeFile(runtimeOutputPath, generatedRuntime, 'utf8');
-console.log(`Prepared ÉLANE v8 from verified source ${expectedHash.slice(0, 12)}… and runtime ${expectedRuntimeHash.slice(0, 12)}…`);
+console.log(
+  `Prepared ÉLANE v8 from verified source ${expectedHash.slice(0, 12)}… and runtime ${expectedRuntimeHash.slice(0, 12)}…`,
+);
