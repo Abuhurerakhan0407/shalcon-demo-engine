@@ -19,7 +19,9 @@ async function openTemplate(page: Page, suffix = '') {
   return { iframe, frame };
 }
 
-test('ÉLANE v8 long fixture preserves the cinematic master template and engine config', async ({ page }) => {
+test('ÉLANE v8 long fixture preserves the cinematic master template and engine config', async ({
+  page,
+}) => {
   const consoleErrors = captureConsoleErrors(page);
   const { iframe, frame } = await openTemplate(page);
   await expect(frame.locator('meta[name="robots"]')).toHaveAttribute(
@@ -45,7 +47,9 @@ test('ÉLANE v8 long fixture preserves the cinematic master template and engine 
   expect(consoleErrors).toEqual([]);
 });
 
-test('ÉLANE finder is driven by injected config rather than hardcoded prospect facts', async ({ page }) => {
+test('ÉLANE finder is driven by injected config rather than hardcoded prospect facts', async ({
+  page,
+}) => {
   const consoleErrors = captureConsoleErrors(page);
   const { frame } = await openTemplate(page);
   await frame.locator('#finder').scrollIntoViewIfNeeded();
@@ -55,7 +59,9 @@ test('ÉLANE finder is driven by injected config rather than hardcoded prospect 
   expect(consoleErrors).toEqual([]);
 });
 
-test('ÉLANE short fixture hides unsupported cinematic fact sections rather than inventing data', async ({ page }) => {
+test('ÉLANE short fixture hides unsupported cinematic fact sections rather than inventing data', async ({
+  page,
+}) => {
   const consoleErrors = captureConsoleErrors(page);
   const { frame } = await openTemplate(page, '?fixture=short');
   await expect(frame.locator('.brand').first()).toHaveText('Mora Studio');
@@ -67,7 +73,9 @@ test('ÉLANE short fixture hides unsupported cinematic fact sections rather than
   expect(consoleErrors).toEqual([]);
 });
 
-test('ÉLANE minimal fixture is evidence-safe and disables booking inputs without contact data', async ({ page }) => {
+test('ÉLANE minimal fixture is evidence-safe and disables booking inputs without contact data', async ({
+  page,
+}) => {
   const consoleErrors = captureConsoleErrors(page);
   const { frame } = await openTemplate(page, '?fixture=minimal');
   await expect(frame.locator('.brand').first()).toHaveText('Field Studio');
@@ -85,10 +93,36 @@ test('ÉLANE v8 keeps its mobile choreography without horizontal overflow', asyn
   await page.setViewportSize({ width: 390, height: 844 });
   const { iframe, frame } = await openTemplate(page);
   await expect(frame.locator('#heroTitle h1')).toContainText('unhurried.');
-  const hasHorizontalOverflow = await frame.locator('html').evaluate(
-    (html) => html.scrollWidth > (html.ownerDocument.defaultView?.innerWidth ?? 0) + 1,
-  );
+  const hasHorizontalOverflow = await frame
+    .locator('html')
+    .evaluate((html) => html.scrollWidth > (html.ownerDocument.defaultView?.innerWidth ?? 0) + 1);
   expect(hasHorizontalOverflow).toBe(false);
   await iframe.screenshot({ path: 'test-results/phase3-elane-mobile-hero.png' });
+  expect(consoleErrors).toEqual([]);
+});
+
+test('ÉLANE reduced-motion mode exposes the static final state instead of faded reveal placeholders', async ({
+  page,
+}) => {
+  const consoleErrors = captureConsoleErrors(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const { frame } = await openTemplate(page);
+
+  for (const selector of [
+    '.belief-portrait',
+    '.belief-note',
+    '.interlude-lines p',
+    '.process-step',
+    'details',
+    '.book-copy',
+    '#bookForm',
+  ]) {
+    await expect(frame.locator(selector).first()).toHaveCSS('opacity', '1');
+  }
+
+  await frame.locator('#book').scrollIntoViewIfNeeded();
+  await expect(frame.locator('.book-copy')).toBeVisible();
+  await expect(frame.locator('#bookForm')).toBeVisible();
+  await expect(frame.locator('.book-copy h2')).toContainText('Reserved.');
   expect(consoleErrors).toEqual([]);
 });
