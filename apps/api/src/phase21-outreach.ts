@@ -180,6 +180,58 @@ async function contactsForProspect(db: D1DatabaseLike, prospectId: string): Prom
   return result.results;
 }
 
+async function syncVerifiedWhatsAppContacts(
+  db: D1DatabaseLike,
+  prospectId: string,
+): Promise<ContactRow[]> {
+  const result = await db
+    .prepare(
+      `
+    SELECT id, value, confidence FROM evidence
+    WHERE prospect_id = ? AND field = 'whatsapp' AND verification_status = 'VERIFIED'
+    ORDER BY captured_at DESC, id DESC
+  `,
+    )
+    .bind(prospectId)
+    .all<{ id: string; value: string; confidence: number }>();
+  for (const item of result.results) {
+    for (const candidate of extractVerifiedPhoneCandidates(item.value)) {
+      const existing = await db
+        .prepare('SELECT id FROM contacts WHERE prospect_id = ? AND phone = ? LIMIT 1')
+        .bind(prospectId, candidate)
+        .first<{ id: string }>();
+      const evidenceJson = JSON.stringify([item.id]);
+      if (existing) {
+        await db
+          .prepare(
+            `
+          UPDATE contacts SET verification_status = 'WHATSAPP_VERIFIED',
+            source = 'VERIFIED_WHATSAPP_EVIDENCE', confidence = ?, evidence_ids_json = ?
+          WHERE id = ?
+        `,
+          )
+          .bind(item.confidence, evidenceJson, existing.id)
+          .run();
+      } else {
+        const now = new Date().toISOString();
+        await db
+          .prepare(
+            `
+          INSERT INTO contacts(
+            id, prospect_id, first_name, last_name, role, email, phone, verification_status,
+            source, confidence, evidence_ids_json, created_at
+          ) VALUES (?, ?, NULL, NULL, NULL, NULL, ?, 'WHATSAPP_VERIFIED',
+            'VERIFIED_WHATSAPP_EVIDENCE', ?, ?, ?)
+        `,
+          )
+          .bind(randomId('contact'), prospectId, candidate, item.confidence, evidenceJson, now)
+          .run();
+      }
+    }
+  }
+  return contactsForProspect(db, prospectId);
+}
+
 async function latestMessage(
   db: D1DatabaseLike,
   prospectId: string,
@@ -302,7 +354,7 @@ export async function preparePhase21Outreach(
       )
       .run();
   }
-  contacts = await contactsForProspect(db, prospect.id);
+  contacts = await syncVerifiedWhatsAppContacts(db, prospect.id);
   if (contacts.length === 0)
     throw new Error('Phase 21 contact persistence produced no verified contact rows.');
   await transitionIf(prospects, prospect.id, 'CONTACT_PENDING', 'CONTACT_VERIFIED');
